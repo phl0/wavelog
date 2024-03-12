@@ -182,6 +182,7 @@ class EqslImporter
 				'call' => str_replace("0", "&Oslash;", $record['call']),
 				'mode' => $record['mode'],
 				'submode' => $record['submode'] ?? null,
+				'qslmsg' => $record['qslmsg'] ?? null,
 				'status' => $status[0],
 				'eqsl_status' => $eqsl_status,
 				'qsoid' => $qsoid,
