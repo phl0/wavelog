@@ -74,6 +74,7 @@ function load_waja_map() {
             lotw: +$('#lotw').prop('checked'),
             eqsl: +$('#eqsl').prop('checked'),
             qrz: +$('#qrz').prop('checked'),
+            clublog: +$('#clublog').prop('checked'),
         },
         success: function(data) {
             prefectures = data;
@@ -312,5 +313,5 @@ function onClick(e) {
 
 function onClick2(e) {
   var marker = e.target;
-  displayContactsOnMap($("#wajamap"), marker.options.title, $('#band2').val(), $('#mode').val(), 'WAJA');
+  displayContactsOnMap($("#wajamap"), marker.options.title, $('#band2').val(), 'All', 'All', $('#mode').val(), 'WAJA');
 }
