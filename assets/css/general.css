@@ -942,8 +942,12 @@ label {
 #latDeg, #lngDeg {
     width: 170px;
 }
-#locator, #distance, #bearing, #ituzonedisplay, #cqzonedisplay{
+#locator, #distance, #bearing {
     width: 120px;
+}
+
+#ituzonedisplay, #cqzonedisplay{
+    width: 80px;
 }
 
 .hamsatBgLin {
