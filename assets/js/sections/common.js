@@ -28,6 +28,7 @@ function qsl_rcvd(id, method) {
             $(".ld-ext-right-r-"+method).prop('disabled', false);
             if (data.message == 'OK') {
                 $("#qsl_" + id).find("span:eq(1)").attr('class', 'qsl-green'); // Paints arrow green
+                $("#qrz_" + id).find("span:eq(0)").attr('class', 'qsl-yellow'); // marks the QRZ Upload as modified
                 $(".qsl_rcvd_" + id).remove(); // removes choice from menu
             }
             else {
@@ -47,6 +48,7 @@ function qsl_sent(id, method) {
         success: function(data) {
             if (data.message == 'OK') {
                 $("#qsl_" + id).find("span:eq(0)").attr('class', 'qsl-green'); // Paints arrow green
+                $("#qrz_" + id).find("span:eq(0)").attr('class', 'qsl-yellow'); // marks the QRZ Upload as modified
                 $(".qsl_sent_" + id).remove(); // removes choice from menu
             }
             else {
@@ -72,6 +74,7 @@ function qsl_requested(id, method) {
             $(".ld-ext-right-t-"+method).prop('disabled', false);
             if (data.message == 'OK') {
                 $("#qsl_" + id).find("span:eq(0)").attr('class', 'qsl-yellow'); // Paints arrow yellow
+                $("#qrz_" + id).find("span:eq(0)").attr('class', 'qsl-yellow'); // marks the QRZ Upload as modified
             }
             else {
                 $(".bootstrap-dialog-message").append('<div class="alert alert-danger"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>You are not allowed to update QSL status!</div>');
@@ -96,6 +99,7 @@ function qsl_ignore(id, method) {
             $(".ld-ext-right-ignore").prop('disabled', false);
             if (data.message == 'OK') {
                 $("#qsl_" + id).find("span:eq(0)").attr('class', 'qsl-grey'); // Paints arrow grey
+                $("#qrz_" + id).find("span:eq(0)").attr('class', 'qsl-yellow'); // marks the QRZ Upload as modified
             }
             else {
                 $(".bootstrap-dialog-message").append('<div class="alert alert-danger"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>You are not allowed to update QSL status!</div>');
@@ -170,6 +174,11 @@ function single_callbook_update() {
             fill_if_empty('#dxcc_id', data.dxcc.adif);
             fill_if_empty('#continent', data.dxcc.cont);
             fill_if_empty('#cqz', data.dxcc.cqz);
+            if (data.callsign_ituz != '') {
+                fill_if_empty('#ituz', data.callsign_ituz);
+            } else {
+                fill_if_empty('#ituz', data.dxcc.ituz);
+            }
             fill_if_empty('#distance', data.callsign_distance);
             fill_if_empty('#locator', data.callsign_qra);
             // fill_if_empty('#image', data.image);  Not in use yet, but may in future
@@ -602,9 +611,9 @@ function spawnQrbCalculator(locator1, locator2) {
 		type: 'post',
 		success: function (html) {
 			BootstrapDialog.show({
-				title: 'Compute QRB and QTF',
+				title: lang_qrbcalc_title,
 				size: BootstrapDialog.SIZE_WIDE,
-				cssClass: 'lookup-dialog',
+				cssClass: 'lookup-dialog bg-black bg-opacity-50',
 				nl2br: false,
 				message: html,
 				onshown: function(dialog) {
@@ -633,7 +642,7 @@ function spawnActivatorsMap(call, count, grids) {
 		type: 'post',
 		success: function (html) {
 			BootstrapDialog.show({
-				title: 'Activators Map',
+				title: lang_activators_map,
 				size: BootstrapDialog.SIZE_WIDE,
 				cssClass: 'lookup-dialog',
 				nl2br: false,
@@ -666,28 +675,36 @@ function calculateQrb() {
                     'locator2': locator2},
             success: function (html) {
 
-                var result = "<h5>Negative latitudes are south of the equator, negative longitudes are west of Greenwich. <br/>";
-                result += ' ' + locator1.toUpperCase() + ' Latitude = ' + html['latlng1'][0] + ' Longitude = ' + html['latlng1'][1] + '<br/>';
-                result += ' ' + locator2.toUpperCase() + ' Latitude = ' + html['latlng2'][0] + ' Longitude = ' + html['latlng2'][1] + '<br/>';
-                result += 'Distance between ' + locator1.toUpperCase() + ' and ' + locator2.toUpperCase() + ' is ' + html['distance'] + '.<br />';
-                result += 'The bearing is ' + html['bearing'] + '.</h5>';
+                var result = "<h5>" + html['latlong_info_text'] + "<br><br>";
+                result += html['text_latlng1'] + '<br>';
+                result += html['text_latlng2'] + '<br><br>';
+                result += html['distance'] + ' ';
+                result += html['bearing'] + '</h5>';
 
                 $(".qrbResult").html(result);
                 newpath(html['latlng1'], html['latlng2'], locator1, locator2);
             }
         });
     } else {
-        $('.qrbResult').html('<div class="qrbalert alert alert-danger" role="alert">Error in locators. Please check.</div>');
+        $("#mapqrb").hide();
+        $('.qrbResult').html('<div class="qrbalert alert alert-danger" role="alert">' + lang_qrbcalc_errmsg + '</div>');
     }
 }
 
 function validateLocator(locator) {
-    vucc_gridno = locator.split(",").length;
-    if(vucc_gridno == 3 || vucc_gridno > 4) {
+    const regex = /^[A-R]{2}[0-9]{2}([A-X]{2}([0-9]{2}([A-X]{2})?)?)?$/i;
+    const locators = locator.split(",");
+
+    if (locators.length === 3 || locators.length > 4) {
         return false;
     }
-    if(locator.length < 4 && !(/^[a-rA-R]{2}[0-9]{2}[a-xA-X]{0,2}[0-9]{0,2}[a-xA-X]{0,2}$/.test(locator))) {
-        return false;
+
+    for (let i = 0; i < locators.length; i++) {
+        let loc = locators[i].trim();
+
+        if (!regex.test(loc)) {
+            return false;
+        }
     }
 
     return true;
@@ -807,7 +824,7 @@ function getDxccResult(dxcc, name) {
 		},
 		success: function (html) {
             $('.dxccsummary').remove();
-            $('.qsopane').append('<div class="dxccsummary col-sm-12"><br><div class="card"><div class="card-header dxccsummaryheader" data-bs-toggle="collapse" data-bs-target=".dxccsummarybody">DXCC Summary for '+name+'</div><div class="card-body collapse dxccsummarybody"></div></div></div>');
+            $('.qsopane').append('<div class="dxccsummary col-sm-12"><br><div class="card"><div class="card-header dxccsummaryheader" data-bs-toggle="collapse" data-bs-target=".dxccsummarybody">' + lang_dxccsummary_for + name + '</div><div class="card-body collapse dxccsummarybody"></div></div></div>');
             $('.dxccsummarybody').append(html);
 			$('.dxccsummaryheader').click(function(){
 				$('.dxccsummaryheader').toggleClass('dxccsummaryheaderopened');
@@ -938,7 +955,7 @@ function statesDropdown(states, set_state = null) {
         dropdown.empty();
         var option = $('<option>', {
             value: '',
-            text: 'No states for this DXCC available'
+            text: lang_no_states_for_dxcc_available
         });
         dropdown.append(option);
         dropdown.prop('disabled', true);
@@ -1108,6 +1125,26 @@ function newpath(latlng1, latlng2, locator1, locator2) {
         wrap: false,
         steps: 100
     }).addTo(map);
+}
+
+function disableMap() {
+    // console.log('disable map');
+    map.dragging.disable();
+    map.scrollWheelZoom.disable();
+    map.touchZoom.disable();
+    map.doubleClickZoom.disable();
+    map.boxZoom.disable();
+    map.keyboard.disable();
+}
+
+function enableMap() {
+    // console.log('enable map');
+    map.dragging.enable();
+    map.scrollWheelZoom.enable();
+    map.touchZoom.enable();
+    map.doubleClickZoom.enable();
+    map.boxZoom.enable();
+    map.keyboard.enable();
 }
 
 console.log("Ready to unleash your coding prowess and join the fun?\n\n" +

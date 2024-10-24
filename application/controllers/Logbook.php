@@ -27,10 +27,10 @@ class Logbook extends CI_Controller {
 		$config['cur_tag_close'] = '</a></strong>';
 
 		$this->pagination->initialize($config);
-		
+
 		//load the model and get results
 		$data['results'] = $this->logbook_model->get_qsos($config['per_page'],$this->uri->segment(3));
-		
+
 		$data['user_map_custom'] = $this->optionslib->get_map_custom();
 
 		if(!$data['results']) {
@@ -114,6 +114,8 @@ class Logbook extends CI_Controller {
 			"callsign_iota" => "",
 			"callsign_state" => "",
 			"callsign_us_county" => "",
+			"callsign_ituz" => "",
+			"callsign_cqz" => "",
 			"qsl_manager" => "",
 			"bearing" 		=> "",
 			"workedBefore" => false,
@@ -139,12 +141,14 @@ class Logbook extends CI_Controller {
 
 		$return['callsign_name'] 		= $this->nval($callbook['name'] ?? '', $this->logbook_model->call_name($callsign));
 		$return['callsign_qra'] 		= $this->nval($callbook['gridsquare'] ?? '',  $this->logbook_model->call_qra($callsign));
-		$return['callsign_distance'] 	= $this->distance($return['callsign_qra']);
+		$return['callsign_distance'] 	= $this->distance($return['callsign_qra'], $station_id);
 		$return['callsign_qth'] 		= $this->nval($callbook['city'] ?? '', $this->logbook_model->call_qth($callsign));
 		$return['callsign_iota'] 		= $this->nval($callbook['iota'] ?? '', $this->logbook_model->call_iota($callsign));
 		$return['qsl_manager'] 			= $this->nval($callbook['qslmgr'] ?? '', $this->logbook_model->call_qslvia($callsign));
 		$return['callsign_state'] 		= $this->nval($callbook['state'] ?? '', $this->logbook_model->call_state($callsign));
 		$return['callsign_us_county'] 	= $this->nval($callbook['us_county'] ?? '', $this->logbook_model->call_us_county($callsign));
+		$return['callsign_ituz'] 	= $this->nval($callbook['ituz'] ?? '', $this->logbook_model->call_ituzone($callsign));
+		$return['callsign_cqz'] 	= $this->nval($callbook['cqz'] ?? '', $this->logbook_model->call_cqzone($callsign));
 		$return['workedBefore'] 		= $this->worked_grid_before($return['callsign_qra'], $band, $mode);
 		$return['confirmed'] 		= $this->confirmed_grid_before($return['callsign_qra'], $band, $mode);
 		$return['timesWorked'] 		= $this->logbook_model->times_worked($lookupcall);
@@ -681,9 +685,9 @@ class Logbook extends CI_Controller {
 			}
 
 			foreach ($query->result() as $row) {
-				$timestamp = strtotime($row->COL_TIME_ON);
+				$timestamp = strtotime($row->COL_TIME_ON ?? '1970-01-01 00:00:00');
 				$html .= "<tr>";
-					$html .= "<td>".date($custom_date_format, $timestamp). date(' H:i',strtotime($row->COL_TIME_ON)) . "</td>";
+					$html .= "<td>".date($custom_date_format, $timestamp). date(' H:i',strtotime($row->COL_TIME_ON ?? '1970-01-01 00:00:00')) . "</td>";
 					$html .= "<td><a id='edit_qso' href='javascript:displayQso(" . $row->COL_PRIMARY_KEY . ");'>" . str_replace('0','&Oslash;',strtoupper($row->COL_CALL)) . "</a></td>";
 					$html .= $this->part_table_col($row, $this->session->userdata('user_column1')==""?'Mode':$this->session->userdata('user_column1'));
 					$html .= $this->part_table_col($row, $this->session->userdata('user_column2')==""?'RSTS':$this->session->userdata('user_column2'));
@@ -1012,20 +1016,30 @@ class Logbook extends CI_Controller {
   }
 
 	function search_lotw_unconfirmed($station_id) {
-		$station_id = $this->security->xss_clean($station_id);
+		$clean_station_id = $this->security->xss_clean($station_id);
+
+		if (!is_numeric($clean_station_id) && $clean_station_id !== 'All') {
+			show_404();
+		}
 
 		$this->load->model('user_model');
 
 		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
-		$this->load->model('logbooks_model');
-		$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+		$this->load->model('stations');
+		$logbooks_locations_array = $this->stations->all_of_user();
 
-		if (!$logbooks_locations_array) {
+		$station_ids = array();
+
+		if ($logbooks_locations_array->num_rows() > 0){
+			foreach ($logbooks_locations_array->result() as $row) {
+				array_push($station_ids, $row->station_id);
+			}
+		} else {
 			return null;
 		}
 
-		$location_list = "'".implode("','",$logbooks_locations_array)."'";
+		$location_list = "'".implode("','",$station_ids)."'";
 
 		$sql = 'select COL_CALL, COL_MODE, COL_SUBMODE, station_callsign, COL_SAT_NAME, COL_BAND, COL_TIME_ON, lotw_users.lastupload from ' . $this->config->item('table_name') .
 		' join station_profile on ' . $this->config->item('table_name') . '.station_id = station_profile.station_id
@@ -1047,35 +1061,96 @@ class Logbook extends CI_Controller {
 	}
 
 	function search_incorrect_cq_zones($station_id) {
-		$station_id = $this->security->xss_clean($station_id);
+		$clean_station_id = $this->security->xss_clean($station_id);
+
+		if (!is_numeric($clean_station_id) && $clean_station_id !== 'All') {
+			show_404();
+		}
 
 		$this->load->model('user_model');
 
 		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
-		$this->load->model('logbooks_model');
-		$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+		$this->load->model('stations');
+		$logbooks_locations_array = $this->stations->all_of_user();
 
-		if (!$logbooks_locations_array) {
+		$station_ids = array();
+
+		if ($logbooks_locations_array->num_rows() > 0){
+			foreach ($logbooks_locations_array->result() as $row) {
+				array_push($station_ids, $row->station_id);
+			}
+		} else {
 			return null;
 		}
 
-		$location_list = "'".implode("','",$logbooks_locations_array)."'";
+		$location_list = "'".implode("','",$station_ids)."'";
 
 		$sql = 'select *, (select group_concat(distinct cqzone order by cqzone) from dxcc_master where countrycode = thcv.col_dxcc and cqzone <> \'\' order by cqzone asc) as correctcqzone from ' . $this->config->item('table_name') .
 		' thcv join station_profile on thcv.station_id = station_profile.station_id where thcv.station_id in ('. $location_list . ')
 		and not exists (select 1 from dxcc_master where countrycode = thcv.col_dxcc and cqzone = col_cqz) and col_dxcc > 0
 		';
 
-		if ($station_id != 'All') {
-			$sql .= ' and station_profile.station_id = ' . $station_id;
+		$params = [];
+
+		if ($clean_station_id != 'All') {
+			$sql .= ' and station_profile.station_id = ?';
+			$params[] = $clean_station_id;
 		}
 
-		$query = $this->db->query($sql);
+		$query = $this->db->query($sql, $params);
 
 		$data['qsos'] = $query;
 
 		$this->load->view('search/cqzones_result.php', $data);
+	}
+
+	function search_incorrect_itu_zones($station_id) {
+		$clean_station_id = $this->security->xss_clean($station_id);
+
+		if (!is_numeric($clean_station_id) && $clean_station_id !== 'All') {
+			show_404();
+		}
+
+		$this->load->model('user_model');
+
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
+		$this->load->model('stations');
+		$logbooks_locations_array = $this->stations->all_of_user();
+
+		$station_ids = array();
+
+		if ($logbooks_locations_array->num_rows() > 0){
+			foreach ($logbooks_locations_array->result() as $row) {
+				array_push($station_ids, $row->station_id);
+			}
+		} else {
+			return null;
+		}
+
+		$location_list = "'".implode("','",$station_ids)."'";
+
+		$sql = "select *, (select group_concat(distinct ituzone order by ituzone) from dxcc_master where countrycode = thcv.col_dxcc and ituzone <> '' order by ituzone asc) as correctituzone from " . $this->config->item('table_name') .
+		" thcv join station_profile on thcv.station_id = station_profile.station_id where thcv.station_id in (". $location_list . ")
+		and not exists (select 1 from dxcc_master where countrycode = thcv.col_dxcc and ituzone = col_ituz) and col_dxcc > 0
+		";
+
+		$params = [];
+
+		if ($clean_station_id != 'All') {
+			$sql .= ' and station_profile.station_id = ?';
+			$params[] = $clean_station_id;
+		}
+
+		$sql .= " order by thcv.col_time_on desc
+		limit 1000";
+
+		$query = $this->db->query($sql, $params);
+
+		$data['qsos'] = $query;
+
+		$this->load->view('search/ituzones_result.php', $data);
 	}
 
 	/*
@@ -1312,7 +1387,7 @@ class Logbook extends CI_Controller {
 		case 'Grid':    $ret.= '<td>' . $this->part_QrbCalcLink($row->COL_MY_GRIDSQUARE, $row->COL_VUCC_GRIDS, $row->COL_GRIDSQUARE) . '</td>'; break;
 		case 'Distance':    $ret.= '<td>' . (($row->COL_DISTANCE ?? '' != '') ? $row->COL_DISTANCE . '&nbsp;km' : '') . '</td>'; break;
 		case 'Band':    $ret.= '<td>'; if($row->COL_SAT_NAME != null) { $ret.= '<a href="https://db.satnogs.org/search/?q='.$row->COL_SAT_NAME.'" target="_blank">'.$row->COL_SAT_NAME.'</a></td>'; } else { $ret.= strtolower($row->COL_BAND); } $ret.= '</td>'; break;
-		case 'Frequency':    $ret.= '<td>'; if($row->COL_SAT_NAME != null) { $ret.= '<a href="https://db.satnogs.org/search/?q='.$row->COL_SAT_NAME.'" target="_blank">'.$row->COL_SAT_NAME.'</a></td>'; } else { if($row->COL_FREQ != null) { $ret.= $this->frequency->hz_to_mhz($row->COL_FREQ); } else { $ret.= strtolower($row->COL_BAND); } } $ret.= '</td>'; break;
+		case 'Frequency':    $ret.= '<td>'; if($row->COL_SAT_NAME != null) { $ret.= '<a href="https://db.satnogs.org/search/?q='.$row->COL_SAT_NAME.'" target="_blank">'.$row->COL_SAT_NAME.'</a></td>'; } else { if($row->COL_FREQ != null) { $ret.= $this->frequency->qrg_conversion($row->COL_FREQ); } else { $ret.= strtolower($row->COL_BAND); } } $ret.= '</td>'; break;
 		case 'State':   $ret.= '<td>' . ($row->COL_STATE) . '</td>'; break;
 		case 'Operator': $ret.= '<td>' . ($row->COL_OPERATOR) . '</td>'; break;
 		}

@@ -460,6 +460,17 @@ $config['sess_match_ip'] = FALSE;
 $config['sess_time_to_update'] = 300;
 $config['sess_regenerate_destroy'] = FALSE;
 
+/* 
+ * To make sure we do not collect infinite session we set some garbage collection settings
+ * see https://www.php.net/manual/en/session.configuration.php#ini.session.gc-probability
+ * and https://www.php.net/manual/en/session.configuration.php#ini.session.gc-divisor
+ * and https://osvaldas.info/enabling-codeigniters-garbage-collector/
+ *
+ * set the probability to 1/1000 to make sure we do not collect too often
+*/
+$config['sess_gc_probability'] = 1;
+$config['sess_gc_divisor'] = 1000;
+
 /*
 |--------------------------------------------------------------------------
 | Cookie Related Variables
@@ -670,3 +681,41 @@ $config['special_callsign'] = false;
 
 // hides the usermenu; takes action only if "special_callsign" is true
 $config['sc_hide_usermenu'] = true;   
+
+
+/*
+|--------------------------------------------------------------------------
+| Impersonate
+|--------------------------------------------------------------------------
+|
+| This config switch disables the impersonate feature. This feauture is used to impersonate another user.
+| Impersonate is enabled by default. To disable it, set the value to false.
+| 
+*/
+
+$config['disable_impersonate'] = false;   
+
+
+/*
+|--------------------------------------------------------------------------
+| Cronmanager Allow Insecure
+|--------------------------------------------------------------------------
+|
+| The cronmanager needs http or https with a valid certificate to work.
+| If you want to use it with https and a self-signed certificate, you need to set this to true.
+| 
+*/
+
+$config['cron_allow_insecure'] = false;
+
+/*
+|--------------------------------------------------------------------------
+| Update / version check
+|--------------------------------------------------------------------------
+
+| This config switch disables the check for newer releases on github and
+| hides the banner to admin users if a newer release as published.
+| Default ON.
+ */
+
+$config['disable_version_check'] = false;

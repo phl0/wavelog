@@ -99,6 +99,16 @@
                         <div class="mb-3 row">
                             <div class="col-md-10">
                                 <div class="form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="markEqsl" value="1" id="markEqslImport">
+                                    <label class="form-check-label" for="markEqslImport"><?= __("Mark imported QSOs as uploaded to eQSL Logbook") ?></label>
+                                </div>
+                                <div class="small form-text text-muted"><?= __("Select if ADIF being imported does not contain this information.") ?></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <div class="col-md-10">
+                                <div class="form-check-inline">
                                     <input class="form-check-input" type="checkbox" name="markHrd" value="1" id="markHrdImport">
                                     <label class="form-check-label" for="markHrdImport"><?= __("Mark imported QSOs as uploaded to HRDLog.net Logbook") ?></label>
                                 </div>
@@ -140,7 +150,7 @@
                             <div class="col-md-10">
                                 <div class="form-check-inline">
                                     <input class="form-check-input" type="checkbox" name="operatorName" value="1" id="operatorName">
-                                    <label class="form-check-label" for="operatorName"><?= __("Always use login-callsign as operator-name on import") ?></label>
+                                    <label class="form-check-label" for="operatorName"><?= __("Always use the logged-in account callsign as the operator call during import") ?></label>
                                 </div>
                             </div>
                         </div>
@@ -151,7 +161,7 @@
                                     <input class="form-check-input" type="checkbox" name="skipStationCheck" value="1" id="skipStationCheck">
                                     <label class="form-check-label" for="skipStationCheck"><span class="badge text-bg-warning"><?= __("DANGER") ?></span> <?= __("Ignore Stationcallsign on import") ?></label>
                                 </div>
-                                <div class="small form-text text-muted"><?= __("If selected, Wavelog will try to import <b>all</b> QSO's of the ADIF, regardless if they match to the chosen station-location.") ?></div>
+                                <div class="small form-text text-muted"><?= sprintf(__("If selected, Wavelog will try to import %sall%s QSO's of the ADIF, regardless if they match to the chosen station-location."), '<b>', '</b>'); ?></div>
                             </div>
                         </div>
 
@@ -164,8 +174,9 @@
                     <form class="form" action="<?php echo site_url('adif/export_custom'); ?>" method="post" enctype="multipart/form-data">
                         <h5 class="card-title"><?= __("Take your logbook file anywhere!") ?> </h5>
                         <p class="card-text"><?= __("Exporting ADIFs allows you to import contacts into third party applications like LoTW, Awards or just for keeping a backup.") ?> </p>
+                        <div class="small form-text text-muted"><?= __("Select Station Location") ?></div>
                         <select name="station_profile" class="form-select mb-2 me-sm-2 w-50 w-lg-100">
-                            <option value="0"><?= __("Select Station Location") ?></option>
+                            <option value="0"><?= __("All") ?></option>
                             <?php foreach ($station_profile->result() as $station) { ?>
                                 <option value="<?php echo $station->station_id; ?>" <?php if ($station->station_id == $this->stations->find_active()) {
                                                                                         echo " selected =\"selected\"";
@@ -173,10 +184,10 @@
                             <?php } ?>
                         </select>
                         <br>
-                        <label for="from"><?= __("From date") . ": " ?></label>
+                        <div class="small form-text text-muted"><?= __("From date") . ":"; ?></div>
                         <input name="from" id="from" type="date" class="form-control w-auto">
                         <br>
-                        <label for="to"><?= __("To date") . ": " ?></label>
+                        <div class="small form-text text-muted"><?= __("To date") . ":"; ?></div>
                         <input name="to" id="to" type="date" class="form-control w-auto">
 
                         <br>

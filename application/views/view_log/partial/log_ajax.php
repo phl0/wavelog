@@ -32,13 +32,15 @@ function echo_table_col($row, $name) {
 		case 'WWFF':    echo '<td>' . ($row->COL_WWFF_REF ?? '') . '</td>'; break;
 		case 'POTA':    echo '<td>' . ($row->COL_POTA_REF ?? '') . '</td>'; break;
 		case 'Grid':
-            $ci->load->library('qra');
-            echo '<td>' . ($ci->qra->echoQrbCalcLink($row->station_gridsquare, $row->COL_VUCC_GRIDS, $row->COL_GRIDSQUARE)) . '</td>'; break;
-		case 'Distance':echo '<td>' . ($row->COL_DISTANCE ? $row->COL_DISTANCE . '&nbsp;km' : '') . '</td>'; break;
+				if(!$ci->load->is_loaded('Qra')) {
+					$ci->load->library('Qra');
+				}
+				echo '<td>' . ($ci->qra->echoQrbCalcLink($row->station_gridsquare, $row->COL_VUCC_GRIDS, $row->COL_GRIDSQUARE)) . '</td>'; break;
+		case 'Distance':echo '<td><span data-bs-toggle="tooltip" title="'.$row->COL_GRIDSQUARE.'">' . ($row->COL_DISTANCE ? $row->COL_DISTANCE . '&nbsp;km' : '') . '</span></td>'; break;
 		case 'Band':
-            echo '<td>'; if($row->COL_SAT_NAME ?? '' != '') { echo '<a href="https://db.satnogs.org/search/?q='.$row->COL_SAT_NAME.'" target="_blank"><span data-bs-toggle="tooltip" title="'.($row->COL_BAND ?? '').'">'.$row->COL_SAT_NAME.'</span></a></td>'; } else { if ($row->COL_FREQ ?? ''!= '') { echo ' <span data-bs-toggle="tooltip" title="'.$ci->frequency->hz_to_mhz($row->COL_FREQ ?? 0).'">'. strtolower($row->COL_BAND ?? '').'</span>'; } else { echo strtolower($row->COL_BAND ?? ''); } } echo '</td>'; break;
+            echo '<td>'; if($row->COL_SAT_NAME ?? '' != '') { echo '<a href="https://db.satnogs.org/search/?q='.$row->COL_SAT_NAME.'" target="_blank"><span data-bs-toggle="tooltip" title="'.($row->COL_BAND ?? '').'">'.$row->COL_SAT_NAME.'</span></a></td>'; } else { if ($row->COL_FREQ ?? ''!= '') { echo ' <span data-bs-toggle="tooltip" title="'.$ci->frequency->qrg_conversion($row->COL_FREQ ?? 0).'">'. strtolower($row->COL_BAND ?? '').'</span>'; } else { echo strtolower($row->COL_BAND ?? ''); } } echo '</td>'; break;
 		case 'Frequency':
-            echo '<td>'; if($row->COL_SAT_NAME ?? '' != '') { echo '<a href="https://db.satnogs.org/search/?q='.$row->COL_SAT_NAME.'" target="_blank">'; if ($row->COL_FREQ != null) { echo ' <span data-bs-toggle="tooltip" title="'.$ci->frequency->hz_to_mhz($row->COL_FREQ).'">'.$row->COL_SAT_NAME.'</span>'; } else { echo $row->COL_SAT_NAME; } echo '</a></td>'; } else { if ($row->COL_FREQ != null) { echo ' <span data-bs-toggle="tooltip" title="'.$row->COL_BAND.'">'.$ci->frequency->hz_to_mhz($row->COL_FREQ).'</span>'; } else { echo strtolower($row->COL_BAND); } } echo '</td>'; break;
+            echo '<td>'; if($row->COL_SAT_NAME ?? '' != '') { echo '<a href="https://db.satnogs.org/search/?q='.$row->COL_SAT_NAME.'" target="_blank">'; if ($row->COL_FREQ != null) { echo ' <span data-bs-toggle="tooltip" title="'.$ci->frequency->qrg_conversion($row->COL_FREQ).'">'.$row->COL_SAT_NAME.'</span>'; } else { echo $row->COL_SAT_NAME; } echo '</a></td>'; } else { if ($row->COL_FREQ != null) { echo ' <span data-bs-toggle="tooltip" title="'.$row->COL_BAND.'">'.$ci->frequency->qrg_conversion($row->COL_FREQ).'</span>'; } else { echo strtolower($row->COL_BAND); } } echo '</td>'; break;
 		case 'State':   echo '<td>' . ($row->COL_STATE ?? '') . '</td>'; break;
 		case 'Operator':echo '<td>' . ($row->COL_OPERATOR ?? '') . '</td>'; break;
 		case 'Location':echo '<td>' . ($row->station_profile_name ?? '') . '</td>'; break;
@@ -102,9 +104,9 @@ function echo_table_col($row, $name) {
                     $custom_date_format = $this->config->item('qso_date_format');
                 }
                 echo '<tr class="tr'.($i & 1).'" id="qso_'. $row->COL_PRIMARY_KEY .'">'; ?>
-            <td><?php $timestamp = strtotime($row->COL_TIME_ON); echo date($custom_date_format, $timestamp); ?></td>
+            <td><?php $timestamp = strtotime($row->COL_TIME_ON ?? '1970-01-01 00:00:00'); echo date($custom_date_format, $timestamp); ?></td>
             <?php if(($this->config->item('use_auth') && ($this->session->userdata('user_type') >= 2)) || $this->config->item('use_auth') === FALSE || ($this->config->item('show_time'))) { ?>
-                <td><?php $timestamp = strtotime($row->COL_TIME_ON); echo date('H:i', $timestamp); ?></td>
+                <td><?php $timestamp = strtotime($row->COL_TIME_ON ?? '1970-01-01 00:00:00'); echo date('H:i', $timestamp); ?></td>
             <?php } ?>
             <td>
                 <a id="edit_qso" href="javascript:displayQso(<?php echo $row->COL_PRIMARY_KEY; ?>)"><?php echo str_replace("0","&Oslash;",strtoupper($row->COL_CALL)); ?></a>
@@ -283,8 +285,8 @@ function echo_table_col($row, $name) {
                 <?php } ?>
 
 		<?php if ( strpos($this->session->userdata('user_default_confirmation'),'Z') !== false && ($this->session->userdata('hasQrzKey') != "") ) { ?>
-                    <td class="qrz">
-                        <span <?php if ($row->COL_QRZCOM_QSO_UPLOAD_STATUS == "Y") { echo "title=\"".__("Sent"); if ($row->COL_QRZCOM_QSO_UPLOAD_DATE != null) { $timestamp = strtotime($row->COL_QRZCOM_QSO_UPLOAD_DATE); echo " ".($timestamp!=''?date($custom_date_format, $timestamp):''); } echo "\" data-bs-toggle=\"tooltip\""; } ?> class="qrz-<?php echo ($row->COL_QRZCOM_QSO_UPLOAD_STATUS=='Y')?'green':'red'?>">&#9650;</span>
+                    <td id="qrz_<?php echo $row->COL_PRIMARY_KEY; ?>" class="qrz">
+                        <span <?php if ($row->COL_QRZCOM_QSO_UPLOAD_STATUS == "Y") { echo 'title="'.__("Sent").($row->COL_QRZCOM_QSO_UPLOAD_DATE != null ? " ".date($custom_date_format, strtotime($row->COL_QRZCOM_QSO_UPLOAD_DATE)) : '').'" data-bs-toggle="tooltip"'; } elseif ($row->COL_QRZCOM_QSO_UPLOAD_STATUS == 'M' && $row->COL_QRZCOM_QSO_UPLOAD_DATE != NULL) { echo 'title="'.__("Modified")."<br />(".__("last sent")." ".date($custom_date_format, strtotime($row->COL_QRZCOM_QSO_UPLOAD_DATE)).")".'" data-bs-toggle="tooltip" data-bs-html="true"'; } elseif ($row->COL_QRZCOM_QSO_UPLOAD_STATUS == 'I') { echo 'title="'.__("Invalid (Ignore)").'" data-bs-toggle="tooltip"'; }?> class="qrz-<?php if ($row->COL_QRZCOM_QSO_UPLOAD_STATUS == 'Y') { echo 'green'; } elseif ($row->COL_QRZCOM_QSO_UPLOAD_STATUS == 'M' && $row->COL_QRZCOM_QSO_UPLOAD_DATE != NULL) { echo 'yellow'; } elseif ($row->COL_QRZCOM_QSO_UPLOAD_STATUS == 'I') { echo 'grey'; } else { echo 'red'; } ?>">&#9650;</span>
                         <span <?php if ($row->COL_QRZCOM_QSO_DOWNLOAD_STATUS == "Y") { echo "title=\"".__("Received"); if ($row->COL_QRZCOM_QSO_DOWNLOAD_DATE != null) { $timestamp = strtotime($row->COL_QRZCOM_QSO_DOWNLOAD_DATE); echo " ".($timestamp!=''?date($custom_date_format, $timestamp):''); } echo "\" data-bs-toggle=\"tooltip\""; } ?> class="qrz-<?php echo ($row->COL_QRZCOM_QSO_DOWNLOAD_STATUS=='Y')?'green':'red'?>">&#9660;</span>
                     </td>
                 <?php } ?>

@@ -2,6 +2,9 @@ var callBookProcessingDialog = null;
 var inCallbookProcessing = false;
 var inCallbookItemProcessing = false;
 
+// Array of valid continent codes
+const validContinents = ['AF', 'EU', 'AS', 'SA', 'NA', 'OC', 'AN'];
+
 $('#band').change(function () {
 	var band = $("#band option:selected").text();
 	if (band != "SAT") {
@@ -70,6 +73,9 @@ function updateRow(qso) {
 	if ($(".lotwconfirmation")[0] && user_options.lotw.show == "true"){
 		cells.eq(c++).html(qso.lotw);
 	}
+	if (user_options.qrz.show == "true"){
+		cells.eq(c++).html(qso.qrz);
+	}
 	if (user_options.qslmsg.show == "true"){
 		cells.eq(c++).text(qso.qslMessage);
 	}
@@ -118,6 +124,12 @@ function updateRow(qso) {
 	if (user_options.myrefs.show == "true"){
 		cells.eq(c++).text(qso.deRefs);
 	}
+	if (user_options.continent.show == "true"){
+		cells.eq(c++).text(qso.continent);
+	}
+	if (user_options.profilename.show == "true"){
+		cells.eq(c++).text(qso.profilename);
+	}
 
 	$('[data-bs-toggle="tooltip"]').tooltip();
 	return row;
@@ -158,16 +170,28 @@ function loadQSOTable(rows) {
 		var data = [];
 		data.push('<div class="form-check"><input class="form-check-input" type="checkbox" /></div>');
 		if (user_options.datetime.show == "true"){
-			data.push(qso.qsoDateTime);
+			if (qso.datetime === '') {
+				data.push('<span class="bg-danger">Missing date</span>');
+			} else {
+				data.push(qso.qsoDateTime);
+			}
 		}
 		if (user_options.de.show == "true"){
 			data.push(qso.de.replaceAll('0', 'Ø'));
 		}
 		if (user_options.dx.show == "true"){
-			data.push('<span class="qso_call"><a id="edit_qso" href="javascript:displayQso('+qso.qsoID+')"><span id="dx">'+qso.dx.replaceAll('0', 'Ø')+'</span></a><span class="qso_icons">' + (qso.callsign == '' ? '' : ' <a href="https://lotw.arrl.org/lotwuser/act?act='+qso.callsign+'" target="_blank"><small id="lotw_info" class="badge bg-success'+qso.lotw_hint+'" data-bs-toggle="tooltip" title="LoTW User. Last upload was ' + qso.lastupload + ' ">L</small></a>') + ' <a target="_blank" href="https://www.qrz.com/db/'+qso.dx+'"><img width="16" height="16" src="'+base_url+ 'images/icons/qrz.png" alt="Lookup ' + qso.dx.replaceAll('0', 'Ø') + ' on QRZ.com"></a> <a target="_blank" href="https://www.hamqth.com/'+qso.dx+'"><img width="16" height="16" src="'+base_url+ 'images/icons/hamqth.png" alt="Lookup ' + qso.dx.replaceAll('0', 'Ø') + ' on HamQTH"></a> <a target="_blank" href="https://clublog.org/logsearch.php?log='+qso.dx+'&call='+qso.de+'"><img width="16" height="16" src="'+base_url+'images/icons/clublog.png" alt="Clublog Log Search"></a></span></span>');
+			if (qso.dx === '') {
+				data.push('<span class="bg-danger">Missing callsign</span>');
+			} else {
+				data.push('<span class="qso_call"><a id="edit_qso" href="javascript:displayQso('+qso.qsoID+')"><span id="dx">'+qso.dx.replaceAll('0', 'Ø')+'</span></a><span class="qso_icons">' + (qso.callsign == '' ? '' : ' <a href="https://lotw.arrl.org/lotwuser/act?act='+qso.callsign+'" target="_blank"><small id="lotw_info" class="badge bg-success'+qso.lotw_hint+'" data-bs-toggle="tooltip" title="LoTW User. Last upload was ' + qso.lastupload + ' ">L</small></a>') + ' <a target="_blank" href="https://www.qrz.com/db/'+qso.dx+'"><img width="16" height="16" src="'+base_url+ 'images/icons/qrz.png" alt="Lookup ' + qso.dx.replaceAll('0', 'Ø') + ' on QRZ.com"></a> <a target="_blank" href="https://www.hamqth.com/'+qso.dx+'"><img width="16" height="16" src="'+base_url+ 'images/icons/hamqth.png" alt="Lookup ' + qso.dx.replaceAll('0', 'Ø') + ' on HamQTH"></a> <a target="_blank" href="https://clublog.org/logsearch.php?log='+qso.dx+'&call='+qso.de+'"><img width="16" height="16" src="'+base_url+'images/icons/clublog.png" alt="Clublog Log Search"></a></span></span>');
+			}
 		}
 		if (user_options.mode.show == "true"){
-			data.push(qso.mode);
+			if (qso.mode === '') {
+				data.push('<span class="bg-danger">Missing mode</span>');
+			} else {
+				data.push(qso.mode);
+			}
 		}
 		if (user_options.rsts.show == "true"){
 			data.push(qso.rstS);
@@ -176,7 +200,11 @@ function loadQSOTable(rows) {
 			data.push(qso.rstR);
 		}
 		if (user_options.band.show == "true"){
-			data.push(qso.band);
+			if (qso.band === '') {
+				data.push('<span class="bg-danger">Missing band</span>');
+			} else {
+				data.push(qso.band);
+			}
 		}
 		if (user_options.gridsquare.show == "true"){
 			data.push(qso.gridsquare);
@@ -198,6 +226,9 @@ function loadQSOTable(rows) {
 		}
 		if ($(".lotwconfirmation")[0] && user_options.lotw.show == "true"){
 			data.push(qso.lotw);
+		}
+		if (user_options.qrz.show == "true"){
+			data.push(qso.qrz);
 		}
 		if (user_options.qslmsg.show == "true"){
 			data.push(qso.qslMessage);
@@ -246,6 +277,20 @@ function loadQSOTable(rows) {
 		}
 		if (user_options.myrefs.show == "true"){
 			data.push(qso.deRefs);
+		}
+		if (user_options.continent.show == "true"){
+			if (qso.continent === '') {
+				data.push(qso.continent);
+			} else if (!validContinents.includes(qso.continent.toUpperCase())) {
+				// Check if qso.continent is not in the list of valid continents
+				data.push('<span class="bg-danger">Invalid continent</span> ' + qso.continent);
+			} else {
+				// Continent is valid
+				data.push(qso.continent);
+			}
+		}
+		if (user_options.profilename.show == "true"){
+			data.push(qso.profilename);
 		}
 
 		let createdRow = table.row.add(data).index();
@@ -325,6 +370,7 @@ $(document).ready(function () {
 		enableFiltering: true,
 		enableFullValueFiltering: false,
 		enableCaseInsensitiveFiltering: true,
+		filterPlaceholder: lang_general_word_search,
 		numberDisplayed: 1,
 		inheritClass: true,
 		buttonWidth: '100%',
@@ -336,7 +382,20 @@ $(document).ready(function () {
 
 
 	$('#searchForm').submit(function (e) {
-		var container = L.DomUtil.get('advancedmap');
+		let container = L.DomUtil.get('advancedmap');
+		let selectedlocations = $('#de').val();
+		if (Array.isArray(selectedlocations) && selectedlocations.length === 0) {
+			BootstrapDialog.alert({
+				title: 'INFO',
+				message: 'You need to select at least 1 location to do a search!',
+				type: BootstrapDialog.TYPE_INFO,
+				closable: false,
+				draggable: false,
+				callback: function (result) {
+				}
+			});
+			return false;
+		}
 
 		if(container != null){
 			container._leaflet_id = null;
@@ -355,7 +414,7 @@ $(document).ready(function () {
 			data: {
 				dateFrom: this.dateFrom.value,
 				dateTo: this.dateTo.value,
-				de: $('#de').val(),
+				de: selectedlocations,
 				dx: this.dx.value,
 				mode: this.mode.value,
 				band: this.band.value,
@@ -387,6 +446,8 @@ $(document).ready(function () {
 				qslimages: this.qslimages.value,
 				dupes: this.dupes.value,
 				contest: this.contest.value,
+				invalid: this.invalid.value,
+				continent: this.continent.value,
 			},
 			dataType: 'json',
 			success: function (data) {
@@ -407,6 +468,7 @@ $(document).ready(function () {
 			},
 		});
 		$("#dupes").val("");
+		$("#invalid").val("");
 		return false;
 	});
 
@@ -659,6 +721,10 @@ $(document).ready(function () {
 		dupeSearch();
 	});
 
+	$('#invalidButton').click(function (event) {
+		invalidSearch();
+	});
+
 	$('#editButton').click(function (event) {
 		editQsos();
 	});
@@ -767,6 +833,15 @@ $(document).ready(function () {
 		$('#searchForm').submit();
 	}
 
+	function invalidSearch() {
+		$("#invalid").val("Y");
+		$('#invalidButton').prop('disabled', true).addClass('running');
+		setTimeout(() => {
+			$('#invalidButton').prop('disabled', false).removeClass("running");
+		}, 1000);
+		$('#searchForm').submit();
+	}
+
 	function quickSearch(type) {
 		var elements = $('#qsoList tbody input:checked');
 		var nElements = elements.length;
@@ -792,6 +867,7 @@ $(document).ready(function () {
 				callback: function (result) {
 				}
 			});
+			return;
 		}
 
 		elements.each(function() {
@@ -1072,6 +1148,9 @@ function saveOptions() {
 			dok: $('input[name="dok"]').is(':checked') ? true : false,
 			wwff: $('input[name="wwff"]').is(':checked') ? true : false,
 			sig: $('input[name="sig"]').is(':checked') ? true : false,
+			continent: $('input[name="continent"]').is(':checked') ? true : false,
+			qrz: $('input[name="qrz"]').is(':checked') ? true : false,
+			profilename: $('input[name="profilename"]').is(':checked') ? true : false,
 			gridsquare_layer: $('input[name="gridsquareoverlay"]').is(':checked') ? true : false,
 			path_lines: $('input[name="pathlines"]').is(':checked') ? true : false,
 			cqzone_layer: $('input[name="cqzones"]').is(':checked') ? true : false,

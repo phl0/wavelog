@@ -89,16 +89,19 @@
                     </tr>
 
                     <?php if($this->config->item('display_freq') == true) { ?>
-                    <tr>
-                        <td><?= __("Frequency"); ?></td>
-                        <td><?php echo $this->frequency->hz_to_mhz($row->COL_FREQ); ?></td>
-                    </tr>
-                    <?php if($row->COL_FREQ_RX != 0) { ?>
-                    <tr>
-                        <td><?= __("Frequency (RX)"); ?></td>
-                        <td><?php echo $this->frequency->hz_to_mhz($row->COL_FREQ_RX); ?></td>
-                    </tr>
-                    <?php }} ?>
+                        <?php if($row->COL_FREQ != 0) { ?>
+                        <tr>
+                            <td><?= __("Frequency"); ?></td>
+                            <td><?php echo $this->frequency->qrg_conversion($row->COL_FREQ); ?></td>
+                        </tr>
+                        <?php } ?>
+                        <?php if($row->COL_FREQ_RX != 0) { ?>
+                        <tr>
+                            <td><?= __("Frequency (RX)"); ?></td>
+                            <td><?php echo $this->frequency->qrg_conversion($row->COL_FREQ_RX); ?></td>
+                        </tr>
+                        <?php } ?>
+                    <?php } ?>
 
                     <tr>
                         <td><?= __("Mode"); ?></td>
@@ -305,14 +308,14 @@
                             <?php
                             $pota_refs = explode(',', $row->COL_POTA_REF);
                             $link_output = '';
-                            
+
                             foreach ($pota_refs as $pota_ref) {
                                 $pota_ref = trim($pota_ref);
                                 if (!empty($pota_ref)) {
                                     $link_output .= '<a href="https://pota.app/#/park/' . $pota_ref . '" target="_blank">' . $pota_ref . '</a>, ';
                                 }
                             }
-                            
+
                             $link_output = rtrim($link_output, ', ');
                             echo $link_output;
                             ?>
@@ -323,7 +326,16 @@
                     <?php if($row->COL_SIG != null) { ?>
                     <tr>
                         <td><?= __("Sig"); ?></td>
-                        <td><?php echo $row->COL_SIG; ?></td>
+                        <?php
+                        switch ($row->COL_SIG) {
+                        case "GMA":
+                           echo "<td><a href=\"https://cqgma.org/\" target=\"_blank\">".$row->COL_SIG."</a></td>";
+                           break;
+                        default:
+                           echo "<td>".$row->COL_SIG."</td>";
+                           break;
+                        }
+                        ?>
                     </tr>
                     <?php } ?>
 
@@ -688,7 +700,7 @@
 
 <?php
 	if($row->COL_GRIDSQUARE != null && strlen($row->COL_GRIDSQUARE) >= 4) {
-		$stn_loc = $this->qra->qra2latlong(trim($row->COL_GRIDSQUARE));	
+		$stn_loc = $this->qra->qra2latlong(trim($row->COL_GRIDSQUARE));
         if($stn_loc[0] != 0) {
 		    $lat = $stn_loc[0];
 		    $lng = $stn_loc[1];
@@ -700,7 +712,7 @@
             $grid2 = $this->qra->qra2latlong(trim($grids[1]));
 
             $coords[]=array('lat' => $grid1[0],'lng'=> $grid1[1]);
-            $coords[]=array('lat' => $grid2[0],'lng'=> $grid2[1]);    
+            $coords[]=array('lat' => $grid2[0],'lng'=> $grid2[1]);
 
             $midpoint = $this->qra->get_midpoint($coords);
             $lat = $midpoint[0];
@@ -713,9 +725,9 @@
             $grid4 = $this->qra->qra2latlong(trim($grids[3]));
 
             $coords[]=array('lat' => $grid1[0],'lng'=> $grid1[1]);
-            $coords[]=array('lat' => $grid2[0],'lng'=> $grid2[1]);    
-            $coords[]=array('lat' => $grid3[0],'lng'=> $grid3[1]);    
-            $coords[]=array('lat' => $grid4[0],'lng'=> $grid4[1]);    
+            $coords[]=array('lat' => $grid2[0],'lng'=> $grid2[1]);
+            $coords[]=array('lat' => $grid3[0],'lng'=> $grid3[1]);
+            $coords[]=array('lat' => $grid4[0],'lng'=> $grid4[1]);
 
             $midpoint = $this->qra->get_midpoint($coords);
             $lat = $midpoint[0];

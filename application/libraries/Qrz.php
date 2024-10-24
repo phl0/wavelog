@@ -10,6 +10,7 @@ class Qrz {
 	// Return session key
 	public function session($username, $password) {
 		// URL to the XML Source
+		$ci = & get_instance();
 		$xml_feed_url = 'https://xmldata.qrz.com/xml/current/?username='.$username.';password='.urlencode($password).';agent=wavelog';
 		
 		// CURL Functions
@@ -18,7 +19,8 @@ class Qrz {
 		curl_setopt($ch, CURLOPT_HEADER, false);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+		curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog/'.$ci->optionslib->get_option('version'));
 		$xml = curl_exec($ch);
 		curl_close($ch);
 		
@@ -43,7 +45,8 @@ class Qrz {
 		curl_setopt($ch, CURLOPT_HEADER, false);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+		curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog/'.$ci->optionslib->get_option('version'));
 		$xml = curl_exec($ch);
 		curl_close($ch);
 		
@@ -60,6 +63,7 @@ class Qrz {
 
 	public function search($callsign, $key, $use_fullname = false, $reduced = false) {
 		$data = null;
+		$ci = & get_instance();
 		try {
 			// URL to the XML Source
 			$xml_feed_url = 'https://xmldata.qrz.com/xml/current/?s=' . $key . ';callsign=' . $callsign . '';
@@ -70,7 +74,8 @@ class Qrz {
 			curl_setopt($ch, CURLOPT_HEADER, false);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-        	curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+			curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog/'.$ci->optionslib->get_option('version'));
 			$xml = curl_exec($ch);
 			$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 			curl_close($ch);
@@ -109,6 +114,8 @@ class Qrz {
 				$data['iota'] 	= (string)$xml->Callsign->iota;
 				$data['qslmgr'] = (string)$xml->Callsign->qslmgr;
 				$data['image'] 	= (string)$xml->Callsign->image;
+				$data['ituz'] 	= (string)$xml->Callsign->ituzone;
+				$data['cqz'] 	= (string)$xml->Callsign->cqzone;
 
 				if ($xml->Callsign->country == "United States") {
 					$data['us_county'] = (string)$xml->Callsign->county;
@@ -128,6 +135,8 @@ class Qrz {
 				$data['qslmgr'] = (string)$xml->Callsign->qslmgr;
 				$data['image'] 	= (string)$xml->Callsign->image;
 				$data['us_county'] = '';
+				$data['ituz'] = '';
+				$data['cqz'] = '';
 
 			}
 		} finally {

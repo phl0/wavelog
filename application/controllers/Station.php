@@ -14,28 +14,9 @@ class Station extends CI_Controller
 
 		$this->load->model('user_model');
 		if (!$this->user_model->authorize(2)) {
-			$this->session->set_flashdata('notice', 'You\'re not allowed to do that!');
+			$this->session->set_flashdata('error', __("You're not allowed to do that!"));
 			redirect('dashboard');
 		}
-	}
-
-	public function index()
-	{
-		$this->load->model('stations');
-		$this->load->model('Logbook_model');
-		$this->load->model('user_model');
-
-		$data['is_admin'] = ($this->user_model->authorize(99));
-
-		$data['stations'] = $this->stations->all_with_count();
-		$data['current_active'] = $this->stations->find_active();
-		$data['is_there_qsos_with_no_station_id'] = $this->Logbook_model->check_for_station_id();
-
-		// Render Page
-		$data['page_title'] = __("Station Location");
-		$this->load->view('interface_assets/header', $data);
-		$this->load->view('station_profile/index');
-		$this->load->view('interface_assets/footer');
 	}
 
 	public function create()
@@ -50,6 +31,7 @@ class Station extends CI_Controller
 		$this->load->library('form_validation');
 
 		$this->form_validation->set_rules('station_profile_name', 'Station Profile Name', 'required');
+		$this->form_validation->set_rules('dxcc', 'DXCC', 'required');
 
 		if ($this->form_validation->run() == FALSE) {
 			$data['page_title'] = __("Create Station Location");
@@ -69,6 +51,7 @@ class Station extends CI_Controller
 			$data = $this->load_station_for_editing($id);
 			$data['page_title'] = __("Edit Station Location: ") . $data['my_station_profile']->station_profile_name;
 
+			$this->form_validation->set_rules('dxcc', 'DXCC', 'required');
 			if ($this->form_validation->run() == FALSE) {
 				$this->load->view('interface_assets/header', $data);
 				$this->load->view('station_profile/edit');

@@ -10,7 +10,7 @@ class adif extends CI_Controller {
 		$this->load->helper(array('form', 'url'));
 
 		$this->load->model('user_model');
-		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('notice', 'You\'re not allowed to do that!'); redirect('dashboard'); }
+		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
 	public function test() {
@@ -42,7 +42,7 @@ class adif extends CI_Controller {
 
 		$this->load->model('adif_data');
 
-		$data['qsos'] = $this->adif_data->export_all();
+		$data['qsos'] = $this->adif_data->export_all(null, $this->input->post('from', true), $this->input->post('to', true));
 
 		$this->load->view('adif/data/exportall', $data);
 	}
@@ -83,10 +83,10 @@ class adif extends CI_Controller {
 		$station_id = $this->security->xss_clean($this->input->post('station_profile'));
 
 		// Used for exporting QSOs not previously exported to LoTW
-        if ($this->input->post('exportLotw') == 1) {
-            $exportLotw = true;
-        } else {
-            $exportLotw = false;
+		if ($this->input->post('exportLotw') == 1) {
+			$exportLotw = true;
+		} else {
+			$exportLotw = false;
 		}
 
 		$data['qsos'] = $this->adif_data->export_custom($this->input->post('from'), $this->input->post('to'), $station_id, $exportLotw);
@@ -95,29 +95,29 @@ class adif extends CI_Controller {
 
 
 		if ($this->input->post('markLotw') == 1) {
-            foreach ($data['qsos']->result() as $qso)
-            {
-                $this->adif_data->mark_lotw_sent($qso->COL_PRIMARY_KEY);
-            }
-        }
-    }
+			foreach ($data['qsos']->result() as $qso)
+			{
+				$this->adif_data->mark_lotw_sent($qso->COL_PRIMARY_KEY);
+			}
+		}
+	}
 
-    public function mark_lotw() {
-        // Set memory limit to unlimited to allow heavy usage
-        ini_set('memory_limit', '-1');
+	public function mark_lotw() {
+		// Set memory limit to unlimited to allow heavy usage
+		ini_set('memory_limit', '-1');
 
 		$station_id = $this->security->xss_clean($this->input->post('station_profile'));
-        $this->load->model('adif_data');
+		$this->load->model('adif_data');
 
-        $data['qsos'] = $this->adif_data->export_custom($this->input->post('from'), $this->input->post('to'), $station_id);
+		$data['qsos'] = $this->adif_data->export_custom($this->input->post('from'), $this->input->post('to'), $station_id);
 
-        foreach ($data['qsos']->result() as $qso)
-        {
-            $this->adif_data->mark_lotw_sent($qso->COL_PRIMARY_KEY);
-        }
+		foreach ($data['qsos']->result() as $qso)
+		{
+			$this->adif_data->mark_lotw_sent($qso->COL_PRIMARY_KEY);
+		}
 
-        $this->load->view('adif/mark_lotw', $data);
-    }
+		$this->load->view('adif/mark_lotw', $data);
+	}
 
 	public function export_lotw()
 	{
@@ -146,8 +146,8 @@ class adif extends CI_Controller {
 		$data['max_upload'] = ini_get('upload_max_filesize');
 
 		$data['station_profile'] = $this->stations->all_of_user();
-        $active_station_id = $this->stations->find_active();
-        $station_profile = $this->stations->profile($active_station_id);
+		$active_station_id = $this->stations->find_active();
+		$station_profile = $this->stations->profile($active_station_id);
 
 		$data['active_station_info'] = $station_profile->row();
 		$data['active_station_id'] = $active_station_id;
@@ -214,7 +214,9 @@ class adif extends CI_Controller {
 				}
 				if (!($stopnow)) {
 
-					$this->load->library('adif_parser');
+					if (!$this->load->is_loaded('adif_parser')) {
+						$this->load->library('adif_parser');
+					}
 
 					$this->adif_parser->load_from_file('./uploads/'.$p_adif);
 					unlink('./uploads/'.$p_adif);
@@ -233,7 +235,16 @@ class adif extends CI_Controller {
 						array_push($alladif,$record);
 					};
 					$record='';	// free memory
-					$custom_errors = $this->logbook_model->import_bulk($alladif, $this->input->post('station_profile'), $this->input->post('skipDuplicate'), $this->input->post('markClublog'),$this->input->post('markLotw'), $this->input->post('dxccAdif'), $this->input->post('markQrz'), $this->input->post('markHrd'), true, $this->input->post('operatorName'), false, $this->input->post('skipStationCheck'));
+					try {
+						$custom_errors = $this->logbook_model->import_bulk($alladif, $this->input->post('station_profile'), $this->input->post('skipDuplicate'), $this->input->post('markClublog'),$this->input->post('markLotw'), $this->input->post('dxccAdif'), $this->input->post('markQrz'), $this->input->post('markEqsl'), $this->input->post('markHrd'), true, $this->input->post('operatorName'), false, $this->input->post('skipStationCheck'));
+					} catch (Exception $e) {
+						log_message('error', 'Import error: '.$e->getMessage());
+						$data['page_title'] = __("ADIF Import failed!");
+						$this->load->view('interface_assets/header', $data);
+						$this->load->view('adif/import_failed');
+						$this->load->view('interface_assets/footer');
+						return;
+					}
 				} else {	// Failure, if no ADIF inside ZIP
 					$data['max_upload'] = ini_get('upload_max_filesize');
 					$this->load->view('interface_assets/header', $data);
@@ -284,7 +295,9 @@ class adif extends CI_Controller {
 
 			$this->load->model('logbook_model');
 
-			$this->load->library('adif_parser');
+			if (!$this->load->is_loaded('adif_parser')) {
+				$this->load->library('adif_parser');
+			}
 
 			$this->adif_parser->load_from_file('./uploads/'.$data['upload_data']['file_name']);
 
@@ -321,7 +334,7 @@ class adif extends CI_Controller {
 			$this->load->view('adif/dcl_success');
 			$this->load->view('interface_assets/footer');
 		}
-   }
+	}
 }
 
 /* End of file adif.php */

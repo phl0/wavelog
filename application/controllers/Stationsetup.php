@@ -12,7 +12,7 @@ class Stationsetup extends CI_Controller {
 		$this->load->helper(array('form', 'url'));
 
 		$this->load->model('user_model');
-		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('notice', 'You\'re not allowed to do that!'); redirect('dashboard'); }
+		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
 	public function index() {
@@ -376,9 +376,9 @@ class Stationsetup extends CI_Controller {
 	}
 
 	private function stationcountry2html($station_country, $dxcc_end) {
-		$returntext = $station_country == '' ? '- ' . __("NONE") . ' -' : $station_country;
+		$returntext = $station_country == '' ? __("Please select one") : $station_country;
 		if ($dxcc_end != NULL) {
-			$returntext .= ' <span class="badge badge-danger">'.__("Deleted DXCC").'</span>';
+			$returntext .= ' <span class="badge bg-danger">'.__("Deleted DXCC").'</span>';
 		}
 
 		return $returntext;

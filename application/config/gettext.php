@@ -56,11 +56,31 @@ $config['gettext_domain'] = NULL;
 |	- Add the new language to this array
 |	- Add the language at the bottom of application/views/debug/index.php
 |	- Add the language at the array in install/includes/gettext/gettext_conf.php
-|	- Add the language at the bottom of install/index.php
+|	- Add the language at the bottom of install/includes/interface_assets/footer.php
 |
 */
 $config['languages'] = array(
 
+	'albanian' => array(
+		'name'      => 'Shqip',
+		'name_en'   => 'Albanian',
+		'folder'    => 'albanian',
+		'locale'    => 'sq',
+		'gettext'   => 'sq',
+		'direction' => 'ltr',
+		'code'      => 'sq',
+		'flag'      => 'al',
+	),
+	'bosnian' => array(
+		'name'      => 'Bosanski',
+		'name_en'   => 'Bosnian',
+		'folder'    => 'bosnian',
+		'locale'    => 'bs',
+		'gettext'   => 'bs',
+		'direction' => 'ltr',
+		'code'      => 'bs',
+		'flag'      => 'ba',
+	),
 	'bulgarian' => array(
 		'name'      => 'Български',
 		'name_en'   => 'Bulgarian',
@@ -80,6 +100,16 @@ $config['languages'] = array(
 		'direction' => 'ltr',
 		'code'      => 'zh-Hans',
 		'flag'      => 'cn',
+	),
+	'croatian' => array(
+		'name'      => 'Hrvatski',
+		'name_en'   => 'Croatian',
+		'folder'    => 'croatian',
+		'locale'    => 'hr',
+		'gettext'   => 'hr',
+		'direction' => 'ltr',
+		'code'      => 'hr',
+		'flag'      => 'hr',
 	),
 	'czech' => array(
 		'name'      => 'Čeština',
@@ -110,6 +140,16 @@ $config['languages'] = array(
 		'direction' => 'ltr',
 		'code'      => 'en',
 		'flag'      => 'us',
+	),
+	'estonian' => array(
+		'name'      => 'Eesti',
+		'name_en'   => 'Estonian',
+		'folder'    => 'estonian',
+		'locale'    => 'et',
+		'gettext'   => 'et',
+		'direction' => 'ltr',
+		'code'      => 'et',
+		'flag'      => 'ee',
 	),
 	'finnish' => array(
 		'name'      => 'Suomi',
@@ -161,6 +201,36 @@ $config['languages'] = array(
 		'code'      => 'it',
 		'flag'      => 'it',
 	),
+	'latvian' => array(
+		'name'      => 'Latviešu',
+		'name_en'   => 'Latvian',
+		'folder'    => 'latvian',
+		'locale'    => 'lv',
+		'gettext'   => 'lv',
+		'direction' => 'ltr',
+		'code'      => 'lv',
+		'flag'      => 'lv',
+	),
+	'lithuanian' => array(
+		'name'      => 'Lietuvių',
+		'name_en'   => 'Lithuanian',
+		'folder'    => 'lithuanian',
+		'locale'    => 'lt',
+		'gettext'   => 'lt',
+		'direction' => 'ltr',
+		'code'      => 'lt',
+		'flag'      => 'lt',
+	),
+	'montenegrin' => array(
+		'name'      => 'Crnogorski',
+		'name_en'   => 'Montenegrin',
+		'folder'    => 'montenegrin',
+		'locale'    => 'cnr',
+		'gettext'   => 'cnr',
+		'direction' => 'ltr',
+		'code'      => 'cnr',
+		'flag'      => 'me',
+	),
 	'polish' => array(
 		'name'      => 'Polski',
 		'name_en'   => 'Polish',
@@ -190,6 +260,16 @@ $config['languages'] = array(
 		'direction' => 'ltr',
 		'code'      => 'ru',
 		'flag'      => 'ru',
+	),
+	'serbian' => array(
+		'name'      => 'Srpski',
+		'name_en'   => 'Serbian',
+		'folder'    => 'serbian',
+		'locale'    => 'sr',
+		'gettext'   => 'sr',
+		'direction' => 'ltr',
+		'code'      => 'sr',
+		'flag'      => 'rs',
 	),
 	'spanish' => array(
 		'name'      => 'Español',

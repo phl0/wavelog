@@ -34,16 +34,21 @@
     var lang_general_word_warning = "<?= __("Warning"); ?>";
     var lang_general_word_cancel = "<?= __("Cancel"); ?>";
     var lang_general_word_ok = "<?= __("OK"); ?>";
+    var lang_general_word_search = "<?= __("Search"); ?>";
     var lang_qso_delete_warning = "<?= __("Warning! Are you sure you want delete QSO with "); ?>";
     var lang_general_word_colors = "<?= __("Colors"); ?>";
     var lang_general_word_confirmed = "<?= __("Confirmed"); ?>";
     var lang_general_word_worked_not_confirmed = "<?= __("Worked not confirmed"); ?>";
     var lang_general_word_not_worked = "<?= __("Not worked"); ?>";
+    var lang_general_gridsquares = "<?= __("Gridsquares"); ?>";
     var lang_admin_close = "<?= __("Close"); ?>";
     var lang_admin_save = "<?= __("Save"); ?>";
     var lang_admin_clear = "<?= __("Clear"); ?>";
     var lang_lotw_propmode_hint = "<?= __("Propagation mode is not supported by LoTW. LoTW QSL fields disabled."); ?>";
-
+    var lang_no_states_for_dxcc_available = "<?= html_entity_decode(__("No states for this DXCC available")); ?>";
+    var lang_qrbcalc_title = '<?= __("Compute QRB and QTF"); ?>';
+    var lang_qrbcalc_errmsg = '<?= __("Error in locators. Please check."); ?>';
+    var lang_general_refresh_list = '<?= __("Refresh List"); ?>';
 </script>
 
 <!-- General JS Files used across Wavelog -->
@@ -236,6 +241,7 @@ if($this->session->userdata('user_id') != null) {
 <?php if ($this->uri->segment(1) == "station") { ?>
     <script language="javascript" src="<?php echo base_url() ;?>assets/js/HamGridSquare.js"></script>
     <script src="<?php echo base_url() ;?>assets/js/sections/station_locations.js"></script>
+    <script src="<?php echo base_url() ;?>assets/js/bootstrap-multiselect.js"></script>
     <script>
         var position;
         function getLocation() {
@@ -681,12 +687,16 @@ $('#dxcc_id').ready(function() {
 
 $('#dxcc_id').on('change', function() {
     printWarning();
-	let dxccadif = $('#dxcc_id').val();
-	let dxccinfo = dxccarray.filter(function(dxcc) {
-		return dxcc.adif == dxccadif;
-	});
-	$("#stationCQZoneInput").val(dxccinfo[0].cq);
-	// $("#stationITUZoneInput").val(dxccinfo[0].itu); // Commented out, since we do not have itu data.
+    <?php if (isset($dxcc_list) && $dxcc_list->result() > 0) { ?>
+        let dxccadif = $('#dxcc_id').val();
+        let dxccinfo = dxccarray.filter(function(dxcc) {
+            return dxcc.adif == dxccadif;
+        });
+        $("#stationCQZoneInput").val(dxccinfo[0].cq);
+        if (dxccadif == 0) {
+            $("#stationITUZoneInput").val(dxccinfo[0].itu); // Only set ITU zone to none if DXCC none is selected. We don't have ITU data for other DXCCs.
+        }
+    <?php } ?>
 });
 </script>
 
@@ -717,9 +727,9 @@ function showActivatorsMap(call, count, grids) {
     let re = /,/g;
     grids = grids.replace(re, ', ');
 
-    var result = "Callsign: "+call.replace('0', '&Oslash;')+"<br />";
-    result +=    "Count: "+count+"<br/>";
-    result +=    "Grids: "+grids+"<br/><br />";
+    var result = '<?= __("Callsign: "); ?>'+call.replace('0', '&Oslash;')+"<br />";
+    result +=    '<?= __("Count: "); ?>'+count+"<br/>";
+    result +=    '<?= __("Grids: "); ?>'+grids+"<br/><br />";
 
     $(".activatorsmapResult").html(result);
 
@@ -736,8 +746,8 @@ function showActivatorsMap(call, count, grids) {
 
     var maidenhead = new L.maidenheadactivators(grid_four).addTo(map);
 
-    var osmUrl='<?php echo $this->optionslib->get_option('option_map_tile_server');?>';
-    var osmAttrib='Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors';
+    var osmUrl = '<?php echo $this->optionslib->get_option('option_map_tile_server');?>';
+    var osmAttrib = option_map_tile_server_copyright;
     var osm = new L.TileLayer(osmUrl, {minZoom: 1, maxZoom: 12, attribution: osmAttrib});
 
     map.addLayer(osm);
@@ -776,24 +786,6 @@ function showActivatorsMap(call, count, grids) {
       });
     </script>
 <?php } ?>
-
-
-
-<?php if ($this->uri->segment(1) == "radio") { ?>
-<!-- If this is the admin/radio page run the JS -->
-<script type="text/javascript">
-    $(document).ready(function(){
-        setInterval(function() {
-            // Get Mode
-            $.get('radio/status/', function(result) {
-                    //$('.status').append(result);
-                    $('.status').html(result);
-            });
-        }, 2000);
- });
-</script>
-<?php } ?>
-
 
 
 <script type="text/javascript">
@@ -835,6 +827,32 @@ function findlotwunconfirmed(){
 function findincorrectcqzones() {
     event.preventDefault();
     $('#partial_view').load(base_url+"index.php/logbook/search_incorrect_cq_zones/"+$("#station_id").val(), function() {
+        $('.qsolist').DataTable({
+            "pageLength": 25,
+            responsive: false,
+            ordering: false,
+            "scrollY":        "500px",
+            "scrollCollapse": true,
+            "paging":         false,
+            "scrollX": true,
+            "language": {
+                url: getDataTablesLanguageUrl(),
+            },
+            dom: 'Bfrtip',
+            buttons: [
+                'csv'
+            ]
+        });
+        // change color of csv-button if dark mode is chosen
+        if (isDarkModeTheme()) {
+            $(".buttons-csv").css("color", "white");
+        }
+    });
+}
+
+function findincorrectituzones() {
+    event.preventDefault();
+    $('#partial_view').load(base_url+"index.php/logbook/search_incorrect_itu_zones/"+$("#station_id").val(), function() {
         $('.qsolist').DataTable({
             "pageLength": 25,
             responsive: false,
@@ -923,6 +941,7 @@ $($('#callsign')).on('keypress',function(e) {
 <?php if ($this->uri->segment(1) == "qso") { ?>
 
 <script src="<?php echo base_url() ;?>assets/js/sections/qso.js"></script>
+<script src="<?php echo base_url() ;?>assets/js/bootstrap-multiselect.js"></script>
 <?php if ($this->session->userdata('isWinkeyEnabled')) { ?>
 	<script src="<?php echo base_url() ;?>assets/js/winkey.js"></script>
 <?php }	?>
@@ -1156,81 +1175,83 @@ $($('#callsign')).on('keypress',function(e) {
 
 		    if($('select.radios option:selected').val() != '0') {
 			    radioID = $('select.radios option:selected').val();
-			    $.getJSON( "radio/json/" + radioID, function( data ) {
-        /* {
-        "frequency": "2400210000",
-            "frequency_rx": "10489710000",
-            "mode": "SSB",
-            "satmode": "S/X",
-            "satname": "QO-100"
-            "power": "20"
-            "prop_mode": "SAT",
-            "error": "not_logged_id" // optional, reserved for errors
-        }  */
-				    if (data.error) {
-					    if (data.error == 'not_logged_in') {
-						    $(".radio_cat_state" ).remove();
-						    if($('.radio_login_error').length == 0) {
-							    $('.qso_panel').prepend('<div class="alert alert-danger radio_login_error" role="alert"><i class="fas fa-broadcast-tower"></i> '+"<?= sprintf(__("You're not logged it. Please <a href='%s'>login</a>"), base_url()); ?>"+'</div>');
-						    }
-					    }
-					    // Put future Errorhandling here
-				    } else {
-					    if($('.radio_login_error').length != 0) {
-						    $(".radio_login_error" ).remove();
-					    }
-					    cat2UI($('#frequency'),data.frequency,false,true,function(d){
-						    if ($("#band").val() != frequencyToBand(d)) {
-							    $("#band").val(frequencyToBand(d)).trigger('change');	// Let's only change if we really have a different band!
-						    }
-					    });
-
-					    cat2UI($('#frequency_rx'),data.frequency_rx,false,true,function(d){$("#band_rx").val(frequencyToBand(d))});
-					    cat2UI($('.mode'),data.mode,false,false,function(d){setRst($(".mode").val())});
-					    cat2UI($('#sat_name'),data.satname,false,false);
-					    cat2UI($('#sat_mode'),data.satmode,false,false);
-					    cat2UI($('#transmit_power'),data.power,false,false);
-					    cat2UI($('#selectPropagation'),data.prop_mode,false,false);
-
-					    // Display CAT Timeout warning based on the figure given in the config file
-					    var minutes = Math.floor(<?php echo $this->optionslib->get_option('cat_timeout_interval'); ?> / 60);
-
-					    if(data.updated_minutes_ago > minutes) {
-						    $(".radio_cat_state" ).remove();
-						    if($('.radio_timeout_error').length == 0) {
-							    $('#radio_status').prepend('<div class="alert alert-danger radio_timeout_error" role="alert"><i class="fas fa-broadcast-tower"></i> Radio connection timed-out: ' + $('select.radios option:selected').text() + ' data is ' + data.updated_minutes_ago + ' minutes old.</div>');
-						    } else {
-							    $('.radio_timeout_error').html('Radio connection timed-out: ' + $('select.radios option:selected').text() + ' data is ' + data.updated_minutes_ago + ' minutes old.');
-						    }
-					    } else {
-						    $(".radio_timeout_error" ).remove();
-						    text = '<i class="fas fa-broadcast-tower"></i><span style="margin-left:10px;"></span><b>TX:</b> '+(Math.round(parseInt(data.frequency)/100)/10000).toFixed(4)+' MHz';
-						    if(data.mode != null) {
-							    text = text+'<span style="margin-left:10px"></span>'+data.mode;
-						    }
-						    if(data.power != null && data.power != 0) {
-							    text = text+'<span style="margin-left:10px"></span>'+data.power+' W';
-						    }
-						    ptext = '';
-						    if(data.prop_mode != null && data.prop_mode != '') {
-							    ptext = ptext + data.prop_mode;
-							    if (data.prop_mode == 'SAT') {
-								    ptext = ptext + ' ' + data.satname;
+			    if ((typeof radioID !== 'undefined') && (radioID !== null) && (radioID !== "")) {
+				    $.getJSON( "radio/json/" + radioID, function( data ) {
+	/* {
+	"frequency": "2400210000",
+	    "frequency_rx": "10489710000",
+	    "mode": "SSB",
+	    "satmode": "S/X",
+	    "satname": "QO-100"
+	    "power": "20"
+	    "prop_mode": "SAT",
+	    "error": "not_logged_id" // optional, reserved for errors
+	}  */
+					    if (data.error) {
+						    if (data.error == 'not_logged_in') {
+							    $(".radio_cat_state" ).remove();
+							    if($('.radio_login_error').length == 0) {
+								    $('.qso_panel').prepend('<div class="alert alert-danger radio_login_error" role="alert"><i class="fas fa-broadcast-tower"></i> ' + '<?= sprintf(__("You're not logged in. Please %slogin%s"), '<a href="' . base_url() . '">', '</a>'); ?>' + '</div>');
 							    }
 						    }
-						    if(data.frequency_rx != null && data.frequency_rx != 0) {
-							    ptext = ptext + '<span style="margin-left:10px"></span><b>RX:</b> ' + (Math.round(parseInt(data.frequency_rx)/1000)/1000).toFixed(3) + ' MHz';
+						    // Put future Errorhandling here
+					    } else {
+						    if($('.radio_login_error').length != 0) {
+							    $(".radio_login_error" ).remove();
 						    }
-						    if( ptext != '') { text = text + '<span style="margin-left:10px"></span>(' + ptext + ')';}
-						    if (! $('#radio_cat_state').length) {
-							    $('#radio_status').prepend('<div aria-hidden="true"><div id="radio_cat_state" class="alert alert-success radio_cat_state" role="alert">'+text+'</div></div>');
+						    cat2UI($('#frequency'),data.frequency,false,true,function(d){
+							    if ($("#band").val() != frequencyToBand(d)) {
+								    $("#band").val(frequencyToBand(d)).trigger('change');	// Let's only change if we really have a different band!
+							    }
+						    });
+
+						    cat2UI($('#frequency_rx'),data.frequency_rx,false,true,function(d){$("#band_rx").val(frequencyToBand(d))});
+						    cat2UI($('.mode'),data.mode,false,false,function(d){setRst($(".mode").val())});
+						    cat2UI($('#sat_name'),data.satname,false,false);
+						    cat2UI($('#sat_mode'),data.satmode,false,false);
+						    cat2UI($('#transmit_power'),data.power,false,false);
+						    cat2UI($('#selectPropagation'),data.prop_mode,false,false);
+
+						    // Display CAT Timeout warning based on the figure given in the config file
+						    var minutes = Math.floor(<?php echo $this->optionslib->get_option('cat_timeout_interval'); ?> / 60);
+
+						    if(data.updated_minutes_ago > minutes) {
+							    $(".radio_cat_state" ).remove();
+							    if($('.radio_timeout_error').length == 0) {
+								    $('#radio_status').prepend('<div class="alert alert-danger radio_timeout_error" role="alert"><i class="fas fa-broadcast-tower"></i> Radio connection timed-out: ' + $('select.radios option:selected').text() + ' data is ' + data.updated_minutes_ago + ' minutes old.</div>');
+							    } else {
+								    $('.radio_timeout_error').html('Radio connection timed-out: ' + $('select.radios option:selected').text() + ' data is ' + data.updated_minutes_ago + ' minutes old.');
+							    }
 						    } else {
-							    $('#radio_cat_state').html(text);
+							    $(".radio_timeout_error" ).remove();
+							    text = '<i class="fas fa-broadcast-tower"></i><span style="margin-left:10px;"></span><b>TX:</b> ' + data.frequency_formatted;
+							    if(data.mode != null) {
+								    text = text+'<span style="margin-left:10px"></span>'+data.mode;
+							    }
+							    if(data.power != null && data.power != 0) {
+								    text = text+'<span style="margin-left:10px"></span>'+data.power+' W';
+							    }
+							    ptext = '';
+							    if(data.prop_mode != null && data.prop_mode != '') {
+								    ptext = ptext + data.prop_mode;
+								    if (data.prop_mode == 'SAT') {
+									    ptext = ptext + ' ' + data.satname;
+								    }
+							    }
+							    if(data.frequency_rx != null && data.frequency_rx != 0) {
+								    ptext = ptext + '<span style="margin-left:10px"></span><b>RX:</b> ' + data.frequency_rx_formatted;
+							    }
+							    if( ptext != '') { text = text + '<span style="margin-left:10px"></span>(' + ptext + ')';}
+							    if (! $('#radio_cat_state').length) {
+								    $('#radio_status').prepend('<div aria-hidden="true"><div id="radio_cat_state" class="alert alert-success radio_cat_state" role="alert">'+text+'</div></div>');
+							    } else {
+								    $('#radio_cat_state').html(text);
+							    }
 						    }
 					    }
-				    }
-			    });
-            }
+				    });
+			    }
+		    }
 	    };
 
 	    // Update frequency every three second
@@ -1295,15 +1316,17 @@ $($('#callsign')).on('keypress',function(e) {
 <script>
 $(document).ready(function(){
     $('#btn_update_dxcc').bind('click', function(){
-		$(".ld-ext-right").addClass("running");
-		$(".ld-ext-right").prop("disabled", true);
+		$("#btn_update_dxcc").addClass("running");
+		$("#btn_update_dxcc").prop("disabled", true);
         $('#dxcc_update_status').show();
         $.ajax({
             url:"update/dxcc",
             success: function(response) {
                 if (response == 'success') {
-                    $(".ld-ext-right").removeClass("running");
-                    $(".ld-ext-right").prop("disabled", false);
+                    setTimeout(function() {
+                        $("#btn_update_dxcc").removeClass("running");
+                        $("#btn_update_dxcc").prop("disabled", false);
+                    }, 2000);
                 }
             }
         });
@@ -1316,8 +1339,8 @@ $(document).ready(function(){
             if ((val  === null) || (val.substring(0,4) !="DONE")){
                 setTimeout(update_stats, 5000);
             } else {
-				$(".ld-ext-right").removeClass("running");
-				$(".ld-ext-right").prop("disabled", false);
+				$("#btn_update_dxcc").removeClass("running");
+				$("#btn_update_dxcc").prop("disabled", false);
 			}
         });
 
@@ -1978,7 +2001,7 @@ $(document).ready(function(){
                 $(".buttons-csv").css("color", "white");
             }
 
-            function displayTimelineContacts(querystring, band, mode, type) {
+            function displayTimelineContacts(querystring, band, mode, propmode, type) {
                 var baseURL= "<?php echo base_url();?>";
                 $.ajax({
                     url: baseURL + 'index.php/timeline/details',
@@ -1986,6 +2009,7 @@ $(document).ready(function(){
                     data: {'Querystring': querystring,
                         'Band': band,
                         'Mode': mode,
+                        'Propmode': propmode,
                         'Type': type
                     },
                     success: function(html) {
@@ -2476,7 +2500,6 @@ function viewEqsl(picture, callsign) {
     <script>
         var manual = <?php echo $manual_mode; ?>;
     </script>
-    <script src="<?php echo base_url() ;?>assets/js/sections/contesting.js?v2"></script>
 <?php } ?>
 
 <?php if ($this->uri->segment(2) == "counties" || $this->uri->segment(2) == "counties_details") { ?>
@@ -2584,6 +2607,47 @@ function viewEqsl(picture, callsign) {
 		"order": [ 0, 'desc' ],
 	});
 	</script>
+<?php } ?>
+
+<?php if ($this->uri->segment(1) == "distancerecords") { ?>
+    <script type="text/javascript" src="<?php echo base_url(); ?>assets/js/moment.min.js"></script>
+    <script type="text/javascript" src="<?php echo base_url(); ?>assets/js/datetime-moment.js"></script>
+        <script>
+            $.fn.dataTable.moment('<?php echo $usethisformat ?>');
+            $.fn.dataTable.ext.buttons.clear = {
+                className: 'buttons-clear',
+                action: function ( e, dt, node, config ) {
+                   dt.search('').draw();
+                }
+            };
+            $('#distrectable').DataTable({
+                "pageLength": 25,
+                responsive: false,
+                ordering: true,
+                "columnDefs": [ 2, 'num' ],
+                "scrollCollapse": true,
+                "paging":         false,
+                "scrollX": true,
+                "language": {
+                    url: getDataTablesLanguageUrl(),
+                },
+                "order": [ 2, 'desc' ],
+                dom: 'Bfrtip',
+                buttons: [
+                   {
+                      extend: 'csv'
+                   },
+                   {
+                      extend: 'clear',
+                      text: lang_admin_clear
+                   }
+                ]
+            });
+            // change color of csv-button if dark mode is chosen
+            if (isDarkModeTheme()) {
+               $('[class*="buttons"]').css("color", "white");
+            }
+        </script>
 <?php } ?>
 
 <?php if ($this->uri->segment(1) == "awards") {
@@ -2718,6 +2782,32 @@ function viewEqsl(picture, callsign) {
             // change color of csv-button if dark mode is chosen
             if (isDarkModeTheme()) {
                $('[class*="buttons"]').css("color", "white");
+            }
+        </script>
+    <?php } else if ($this->uri->segment(2) == "wac") { ?>
+        <script>
+            $('#band2').change(function(){
+				var band = $("#band2 option:selected").text();
+				if (band != "SAT") {
+					$("#sats").val('All');
+					$("#orbits").val('All');
+					$("#satrow").hide();
+					$("#orbitrow").hide();
+				} else {
+					$("#satrow").show();
+					$("#orbitrow").show();
+				}
+			});
+
+			$('#sats').change(function(){
+				var sat = $("#sats option:selected").text();
+				$("#band2").val('SAT');
+				if (sat != "All") {
+				}
+			});
+            // change color of csv-button if dark mode is chosen
+            if (isDarkModeTheme()) {
+            	$('[class*="buttons"]').css("color", "white");
             }
         </script>
     <?php } ?>

@@ -13,7 +13,7 @@ class Cabrillo extends CI_Controller {
 		parent::__construct();
 
 		$this->load->model('user_model');
-		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('notice', 'You\'re not allowed to do that!'); redirect('dashboard'); }
+		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
 	public function index() {
@@ -50,7 +50,7 @@ class Cabrillo extends CI_Controller {
 			header('Content-Type: application/json');
 			echo json_encode($result);
 		} else {
-			$this->session->set_flashdata('notice', 'You\'re not allowed to do that!'); redirect('dashboard');
+			$this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard');
 		}
 	}
 
@@ -77,7 +77,7 @@ class Cabrillo extends CI_Controller {
 			header('Content-Type: application/json');
 			echo json_encode($result);
 		} else {
-			$this->session->set_flashdata('notice', 'You\'re not allowed to do that!'); redirect('dashboard');
+			$this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard');
 		}
 	}
 
@@ -117,9 +117,11 @@ class Cabrillo extends CI_Controller {
 			$data['categorypower'] = $this->security->xss_clean($this->input->post('categorypower'));
 			$data['categorystation'] = $this->security->xss_clean($this->input->post('categorystation'));
 			$data['categorytransmitter'] = $this->security->xss_clean($this->input->post('categorytransmitter'));
+			$data['categorytime'] = $this->security->xss_clean($this->input->post('categorytime'));
 			$data['categoryoverlay'] = $this->security->xss_clean($this->input->post('categoryoverlay'));
 			$data['operators'] = $this->security->xss_clean($this->input->post('operators'));
 			$data['club'] = $this->security->xss_clean($this->input->post('club'));
+			$data['location'] = $this->security->xss_clean($this->input->post('location'));
 			$data['name'] = $userinfo->user_firstname . ' ' . $userinfo->user_lastname;
 			$data['email'] = $userinfo->user_email;
 			$data['address'] = $this->security->xss_clean($this->input->post('address'));
@@ -129,10 +131,11 @@ class Cabrillo extends CI_Controller {
 			$data['addresscountry'] = $this->security->xss_clean($this->input->post('addresscountry'));
 			$data['soapbox'] = $this->security->xss_clean($this->input->post('soapbox'));
 			$data['gridlocator'] = $station->station_gridsquare;
+			$data['certificate'] = $this->security->xss_clean($this->input->post('certificate'));
 
 			$this->load->view('cabrillo/export', $data);
 		}else {
-			$this->session->set_flashdata('notice', 'You\'re not allowed to do that!'); redirect('dashboard');
+			$this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard');
 		}
 	}
 }

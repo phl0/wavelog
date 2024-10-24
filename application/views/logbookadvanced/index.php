@@ -8,8 +8,15 @@
     var lang_gen_hamradio_latitude = '<?= __("Latitude"); ?>';
     var lang_gen_hamradio_longitude = '<?= __("Longitude"); ?>';
     var lang_gen_hamradio_gridsquare = '<?= __("Gridsquare"); ?>';
+    var lang_gen_hamradio_gridsquares = '<?= _pgettext("Map Options", "Gridsquares"); ?>';
     var lang_gen_hamradio_distance = '<?= __("Distance"); ?>';
     var lang_gen_hamradio_bearing = '<?= __("Bearing"); ?>';
+    var lang_gen_hamradio_pathlines = '<?= _pgettext("Map Options", "Path lines"); ?>';
+    var lang_gen_hamradio_cq_zones = '<?= _pgettext("Map Options", "CQ Zones"); ?>';
+    var lang_gen_hamradio_itu_zones = '<?= _pgettext("Map Options", "ITU Zones"); ?>';
+    var lang_gen_hamradio_nightshadow = '<?= _pgettext("Map Options", "Night Shadow"); ?>';
+	var lang_gen_hamradio_ituzone = '<?= __("ITU Zone"); ?>';
+	var lang_gen_hamradio_cqzone = '<?= __("CQ Zone"); ?>';
     <?php
     echo "var homegrid ='" . strtoupper($homegrid[0]) . "';";
     if (!isset($options)) {
@@ -43,7 +50,10 @@
 			\"sota\":{\"show\":\"true\"},
 			\"dok\":{\"show\":\"true\"},
 			\"wwff\":{\"show\":\"true\"},
-			\"sig\":{\"show\":\"true\"}
+			\"sig\":{\"show\":\"true\"},
+			\"continent\":{\"show\":\"true\"},
+			\"qrz\":{\"show\":\"true\"},
+			\"profilename\":{\"show\":\"true\"}
         }";
     }
     $current_opts = json_decode($options);
@@ -96,6 +106,18 @@
         echo "\nvar o_template = { sig: {show: 'true'}};";
         echo "\nuser_options={...user_options, ...o_template};";
     }
+	if (!isset($current_opts->continent)) {
+        echo "\nvar o_template = { continent: {show: 'true'}};";
+        echo "\nuser_options={...user_options, ...o_template};";
+    }
+	if (!isset($current_opts->qrz)) {
+        echo "\nvar o_template = { qrz: {show: 'true'}};";
+        echo "\nuser_options={...user_options, ...o_template};";
+    }
+	if (!isset($current_opts->profilename)) {
+        echo "\nvar o_template = { profilename: {show: 'true'}};";
+        echo "\nuser_options={...user_options, ...o_template};";
+    }
 
 
     foreach ($mapoptions as $mo) {
@@ -127,6 +149,7 @@ $options = json_decode($options);
 
             <form id="searchForm" name="searchForm" action="<?php echo base_url() . "index.php/logbookadvanced/search"; ?>" method="post">
                 <input type="hidden" id="dupes" name="dupes" value="">
+				<input type="hidden" id="invalid" name="invalid" value="">
                 <div class="filterbody collapse">
                     <div class="row">
                         <div class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
@@ -145,7 +168,6 @@ $options = json_decode($options);
                             <label class="form-label" for="dxcc"><?= __("DXCC"); ?></label>
                             <select class="form-control form-control-sm" id="dxcc" name="dxcc">
                                 <option value="">-</option>
-                                <option value="0"><?= _pgettext("Logbook Advanced DXCC Select", "- NONE - (e.g. /MM, /AM)"); ?></option>
                                 <?php
                                 foreach ($dxccarray as $dxcc) {
                                     echo '<option value=' . $dxcc->adif;
@@ -172,7 +194,7 @@ $options = json_decode($options);
                                 <option value=""><?= __("All"); ?></option>
                                 <?php
                                 foreach ($modes as $modeId => $mode) {
-                                ?><option value="<?php echo htmlspecialchars($mode); ?>"><?php echo htmlspecialchars($mode); ?></option><?php
+                                ?><option value="<?php echo htmlspecialchars($mode ?? ''); ?>"><?php echo htmlspecialchars($mode ?? ''); ?></option><?php
                                                                                                                                 }
                                                                                                                                     ?>
                             </select>
@@ -183,7 +205,7 @@ $options = json_decode($options);
                                 <option value=""><?= __("All"); ?></option>
                                 <?php
                                 foreach ($bands as $band) {
-                                ?><option value="<?php echo htmlentities($band); ?>"><?php echo htmlspecialchars($band); ?></option><?php
+                                ?><option value="<?php echo htmlentities($band ?? ''); ?>"><?php echo htmlspecialchars($band ?? ''); ?></option><?php
                                                                                                                             }
                                                                                                                                 ?>
                             </select>
@@ -287,6 +309,22 @@ $options = json_decode($options);
                         <div class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
                             <label class="form-label" for="contest"><?= __("Contest"); ?></label>
                             <input type="text" name="contest" id="contest" class="form-control form-control-sm" value="">
+                        </div>
+
+						<div class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                            <label class="form-label" for="continent"><?= __("Continent"); ?></label>
+							<select id="continent" name="continent" class="form-select form-select-sm">
+								<option value=""><?= __("All"); ?></option>
+								<option value="blank"><?= __("None/Empty"); ?></option>
+								<option value="af"><?= __("Africa"); ?></option>
+								<option value="an"><?= __("Antarctica"); ?></option>
+								<option value="na"><?= __("North America"); ?></option>
+								<option value="as"><?= __("Asia"); ?></option>
+								<option value="eu"><?= __("Europe"); ?></option>
+								<option value="sa"><?= __("South America"); ?></option>
+								<option value="oc"><?= __("Oceania"); ?></option>
+								<option value="invalid"><?= __("Invalid"); ?></option>
+							</select>
                         </div>
                     </div>
                 </div>
@@ -510,6 +548,7 @@ $options = json_decode($options);
                 </select>
                 <button type="submit" class="btn btn-sm btn-primary me-1 ld-ext-right" id="searchButton"><?= __("Search"); ?><div class="ld ld-ring ld-spin"></div></button>
                 <button type="button" class="btn btn-sm btn-primary me-1 ld-ext-right" id="dupeButton"><?= __("Dupes"); ?><div class="ld ld-ring ld-spin"></div></button>
+				<button type="button" class="btn btn-sm btn-primary me-1 ld-ext-right" id="invalidButton"><?= __("Invalid"); ?><div class="ld ld-ring ld-spin"></div></button>
                 <button type="button" class="btn btn-sm btn-primary me-1 ld-ext-right" id="editButton"><?= __("Edit"); ?><div class="ld ld-ring ld-spin"></div></button>
                 <button type="button" class="btn btn-sm btn-danger me-1" id="deleteQsos"><?= __("Delete"); ?></button>
                 <div class="btn-group me-1" role="group">
@@ -573,6 +612,9 @@ $options = json_decode($options);
                     <?php if ($this->session->userdata('user_lotw_name') != "" && ($options->lotw->show ?? "true") == "true") {
                         echo '<th class="lotwconfirmation">LoTW</th>';
                     } ?>
+					<?php if (($options->qrz->show ?? "true") == "true") {
+                        echo '<th class="qrz">' . __("QRZ") . '</th>';
+                    } ?>
                     <?php if (($options->qslmsg->show ?? "true") == "true") {
                         echo '<th>' . __("QSL Msg") . '</th>';
                     } ?>
@@ -620,6 +662,12 @@ $options = json_decode($options);
                     } ?>
                     <?php if (($options->myrefs->show ?? "true") == "true") {
                         echo '<th>' . __("My Refs") . '</th>';
+                    } ?>
+					<?php if (($options->continent->show ?? "true") == "true") {
+                        echo '<th>' . __("Continent") . '</th>';
+                    } ?>
+					<?php if (($options->profilename->show ?? "true") == "true") {
+                        echo '<th>' . __("Profile name") . '</th>';
                     } ?>
                 </tr>
             </thead>

@@ -14,7 +14,7 @@ class Lookup extends CI_Controller {
 		parent::__construct();
 
 		$this->load->model('user_model');
-		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('notice', 'You\'re not allowed to do that!'); redirect('dashboard'); }
+		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
 	public function index()
@@ -65,9 +65,7 @@ class Lookup extends CI_Controller {
 
 	public function scp() {
 		session_write_close();
-		if($_POST['callsign']) {
-			$uppercase_callsign = strtoupper($_POST['callsign']);
-		}
+		$uppercase_callsign = strtoupper($this->input->post('callsign', TRUE) ?? '');
 
 		// SCP results from logbook
 		$this->load->model('logbook_model');
@@ -196,8 +194,9 @@ class Lookup extends CI_Controller {
                 $i = 0;
                 foreach ($result as &$value) {
                     $county = explode(',', $value);
-                    // Limit to 100 as to not slowdown browser too much
-                    if (count($json) <= 100) {
+                    // Limit to 254 as to not slowdown browser too much
+					// Texas has 254 counties so we need this number
+                    if (count($json) <= 254) {
                         $json[] = ["name"=>$county[1]];
                     }
                 }

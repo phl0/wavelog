@@ -36,7 +36,7 @@
                                 <a class="nav-item nav-link" id="nav-qso-notes-tab" data-bs-toggle="tab" href="#nav-qso-notes" role="tab" aria-controls="nav-qso-notes" aria-selected="false"><?= __("Notes"); ?></a>
                                 <a class="nav-item nav-link" id="nav-qsl-tab" data-bs-toggle="tab" href="#nav-qsl" role="tab" aria-controls="nav-qsl" aria-selected="false"><?= __("QSL"); ?></a>
                                 <a class="nav-item nav-link" id="nav-station-tab" data-bs-toggle="tab" href="#nav-station" role="tab" aria-controls="nav-station" aria-selected="false"><?= __("Station"); ?></a>
-								<a class="nav-item nav-link" id="nav-contest-tab" data-bs-toggle="tab" href="#nav-contest" role="tab" aria-controls="nav-contest" aria-selected="false"><?= __("Contest"); ?></a>
+                                <a class="nav-item nav-link" id="nav-contest-tab" data-bs-toggle="tab" href="#nav-contest" role="tab" aria-controls="nav-contest" aria-selected="false"><?= __("Contest"); ?></a>
                             </div>
                         </nav>
 
@@ -131,10 +131,10 @@
                                         </select>
                                     </div>
                                     <div class="mb-3 col-sm6">
-              		                    <label for="transmit_power"><?= __("Transmit Power (W)"); ?></label>
-              		                    <input type="number" step="0.001" class="form-control" id="transmit_power" name="transmit_power" value="<?php echo $qso->COL_TX_PWR; ?>" />
-					                    <small id="powerHelp" class="form-text text-muted"><?= __("Give power value in Watts. Include only numbers in the input."); ?></small>
-					                </div>
+                                      <label for="transmit_power"><?= __("Transmit Power (W)"); ?></label>
+                                      <input type="number" step="0.001" class="form-control" id="transmit_power" name="transmit_power" value="<?php echo $qso->COL_TX_PWR; ?>" />
+                                      <small id="powerHelp" class="form-text text-muted"><?= __("Give power value in Watts. Include only numbers in the input."); ?></small>
+                                    </div>
                                 </div>
 
                                 <div class="row">
@@ -218,7 +218,7 @@
                                     <div class="mb-3 col-sm-6">
                                         <label for="dxcc_id"><?= __("DXCC"); ?></label>
                                         <select class="form-select" id="dxcc_id" name="dxcc_id" required>
-                                            <option value="0">- <?= __("NONE"); ?> -</option>
+                                            <option value=""><?= __("Please select one"); ?></option>
                                             <?php
                                             foreach($dxcc as $d){
                                                 echo '<option value=' . $d->adif;
@@ -263,6 +263,18 @@
                                     <label for="sat_mode"><?= __("Sat Mode"); ?></label>
                                     <input type="text" class="form-control form-control-sm" name="sat_mode" id="sat_mode" value="<?php echo $qso->COL_SAT_MODE; ?>">
                                 </div>
+
+                                <div class="mb-3">
+                                    <label for="ant_az"><?= __("Antenna Azimuth (°)"); ?></label>
+                                    <input type="number" step="0.1" min="0" max="360" class="form-control" id="ant_az" name="ant_az" value="<?php echo $qso->COL_ANT_AZ; ?>" />
+                                    <small id="azHelp" class="form-text text-muted"><?= __("Antenna azimuth in decimal degrees."); ?></small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="ant_el"><?= __("Antenna Elevation (°)"); ?></label>
+                                    <input type="number" step="0.1" min="0" max="90" class="form-control" id="ant_el" name="ant_el" value="<?php echo $qso->COL_ANT_EL; ?>" />
+                                    <small id="elHelp" class="form-text text-muted"><?= __("Antenna elevation in decimal degrees."); ?></small>
+                                </div>
                             </div>
 
                             <!-- Awards Panel Contents -->
@@ -283,6 +295,21 @@
                                     </select>
                                 </div>
 
+                                <div class="mb-3">
+                                    <label for="ituz"><?= __("ITU Zone"); ?></label>
+                                    <select class="form-select" id="ituz" name="ituz">
+                                        <option value=''></option>
+                                        <?php
+                                        for ($i = 1; $i<=90; $i++) {
+                                            echo '<option value='. $i;
+                                            if ($qso->COL_ITUZ == $i) {
+                                                echo " selected=\"selected\"";
+                                            }
+                                            echo '>'. $i .'</option>';
+                                        }
+                                        ?>
+                                    </select>
+                                </div>
 
                                 <div class="mb-3">
                                     <?php 
@@ -366,8 +393,9 @@
                             <!-- Notes Panel Contents -->
                             <div class="tab-pane fade" id="nav-qso-notes" role="tabpanel" aria-labelledby="nav-qso-notes-tab">
                                 <div class="mb-3">
-                                    <label for="notes"><?= __("Notes (for internal usage only)"); ?></label>
+                                    <label for="notes"><?= __("Notes"); ?></label>
                                     <textarea  type="text" class="form-control" id="notes" name="notes" rows="10"><?php echo $qso->COL_NOTES; ?></textarea>
+                                    <div class="small form-text text-muted"><?= __("Note: Gets exported to third-party services.") ?></div>
                                 </div>
                             </div>
 
@@ -382,6 +410,9 @@
                                     </li>
                                     <li class="nav-item">
                                         <a class="nav-link" id="contact-tab" data-bs-toggle="tab" href="#contact" role="tab" aria-controls="contact" aria-selected="false"><?= __("LoTW"); ?></a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="contact-tab" data-bs-toggle="tab" href="#qrz" role="tab" aria-controls="qrz" aria-selected="false"><?= __("QRZ"); ?></a>
                                     </li>
                                 </ul>
                                 <div class="tab-content" id="myTabContent">
@@ -473,14 +504,10 @@
                                         </div>
                                         <div class="mb-3 row">
                                             <div>
-                                                <div class="alert alert-info" role="alert">
-                                                    <span class="badge text-bg-info"><?= __("Info"); ?></span> <?= __("This note content is exported to QSL services like eqsl.cc."); ?>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label for="qslmsg"><?= __("Notes"); ?><span class="qso_eqsl_qslmsg_update" title="<?= __("Get the default message for eQSL, for this station."); ?>"><i class="fas fa-redo-alt"></i></span></label>
+                                                <label for="qslmsg"><?= __("QSL MSG"); ?><span class="qso_eqsl_qslmsg_update" title="<?= __("Get the default message for eQSL, for this station."); ?>"><i class="fas fa-redo-alt"></i></span></label>
                                                 <label class="position-absolute end-0 mb-2 me-3" for="qslmsg" id="charsLeft"> </label>
                                                 <textarea  type="text" class="form-control" id="qslmsg" name="qslmsg" rows="5" maxlength="240"><?php echo $qso->COL_QSLMSG; ?></textarea>
+                                                <div class="small form-text text-muted"><?= __("Note: Gets exported to third-party services.") ?></div>
                                                 <div id="qslmsg_hide" style="display:none;"><?php echo $qso->COL_QSLMSG; ?></div>
                                             </div>
                                         </div>
@@ -510,6 +537,33 @@
                                                     <option value="V" <?php if($qso->COL_LOTW_QSL_RCVD == "V") { echo "selected=\"selected\""; } ?>><?= __("Verified (Match)"); ?></option>
                                                 </select>
                                                 <small id="lotw_propmode_hint" class="form-text text-muted"><?php if (in_array($qso->COL_PROP_MODE, $this->config->item('lotw_unsupported_prop_modes'))) { echo __("Propagation mode is not supported by LoTW. LoTW QSL fields disabled."); } else { echo "&nbsp;"; } ?></small>
+                                            </div>
+                                        </div>
+                                    </div>
+				                    <div class="tab-pane fade" id="qrz" role="tabpanel" aria-labelledby="qrz-tab">
+                                        <div class="mb-3 row">
+                                            <label for="sent" class="col-sm-3 col-form-label"><?= __("Sent"); ?></label>
+                                            <div class="col-sm-9">
+                                                <select class="form-select" id="qrz_sent" name="qrz_sent">
+                                                    <option value="N" <?php if($qso->COL_QRZCOM_QSO_UPLOAD_STATUS == "N") { echo "selected=\"selected\""; } ?>><?= __("No"); ?></option>
+                                                    <option value="Y" <?php if($qso->COL_QRZCOM_QSO_UPLOAD_STATUS == "Y") { echo "selected=\"selected\""; } ?>><?= __("Yes"); ?></option>
+                                                    <option value="R" <?php if($qso->COL_QRZCOM_QSO_UPLOAD_STATUS == "R") { echo "selected=\"selected\""; } ?>><?= __("Requested"); ?></option>
+                                                    <option value="Q" <?php if($qso->COL_QRZCOM_QSO_UPLOAD_STATUS == "Q") { echo "selected=\"selected\""; } ?>><?= __("Queued"); ?></option>
+                                                    <option value="I" <?php if($qso->COL_QRZCOM_QSO_UPLOAD_STATUS == "I") { echo "selected=\"selected\""; } ?>><?= __("Invalid (Ignore)"); ?></option>
+                                                    <option value="M" <?php if($qso->COL_QRZCOM_QSO_UPLOAD_STATUS == "M") { echo "selected=\"selected\""; } ?>><?= __("Modified"); ?></option>
+                                                </select></div>
+                                        </div>
+
+                                        <div class="mb-3 row">
+                                            <label for="sent" class="col-sm-3 col-form-label"><?= __("Received"); ?></label>
+                                            <div class="col-sm-9">
+                                                <select class="form-select" id="qrz_rcvd" name="qrz_rcvd">
+                                                    <option value="N" <?php if($qso->COL_QRZCOM_QSO_DOWNLOAD_STATUS == "N") { echo "selected=\"selected\""; } ?>><?= __("No"); ?></option>
+                                                    <option value="Y" <?php if($qso->COL_QRZCOM_QSO_DOWNLOAD_STATUS == "Y") { echo "selected=\"selected\""; } ?>><?= __("Yes"); ?></option>
+                                                    <option value="R" <?php if($qso->COL_QRZCOM_QSO_DOWNLOAD_STATUS == "R") { echo "selected=\"selected\""; } ?>><?= __("Requested"); ?></option>
+                                                    <option value="I" <?php if($qso->COL_QRZCOM_QSO_DOWNLOAD_STATUS == "I") { echo "selected=\"selected\""; } ?>><?= __("Invalid (Ignore)"); ?></option>
+                                                    <option value="V" <?php if($qso->COL_QRZCOM_QSO_DOWNLOAD_STATUS == "V") { echo "selected=\"selected\""; } ?>><?= __("Verified (Match)"); ?></option>
+                                                </select>
                                             </div>
                                         </div>
                                     </div>

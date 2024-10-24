@@ -36,6 +36,25 @@ class Stations extends CI_Model {
 		return $this->db->get('station_profile');
 	}
 
+	function all_station_ids_of_user($userid = null) {
+		if ($userid == null) {
+			$userid=$this->session->userdata('user_id'); // Fallback to session-uid, if userid is omitted
+		}
+		$this->db->select('station_profile.station_id');
+		$this->db->where('user_id', $userid);
+		$query=$this->db->get('station_profile');
+		$a_station_ids = array();
+		if ($query->num_rows() > 0){
+			foreach ($query->result() as $row) {
+				array_push($a_station_ids, $row->station_id);
+			}
+			$station_ids=implode(', ', $a_station_ids);	
+			return $station_ids;
+		} else {
+			return '';
+		}
+	}
+
 	function callsigns_of_user($userid = null) {
 		if ($userid == null) {
 			$userid=$this->session->userdata('user_id'); // Fallback to session-uid, if userid is omitted
@@ -114,7 +133,7 @@ class Stations extends CI_Model {
 			'station_pota' =>  xss_clean(strtoupper($this->input->post('pota', true))),
 			'station_sig' =>  xss_clean(strtoupper($this->input->post('sig', true))),
 			'station_sig_info' =>  xss_clean(strtoupper($this->input->post('sig_info', true))),
-			'station_callsign' =>  xss_clean($this->input->post('station_callsign', true)),
+			'station_callsign' =>  xss_clean(strtoupper($this->input->post('station_callsign', true))),
 			'station_power' => is_numeric(xss_clean($this->input->post('station_power', true))) ? xss_clean($this->input->post('station_power', true)) : NULL,
 			'station_dxcc' =>  xss_clean($this->input->post('dxcc', true)),
 			'station_cnty' =>  $county,
@@ -168,15 +187,15 @@ class Stations extends CI_Model {
 
 		$data = array(
 			'station_profile_name' => xss_clean($this->input->post('station_profile_name', true)),
-			'station_gridsquare' => xss_clean($this->input->post('gridsquare', true)),
+			'station_gridsquare' => xss_clean(strtoupper($this->input->post('gridsquare', true))),
 			'station_city' => xss_clean($this->input->post('city', true)),
-			'station_iota' => xss_clean($this->input->post('iota', true)),
-			'station_sota' => xss_clean($this->input->post('sota', true)),
-			'station_wwff' => xss_clean($this->input->post('wwff', true)),
-			'station_pota' => xss_clean($this->input->post('pota', true)),
-			'station_sig' => xss_clean($this->input->post('sig', true)),
-			'station_sig_info' => xss_clean($this->input->post('sig_info', true)),
-			'station_callsign' => xss_clean($this->input->post('station_callsign', true)),
+			'station_iota' => xss_clean(strtoupper($this->input->post('iota', true))),
+			'station_sota' => xss_clean(strtoupper($this->input->post('sota', true))),
+			'station_wwff' => xss_clean(strtoupper($this->input->post('wwff', true))),
+			'station_pota' => xss_clean(strtoupper($this->input->post('pota', true))),
+			'station_sig' => xss_clean(strtoupper($this->input->post('sig', true))),
+			'station_sig_info' => xss_clean(strtoupper($this->input->post('sig_info', true))),
+			'station_callsign' => xss_clean(strtoupper($this->input->post('station_callsign', true))),
 			'station_power' => is_numeric(xss_clean($this->input->post('station_power', true))) ? xss_clean($this->input->post('station_power', true)) : NULL,
 			'station_dxcc' => xss_clean($this->input->post('dxcc', true)),
 			'station_cnty' =>  $county,
@@ -442,35 +461,38 @@ class Stations extends CI_Model {
     }
 
     function stations_with_qrz_api_key() {
-       $sql = "SELECT station_profile.station_id, station_profile.station_profile_name, station_profile.station_callsign, modc.modcount, notc.notcount, totc.totcount
-                FROM station_profile
-                LEFT OUTER JOIN (
-                            SELECT count(*) modcount, station_id
-                    FROM ". $this->config->item('table_name') .
-                    " WHERE COL_QRZCOM_QSO_UPLOAD_STATUS = 'M'
-                    group by station_id
-                ) as modc on station_profile.station_id = modc.station_id
-                LEFT OUTER JOIN (
-                            SELECT count(*) notcount, station_id
-                    FROM " . $this->config->item('table_name') .
-                    " WHERE (coalesce(COL_QRZCOM_QSO_UPLOAD_STATUS, '') = ''
-                    or COL_QRZCOM_QSO_UPLOAD_STATUS = 'N')
-                    group by station_id
-                ) as notc on station_profile.station_id = notc.station_id
-                LEFT OUTER JOIN (
-                    SELECT count(*) totcount, station_id
-                    FROM " . $this->config->item('table_name') .
-                    " WHERE COL_QRZCOM_QSO_UPLOAD_STATUS = 'Y'
-                    group by station_id
-                ) as totc on station_profile.station_id = totc.station_id
-                WHERE coalesce(station_profile.qrzapikey, '') <> ''
-				 AND station_profile.user_id = " . $this->session->userdata('user_id');
-        $query = $this->db->query($sql);
+	    $bindings=[];
+	    $sql = "SELECT station_profile.station_id, station_profile.station_profile_name, station_profile.station_callsign, modc.modcount, notc.notcount, totc.totcount
+		    FROM station_profile
+		    LEFT OUTER JOIN (
+			    SELECT count(*) modcount, station_id
+			    FROM ". $this->config->item('table_name') .
+			    " WHERE COL_QRZCOM_QSO_UPLOAD_STATUS = 'M'
+			    group by station_id
+		) as modc on station_profile.station_id = modc.station_id
+		LEFT OUTER JOIN (
+			SELECT count(*) notcount, station_id
+			FROM " . $this->config->item('table_name') .
+			" WHERE (coalesce(COL_QRZCOM_QSO_UPLOAD_STATUS, '') = ''
+			or COL_QRZCOM_QSO_UPLOAD_STATUS = 'N')
+			group by station_id
+		) as notc on station_profile.station_id = notc.station_id
+		LEFT OUTER JOIN (
+			SELECT count(*) totcount, station_id
+			FROM " . $this->config->item('table_name') .
+			" WHERE COL_QRZCOM_QSO_UPLOAD_STATUS = 'Y'
+			group by station_id
+		) as totc on station_profile.station_id = totc.station_id
+		WHERE coalesce(station_profile.qrzapikey, '') <> ''
+		AND station_profile.user_id = ?";
+	    $bindings[]=$this->session->userdata('user_id');
+	    $query = $this->db->query($sql, $bindings);
 
-        return $query;
+	    return $query;
     }
 
 	function stations_with_webadif_api_key() {
+		$bindings=[];
 		$sql="
 			SELECT station_profile.station_id, station_profile.station_profile_name, station_profile.station_callsign, notc.c notcount, totc.c totcount
 			FROM station_profile
@@ -489,15 +511,15 @@ class Stations extends CI_Model {
 			) totc ON station_profile.station_id = totc.station_id
 			WHERE COALESCE(station_profile.webadifapikey, '') <> ''
 			AND COALESCE(station_profile.webadifapiurl, '') <> ''
-			AND station_profile.user_id = %d
+			AND station_profile.user_id = ?
 		";
+		$bindings[]=$this->session->userdata('user_id');
 		$sql=sprintf(
 			$sql,
 			$this->config->item('table_name'),
-			$this->config->item('table_name'),
-			$this->session->userdata('user_id')
+			$this->config->item('table_name')
 		);
-		return $this->db->query($sql);
+		return $this->db->query($sql,$bindings);
 	}
 
     /*

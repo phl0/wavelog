@@ -21,7 +21,7 @@ class Update extends CI_Controller {
 	public function index()
 	{
         $this->load->model('user_model');
-		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('notice', 'You\'re not allowed to do that!'); redirect('dashboard'); }
+		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 	    $data['page_title'] = __("Updates");
 	    $this->load->view('interface_assets/header', $data);
@@ -77,6 +77,18 @@ class Update extends CI_Controller {
 			if ($count % 10  == 0)
 				$this->update_status(__("Preparing DXCC-Entries: ").$count);
 		}
+		array_push($a_data, array(
+					'adif' => 0,
+					'name' => '- NONE - (e.g. /MM, /AM)',
+					'prefix' => '',
+					'ituz' => 0,
+					'cqz' => 0,
+					'cont' => '',
+					'long' => 0,
+					'lat' => 0,
+					'start' => null,
+					'end' => null
+				));
 		$this->db->insert_batch('dxcc_entities', $a_data);
 
 		$this->update_status();
@@ -131,7 +143,7 @@ class Update extends CI_Controller {
      * Load the dxcc prefixes
      */
 	public function dxcc_prefixes() {
-		
+
 		// Load the cty file
         if(!$this->load->is_loaded('Paths')) {
         	$this->load->library('Paths');
@@ -225,6 +237,10 @@ class Update extends CI_Controller {
         $this->dxcc_entities();
         $this->dxcc_exceptions();
         $this->dxcc_prefixes();
+		$sql = "update dxcc_entities
+		join dxcc_temp on dxcc_entities.adif = dxcc_temp.adif
+		set dxcc_entities.ituz = dxcc_temp.ituz;";
+		$this->db->query($sql);
         $this->db->trans_complete();
 
         $this->update_status(__("DONE"));
@@ -270,7 +286,7 @@ class Update extends CI_Controller {
 	public function check_missing_dxcc($all = false){
 		$this->load->model('user_model');
 		if (!$this->user_model->authorize(99)) {
-			$this->session->set_flashdata('notice', 'You\'re not allowed to do that!');
+			$this->session->set_flashdata('error', __("You're not allowed to do that!"));
 			redirect('dashboard');
 		}
 
@@ -281,7 +297,7 @@ class Update extends CI_Controller {
 	public function check_missing_continent() {
 		$this->load->model('user_model');
 		if (!$this->user_model->authorize(99)) {
-			$this->session->set_flashdata('notice', 'You\'re not allowed to do that!');
+			$this->session->set_flashdata('error', __("You're not allowed to do that!"));
 			redirect('dashboard');
 		}
 
@@ -289,21 +305,21 @@ class Update extends CI_Controller {
 		$this->logbook_model->check_missing_continent();
 	}
 
-	public function update_distances() {
+	public function update_distances($all = false) {
 		$this->load->model('user_model');
 		if (!$this->user_model->authorize(99)) {
-			$this->session->set_flashdata('notice', 'You\'re not allowed to do that!');
+			$this->session->set_flashdata('error', __("You're not allowed to do that!"));
 			redirect('dashboard');
 		}
 
 		$this->load->model('logbook_model');
-		$this->logbook_model->update_distances();
+		$this->logbook_model->update_distances($all);
 	}
 
 	public function check_missing_grid($all = false){
 		$this->load->model('user_model');
 		if (!$this->user_model->authorize(99)) {
-			$this->session->set_flashdata('notice', 'You\'re not allowed to do that!');
+			$this->session->set_flashdata('error', __("You're not allowed to do that!"));
 			redirect('dashboard');
 		}
 
@@ -339,7 +355,7 @@ class Update extends CI_Controller {
         $this->load->model('Update_model');
         $result = $this->Update_model->dok();
         echo $result;
-        
+
     }
 
     /*
@@ -350,7 +366,7 @@ class Update extends CI_Controller {
         $this->load->model('Update_model');
         $result = $this->Update_model->sota();
         echo $result;
-        
+
     }
 
     /*
@@ -369,8 +385,71 @@ class Update extends CI_Controller {
         $this->load->model('Update_model');
         $result = $this->Update_model->pota();
         echo $result;
-        
+
     }
 
+	public function update_tle() {
+		$mtime = microtime();
+        $mtime = explode(" ",$mtime);
+        $mtime = $mtime[1] + $mtime[0];
+        $starttime = $mtime;
+
+		$url = 'https://www.amsat.org/tle/dailytle.txt';
+		$curl = curl_init($url);
+
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+
+		$response = curl_exec($curl);
+
+		$count = 0;
+
+		if ($response === false) {
+			echo 'Error: ' . curl_error($curl);
+		} else {
+			$this->db->empty_table("tle");
+			// Split the response into an array of lines
+			$lines = explode("\n", $response);
+
+			$satname = '';
+			$tleline1 = '';
+			$tleline2 = '';
+			// Process each line
+			for ($i = 0; $i < count($lines); $i += 3) {
+				$count++;
+				// Check if there are at least three lines remaining
+				if (isset($lines[$i], $lines[$i + 1], $lines[$i + 2])) {
+					// Get the three lines
+					$satname = $lines[$i];
+					$tleline1 = $lines[$i + 1];
+					$tleline2 = $lines[$i + 2];
+					$sql = "INSERT INTO tle (satelliteid, tle) select id, ? from satellite where name = ? or exportname = ?";
+					$this->db->query($sql,array($tleline1."\n".$tleline2,$satname,$satname));
+				}
+			}
+		}
+
+		curl_close($curl);
+
+        $mtime = microtime();
+        $mtime = explode(" ",$mtime);
+        $mtime = $mtime[1] + $mtime[0];
+        $endtime = $mtime;
+        $totaltime = ($endtime - $starttime);
+        echo "This page was created in ".$totaltime." seconds <br />";
+        echo "Records inserted: " . $count . " <br/>";
+        $datetime = new DateTime("now", new DateTimeZone('UTC'));
+        $datetime = $datetime->format('Ymd h:i');
+        $this->optionslib->update('tle_update', $datetime , 'no');
+	}
+
+	function version_check() {
+		// set the last run in cron table for the correct cron id
+		$this->load->model('cron_model');
+		$this->cron_model->set_last_run($this->router->class . '_' . $this->router->method);
+		
+		$this->load->model('Update_model');
+		$this->Update_model->update_check();
+	}
 }
 ?>

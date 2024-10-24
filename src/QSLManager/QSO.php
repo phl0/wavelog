@@ -12,6 +12,7 @@ class QSO
 	private string $qsoID;
 	private string $qsoDateTime;
 	private string $de;
+	private string $profilename;
 	private string $dx;
 	private string $mode;
 	private string $submode;
@@ -38,6 +39,7 @@ class QSO
 	private string $state;
 	private string $dxcc;
 	private string $iota;
+	private string $continent;
 	/** @var string[] */
 	private string $deVUCCGridsquares;
 	private string $dxGridsquare;
@@ -63,6 +65,7 @@ class QSO
 	private string $lotw;
 	private string $eqsl;
 	private string $clublog;
+	private string $qrz;
 	/** Lotw callsign info **/
 	private string $callsign;
 	private string $lastupload;
@@ -144,10 +147,11 @@ class QSO
 			// Get Default date format from /config/wavelog.php
 			$custom_date_format = $CI->config->item('qso_date_format');
 		}
-		$this->qsoDateTime = date($custom_date_format . " H:i", strtotime($data['COL_TIME_ON']));
+		$this->qsoDateTime = date($custom_date_format . " H:i", strtotime($data['COL_TIME_ON'] ?? '1970-01-01 00:00:00'));
 
 		$this->de = $data['station_callsign'];
 		$this->dx = $data['COL_CALL'];
+		$this->continent = $data['COL_CONT'] ?? '';
 
 		$this->mode = $data['COL_MODE'] ?? '';
 		$this->submode = $data['COL_SUBMODE'] ?? '';
@@ -198,6 +202,7 @@ class QSO
 		$this->lotw = $this->getLotwString($data, $custom_date_format);
 		$this->eqsl = $this->getEqslString($data, $custom_date_format);
 		$this->clublog = $this->getClublogString($data, $custom_date_format);
+		$this->qrz = $this->getQrzString($data, $custom_date_format);
 
 		$this->cqzone = ($data['COL_CQZ'] === null) ? '' : $this->geCqLink($data['COL_CQZ']);
 		$this->ituzone = $data['COL_ITUZ'] ?? '';
@@ -219,6 +224,8 @@ class QSO
 		$this->orbit = $data['orbit'] ?? '';
 
 		$this->contest = $data['contestname'] ?? '';
+
+		$this->profilename = $data['station_profile_name'] ?? '';
 	}
 
 	/**
@@ -448,6 +455,71 @@ class QSO
 
 		return $clublogstring;
 	}
+
+	/**
+	 * @return string
+	 */
+	function getQrzString($data, $custom_date_format): string {
+		$CI =& get_instance();
+
+		$qrzstring = '<span ';
+
+		if ($data['COL_QRZCOM_QSO_UPLOAD_STATUS'] == "Y") {
+			$qrzstring .= "title=\"".__("Sent");
+
+			if ($data['COL_QRZCOM_QSO_UPLOAD_DATE'] != null) {
+				$timestamp = strtotime($data['COL_QRZCOM_QSO_UPLOAD_DATE']);
+				$qrzstring .=  " ".($timestamp!=''?date($custom_date_format, $timestamp):'');
+			}
+
+			$qrzstring .= "\" data-bs-toggle=\"tooltip\"";
+		}
+
+		if ($data['COL_QRZCOM_QSO_UPLOAD_STATUS'] == "M") {
+			$qrzstring .= "title=\"".__("Modified");
+
+			if ($data['COL_QRZCOM_QSO_UPLOAD_DATE'] != null) {
+				$timestamp = strtotime($data['COL_QRZCOM_QSO_UPLOAD_DATE']);
+				$qrzstring .=  "<br />(".__("last sent")." ".($timestamp!=''?date($custom_date_format, $timestamp):'').")";
+			}
+
+			$qrzstring .= "\" data-bs-toggle=\"tooltip\" data-bs-html=\"true\"";
+		}
+
+		if ($data['COL_QRZCOM_QSO_UPLOAD_STATUS'] == "I") {
+			$qrzstring .= "title=\"".__("Invalid (Ignore)");
+			$qrzstring .= "\" data-bs-toggle=\"tooltip\"";
+		}
+
+		$qrzstring .= ' class="qrz-';
+		if ($data['COL_QRZCOM_QSO_UPLOAD_STATUS'] =='Y') {
+			$qrzstring .= 'green';
+		} elseif ($data['COL_QRZCOM_QSO_UPLOAD_STATUS'] == 'M') {
+			$qrzstring .= 'yellow';
+		} elseif ($data['COL_QRZCOM_QSO_UPLOAD_STATUS'] == 'I') {
+			$qrzstring .= 'grey';
+		} else {
+			$qrzstring .= 'red';
+		}
+		$qrzstring .= '">&#9650;</span><span ';
+
+		if ($data['COL_QRZCOM_QSO_DOWNLOAD_STATUS'] == "Y") {
+			$qrzstring .= "title=\"".__("Received");
+
+			if ($data['COL_QRZCOM_QSO_DOWNLOAD_DATE'] != null) {
+				$timestamp = strtotime($data['COL_QRZCOM_QSO_DOWNLOAD_DATE']);
+				$qrzstring .= " ".($timestamp!=''?date($custom_date_format, $timestamp):'');
+			}
+			$qrzstring .= "\" data-bs-toggle=\"tooltip\"";
+		}
+
+		$qrzstring .= ' class="qrz-' . (($data['COL_QRZCOM_QSO_DOWNLOAD_STATUS']=='Y') ? 'green':'red') . '">&#9660;</span>';
+
+		$qrzstring .= '</span>';
+
+		return $qrzstring;
+	}
+
 
 	function getEqslString($data, $custom_date_format): string
 	{
@@ -817,6 +889,14 @@ class QSO
 		return $this->clublog;
 	}
 
+		/**
+	 * @return string
+	 */
+	public function getqrz(): string
+	{
+		return $this->qrz;
+	}
+
 	/**
 	 * @return string
 	 */
@@ -880,6 +960,7 @@ class QSO
 			'lotw' => $this->getlotw(),
 			'eqsl' => $this->geteqsl(),
 			'clublog' => $this->getclublog(),
+			'qrz' => $this->getqrz(),
 			'qslMessage' => $this->getQSLMsg(),
 			'name' => $this->getName(),
 			'dxcc' => $this->getDXCC(),
@@ -901,7 +982,9 @@ class QSO
 			'sota' => $this->getFormattedSotaLink(),
 			'dok' => $this->getFormattedDok(),
 			'wwff' => $this->getFormattedWwff(),
-			'sig' => $this->getFormattedSig()
+			'sig' => $this->getFormattedSig(),
+			'continent' => $this->continent,
+			'profilename' => $this->profilename
 		];
 	}
 
@@ -913,7 +996,7 @@ class QSO
 		} else if (preg_match('/^DV[ABCDEFGHIKLMNOPQRSTUVWXY]$/', $this->dxDARCDOK)) {
 			$dokstring = '<a href="https://www.darc.de/der-club/distrikte/' . strtolower(substr($this->dxDARCDOK, 2, 1)) . '" target="_blank">' . $this->dxDARCDOK . '</a>';
 		} else if (preg_match('/^Z\d{2}$/', $this->dxDARCDOK)) {
-			$dokstring = '<a href="https://' . $this->dxDARCDOK . 'vfdb.org" target="_blank">' . $this->dxDARCDOK . '</a>';
+			$dokstring = '<a href="https://' . $this->dxDARCDOK . '.vfdb.org" target="_blank">' . $this->dxDARCDOK . '</a>';
 		} else {
 			$dokstring = $this->dxDARCDOK;
 		}
