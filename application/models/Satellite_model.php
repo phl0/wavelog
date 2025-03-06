@@ -3,11 +3,11 @@
 class Satellite_model extends CI_Model {
 
 	function get_all_satellites() {
-		$sql = "select satellite.id, satellite.name as satname, group_concat(distinct satellitemode.name separator ', ') as modename, satellite.displayname, satellite.orbit, satellite.lotw as lotw, tle.updated
+		$sql = "select satellite.id, satellite.name as satname, group_concat(distinct satellitemode.name separator ', ') as modename, satellite.description, satellite.orbit, satellite.lotw as lotw, tle.updated
 		from satellite
 		left outer join satellitemode on satellite.id = satellitemode.satelliteid
 		left outer join tle on satellite.id = tle.satelliteid
-		group by satellite.name, satellite.displayname, satellite.orbit, satellite.id, tle.updated";
+		group by satellite.name, satellite.description, satellite.orbit, satellite.id, tle.updated";
 
 		return $this->db->query($sql)->result();
 	}
@@ -53,7 +53,7 @@ class Satellite_model extends CI_Model {
 	function add() {
 		$data = array(
 			'name' 			=> xss_clean($this->input->post('name', true)),
-			'displayname' 	=> xss_clean($this->input->post('displayname', true)),
+			'description' 	=> xss_clean($this->input->post('description', true)),
 			'orbit' 		=> xss_clean($this->input->post('orbit', true)),
 		);
 		if (xss_clean($this->input->post('lotw', true)) == 'Y') {
@@ -108,7 +108,7 @@ class Satellite_model extends CI_Model {
 	}
 
 	function satellite_data() {
-		$this->db->select('COALESCE(NULLIF(satellite.name, \'\'), satellite.displayname) AS satellite, satellitemode.name AS satmode, satellitemode.uplink_mode AS Uplink_Mode, satellitemode.uplink_freq AS Uplink_Freq, satellitemode.downlink_mode AS Downlink_Mode, satellitemode.downlink_freq AS Downlink_Freq');
+		$this->db->select('satellite.name AS satellite, satellite.description, satellitemode.name AS satmode, satellitemode.uplink_mode AS Uplink_Mode, satellitemode.uplink_freq AS Uplink_Freq, satellitemode.downlink_mode AS Downlink_Mode, satellitemode.downlink_freq AS Downlink_Freq');
 		$this->db->join('satellitemode', 'satellite.id = satellitemode.satelliteid', 'LEFT OUTER');
 		$this->db->order_by('satellite', 'ASC');
 		$query = $this->db->get('satellite');

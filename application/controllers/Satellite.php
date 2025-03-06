@@ -85,7 +85,7 @@ class Satellite extends CI_Controller {
 
 		$id = $this->security->xss_clean($this->input->post('id', true));
 		$satellite['name'] 	= $this->security->xss_clean($this->input->post('name'));
-		$satellite['displayname'] 	= $this->security->xss_clean($this->input->post('displayname'));
+		$satellite['description'] 	= $this->security->xss_clean($this->input->post('description'));
 		$satellite['orbit'] 	= $this->security->xss_clean($this->input->post('orbit'));
 		if ($this->security->xss_clean($this->input->post('lotw')) == 'Y') {
 			$satellite['lotw'] = 'Y';

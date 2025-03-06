@@ -295,8 +295,8 @@
                     <tr>
                         <td><?= __("Satellite Name"); ?></td>
                         <td><a href="https://db.satnogs.org/search/?q=<?php echo $row->COL_SAT_NAME; ?>" target="_blank">
-                        <?php if ($row->sat_displayname != null) {
-                                 echo $row->sat_displayname." (".$row->COL_SAT_NAME.")";
+                        <?php if ($row->sat_description != null) {
+                                 echo $row->sat_description." (".$row->COL_SAT_NAME.")";
                             } else {
                                  echo $row->COL_SAT_NAME;
                             }

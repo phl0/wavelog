@@ -55,7 +55,7 @@ function createSatelliteDialog() {
 
 function createSatellite(form) {
 	$(".alert").remove();
-	if (form.displayNameInput.value == "") {
+	if (form.nameInput.value == "") {
 		$('#create_satellite').prepend('<div class="alert alert-danger" role="alert"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a> Please enter a name!</div>');
 	}
 	else {
@@ -64,7 +64,7 @@ function createSatellite(form) {
 			type: 'post',
 			data: {
 				'name': form.nameInput.value,
-				'displayname': form.displayNameInput.value,
+				'description': form.descriptionInput.value,
 				'orbit': form.orbit.value,
 				'modename': form.mode.value,
 				'uplinkmode': form.uplinkMode.value,
@@ -108,7 +108,7 @@ function editSatelliteDialog(id) {
 
 function saveUpdatedSatellite(form) {
 	$(".alert").remove();
-	if (form.displayNameInput.value == "") {
+	if (form.nameInput.value == "") {
 		$('#edit_satellite_dialog').prepend('<div class="alert alert-danger" role="alert"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a> Please enter a name!</div>');
 	}
 	else {
@@ -117,7 +117,7 @@ function saveUpdatedSatellite(form) {
 			type: 'post',
 			data: {'id': form.id.value,
 					'name': form.nameInput.value,
-					'displayname': form.displayNameInput.value,
+					'description': form.descriptionInput.value,
 					'lotw': form.lotwAccepted.value,
 					'orbit': form.orbit.value,
 			},

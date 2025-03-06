@@ -20,14 +20,14 @@
 		<form>
 		<div class = "row">
 			<div class="mb-3 col-md-6">
-				<label for="displayNameInput"><?= __("Satellite Display Name"); ?></label>
-				<input type="text" class="form-control" name="displayNameInput" id="displayNameInput" aria-describedby="displayNameInputHelp" required>
-				<small id="displayNameInputHelp" class="form-text text-muted"><?= __("Display / cleartext name of the satellite"); ?></small>
+				<label for="nameInput"><?= __("Name"); ?></label>
+				<input type="text" class="form-control" name="nameInput" id="nameInput" aria-describedby="nameInputHelp">
+				<small id="nameInputHelp" class="form-text text-muted"><?= __("Satellite name as accepted by LoTW. Should be changed later when added to LoTW."); ?></small>
 			</div>
 			<div class="mb-3 col-md-6">
-				<label for="nameInput"><?= __("LoTW Name"); ?></label>
-				<input type="text" class="form-control" name="nameInput" id="nameInput" aria-describedby="nameInputHelp">
-				<small id="nameInputHelp" class="form-text text-muted"><?= __("Satellite name as accepted by LoTW. Not necessarily the same as the display name. Can be set/changed later when added to LoTW."); ?></small>
+				<label for="descriptionInput"><?= __("Description"); ?></label>
+				<input type="text" class="form-control" name="descriptionInput" id="descriptionInput" aria-describedby="descriptionInputHelp" required>
+				<small id="descriptionInputHelp" class="form-text text-muted"><?= __("Original Name or description by the satellite owner"); ?></small>
 			</div>
 		</div>
 		<div class = "row">
@@ -75,7 +75,7 @@
 					<option value="Y"><?= __("Yes"); ?></option>
 					<option value="N" selected="selected"><?= __("No"); ?></option>
 				</select>
-				<small id="displayNameInputHelp" class="form-text text-muted"><?= __("Set to yes only if satellite is accepted my LoTW"); ?></small>
+				<small id="lotwAcceptedHelp" class="form-text text-muted"><?= __("Set to yes only if satellite is accepted my LoTW"); ?></small>
 			</div>
 		</div>
 
