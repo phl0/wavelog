@@ -2,9 +2,11 @@ var favs = {};
 var selected_sat;
 var selected_sat_mode;
 var scps = [];
+let lookupCall = null;
+let preventLookup = false;
 
 // if the dxcc id changes we need to update the state dropdown and clear the county value to avoid wrong data
-$("#dxcc_id").change(function () {
+$("#dxcc_id").on('change', function () {
 	updateStateDropdown('#dxcc_id', '#stateInputLabel', '#location_us_county', '#stationCntyInputQso');
 	$('#stationCntyInputQso').val('');
 	$('#dxcc_id').multiselect('refresh');
@@ -20,20 +22,16 @@ function resetTimers(qso_manual) {
 
 function getUTCTimeStamp(el) {
 	var now = new Date();
-	var localTime = now.getTime();
-	var utc = localTime + (now.getTimezoneOffset() * 60000);
 	$(el).attr('value', ("0" + now.getUTCHours()).slice(-2) + ':' + ("0" + now.getUTCMinutes()).slice(-2) + ':' + ("0" + now.getUTCSeconds()).slice(-2));
 }
 
 function getUTCDateStamp(el) {
 	var now = new Date();
-	var localTime = now.getTime();
-	var utc = localTime + (now.getTimezoneOffset() * 60000);
 	$(el).attr('value', ("0" + now.getUTCDate()).slice(-2) + '-' + ("0" + (now.getUTCMonth() + 1)).slice(-2) + '-' + now.getUTCFullYear());
 }
 
 
-$('#stationProfile').change(function () {
+$('#stationProfile').on('change', function () {
 	var stationProfile = $('#stationProfile').val();
 	$.ajax({
 		url: base_url + 'index.php/qso/get_station_power',
@@ -41,6 +39,8 @@ $('#stationProfile').change(function () {
 		data: { 'stationProfile': stationProfile },
 		success: function (res) {
 			$('#transmit_power').val(res.station_power);
+			latlng=[res.lat,res.lng];
+			$("#sat_name").change();
 		},
 		error: function () {
 			$('#transmit_power').val('');
@@ -56,22 +56,20 @@ $('.qso_panel .qso_eqsl_qslmsg_update').off('click').on('click', function () {
 	$('#charsLeft').text(" ");
 });
 
-$(document).keyup(function (e) {
-	if (e.charCode === 0) {
-		let fixedcall = $('#callsign').val();
-		$('#callsign').val(fixedcall.replace('Ø', '0'));
-	}
-	if (e.key === "Escape") { // escape key maps to keycode `27`
+$(document).on("keydown", function (e) {
+	if (e.key === "Escape" && $('#callsign').val() != '') { // escape key maps to keycode `27`
+		// console.log("Escape key pressed");
 		reset_fields();
-		resetTimers(qso_manual)
-		$('#callsign').val("");
-		$("#callsign").focus();
+		$('#callsign').trigger("focus");
 	}
 });
 
 // Sanitize some input data
 $('#callsign').on('input', function () {
 	$(this).val($(this).val().replace(/\s/g, ''));
+	$(this).val($(this).val().replace(/0/g, 'Ø'));
+	$(this).val($(this).val().replace(/\./g, '/P'));
+	$(this).val($(this).val().replace(/\ /g, ''));
 });
 
 $('#locator').on('input', function () {
@@ -93,7 +91,7 @@ function set_timers() {
 		var callsignValue = localStorage.getItem("quicklogCallsign");
 		if (callsignValue !== null && callsignValue !== undefined) {
 			$("#callsign").val(callsignValue);
-			$("#mode").focus();
+			$("#mode").trigger("focus");
 			localStorage.removeItem("quicklogCallsign");
 		}
 	}, 100);
@@ -113,6 +111,7 @@ $("#qso_input").off('submit').on('submit', function (e) {
 			url: base_url + 'index.php/qso' + manual_addon,
 			method: 'POST',
 			type: 'post',
+			timeout: 10000,
 			data: $(this).serialize(),
 			success: function (resdata) {
 				result = JSON.parse(resdata);
@@ -124,14 +123,9 @@ $("#qso_input").off('submit').on('submit', function (e) {
 					$("#noticer").addClass("alert alert-info");
 					$("#noticer").html("QSO Added");
 					$("#noticer").show();
-					reset_fields();
-					htmx.trigger("#qso-last-table", "qso_event")
-					$("#saveQso").html(saveQsoButtonText).prop("disabled", false);
-					$("#callsign").val("");
+					prepare_next_qso(saveQsoButtonText);
 					$("#noticer").fadeOut(2000);
-					var triggerEl = document.querySelector('#myTab a[href="#qso"]')
-					bootstrap.Tab.getInstance(triggerEl).show() // Select tab by name
-					$("#callsign").focus();
+					processBacklog();	// If we have success with the live-QSO, we could also process the backlog
 				} else {
 					$("#noticer").removeClass("");
 					$("#noticer").addClass("alert alert-warning");
@@ -141,54 +135,130 @@ $("#qso_input").off('submit').on('submit', function (e) {
 				}
 			},
 			error: function () {
+				saveToBacklog(JSON.stringify(this.data),manual_addon);
+				prepare_next_qso(saveQsoButtonText);
 				$("#noticer").removeClass("");
-				$("#noticer").addClass("alert alert-warning");
-				$("#noticer").html("Timeout while adding QSO. NOT added");
+				$("#noticer").addClass("alert alert-info");
+				$("#noticer").html("QSO Added to Backlog");
 				$("#noticer").show();
-				$("#saveQso").html(saveQsoButtonText).prop("disabled", false);
+				$("#noticer").fadeOut(5000);
 			}
 		});
 	}
 	return false;
 });
 
-$('#reset_time').click(function () {
+function prepare_next_qso(saveQsoButtonText) {
+	reset_fields();
+	htmx.trigger("#qso-last-table", "qso_event")
+	$("#saveQso").html(saveQsoButtonText).prop("disabled", false);
+	$("#callsign").val("");
+	var triggerEl = document.querySelector('#myTab a[href="#qso"]')
+	bootstrap.Tab.getInstance(triggerEl).show() // Select tab by name
+	$("#callsign").trigger("focus");
+}
+
+var processingBL=false;
+
+async function processBacklog() {
+	if (!processingBL) {
+		processingBL=true;
+		const Qsobacklog = JSON.parse(localStorage.getItem('qso-backlog')) || [];
+		for (const entry of [...Qsobacklog]) { 
+			try {
+				await $.ajax({url: base_url + 'index.php/qso' + entry.manual_addon,  method: 'POST', type: 'post', data: JSON.parse(entry.data), 
+					success: function(resdata) {
+						Qsobacklog.splice(Qsobacklog.findIndex(e => e.id === entry.id), 1);
+					}, 
+					error: function() { 
+						entry.attempts++;
+					}});
+			} catch (error) {
+				entry.attempts++;
+			}
+		}
+		localStorage.setItem('qso-backlog', JSON.stringify(Qsobacklog));
+		processingBL=false;
+	}
+}
+
+function saveToBacklog(formData,manual_addon) {
+	const backlog = JSON.parse(localStorage.getItem('qso-backlog')) || [];
+	const entry = {
+		id: Date.now(), 
+		timestamp: new Date().toISOString(),
+		data: formData,
+		manual_addon: manual_addon,
+		attempts: 0 
+	};
+	backlog.push(entry);
+	localStorage.setItem('qso-backlog', JSON.stringify(backlog));
+}
+
+window.addEventListener('beforeunload', processBacklog());	// process possible QSO-Backlog on unload of page
+window.addEventListener('pagehide', processBacklog());		// process possible QSO-Backlog on Hide of page (Mobile-Browsers)
+
+$('#reset_time').on("click", function () {
 	var now = new Date();
-	var localTime = now.getTime();
-	var utc = localTime + (now.getTimezoneOffset() * 60000);
-	$('#start_time').val(("0" + now.getUTCHours()).slice(-2) + ':' + ("0" + now.getUTCMinutes()).slice(-2) + ':' + ("0" + now.getUTCSeconds()).slice(-2));
+	$('#start_time').attr('value', ("0" + now.getUTCHours()).slice(-2) + ':' + ("0" + now.getUTCMinutes()).slice(-2) + ':' + ("0" + now.getUTCSeconds()).slice(-2));
 	$("[id='start_time']").each(function () {
 		$(this).attr("value", ("0" + now.getUTCHours()).slice(-2) + ':' + ("0" + now.getUTCMinutes()).slice(-2) + ':' + ("0" + now.getUTCSeconds()).slice(-2));
 	});
 });
 
-$('#reset_start_time').click(function () {
+
+
+// Function to format the current time as HH:MM or HH:MM:SS
+function formatTime(date, includeSeconds) {
+	let time = ("0" + date.getUTCHours()).slice(-2) + ":" + ("0" + date.getUTCMinutes()).slice(-2);
+	if (includeSeconds) {
+		time += ":" + ("0" + date.getUTCSeconds()).slice(-2);
+	}
+	return time;
+}
+
+// Event listener for resetting start time
+$("#reset_start_time").on("click", function () {
 	var now = new Date();
-	var localTime = now.getTime();
-	var utc = localTime + (now.getTimezoneOffset() * 60000);
-	$('#start_time').val(("0" + now.getUTCHours()).slice(-2) + ':' + ("0" + now.getUTCMinutes()).slice(-2));
+
+	// Format start and end times
+	let startTime = formatTime(now, qso_manual != 1);
+	let endTime = formatTime(now, qso_manual != 1);
+
+	// Update all elements with id 'start_time'
 	$("[id='start_time']").each(function () {
-		$(this).attr("value", ("0" + now.getUTCHours()).slice(-2) + ':' + ("0" + now.getUTCMinutes()).slice(-2) + ':' + ("0" + now.getUTCSeconds()).slice(-2));
+		$(this).val(startTime);
 	});
-	$('#end_time').val(("0" + now.getUTCHours()).slice(-2) + ':' + ("0" + now.getUTCMinutes()).slice(-2));
+
+	// Update all elements with id 'end_time'
 	$("[id='end_time']").each(function () {
-		$(this).attr("value", ("0" + now.getUTCHours()).slice(-2) + ':' + ("0" + now.getUTCMinutes()).slice(-2) + ':' + ("0" + now.getUTCSeconds()).slice(-2));
+		$(this).val(endTime);
 	});
-	// update date (today, for "post qso") //
-	$('#start_date').val(("0" + now.getUTCDate()).slice(-2) + '-' + ("0" + (now.getUTCMonth() + 1)).slice(-2) + '-' + now.getUTCFullYear());
+
+	// Update the start date
+	$("#start_date").val(
+		("0" + now.getUTCDate()).slice(-2) +
+		"-" +
+		("0" + (now.getUTCMonth() + 1)).slice(-2) +
+		"-" +
+		now.getUTCFullYear()
+	);
 });
 
-$('#reset_end_time').click(function () {
+// Event listener for resetting end time
+$("#reset_end_time").on("click", function () {
 	var now = new Date();
-	var localTime = now.getTime();
-	var utc = localTime + (now.getTimezoneOffset() * 60000);
-	$('#end_time').val(("0" + now.getUTCHours()).slice(-2) + ':' + ("0" + now.getUTCMinutes()).slice(-2));
+
+	// Format end time
+	let endTime = formatTime(now, qso_manual != 1);
+
+	// Update all elements with id 'end_time'
 	$("[id='end_time']").each(function () {
-		$(this).attr("value", ("0" + now.getUTCHours()).slice(-2) + ':' + ("0" + now.getUTCMinutes()).slice(-2) + ':' + ("0" + now.getUTCSeconds()).slice(-2));
+		$(this).val(endTime);
 	});
 });
 
-$('#fav_add').click(function (event) {
+$('#fav_add').on("click", function (event) {
 	save_fav();
 });
 
@@ -198,13 +268,16 @@ $(document).on("click", "#fav_del", function (event) {
 
 $(document).on("click", "#fav_recall", function (event) {
 	$('#sat_name').val(favs[this.innerText].sat_name);
+	if (favs[this.innerText].sat_name) {
+		$("#sat_name").change();
+	}
 	$('#sat_mode').val(favs[this.innerText].sat_mode);
 	$('#band_rx').val(favs[this.innerText].band_rx);
 	$('#band').val(favs[this.innerText].band);
 	$('#frequency_rx').val(favs[this.innerText].frequency_rx);
-	$('#frequency').val(favs[this.innerText].frequency);
+	$('#frequency').val(favs[this.innerText].frequency).trigger("change");
 	$('#selectPropagation').val(favs[this.innerText].prop_mode);
-	$('#mode').val(favs[this.innerText].mode).change();
+	$('#mode').val(favs[this.innerText].mode).on("change");
 });
 
 
@@ -285,7 +358,7 @@ bc.onmessage = function (ev) {
 			}
 			setTimeout(() => {
 				if (ev.data.frequency != null) {
-					$('#frequency').val(ev.data.frequency);
+					$('#frequency').val(ev.data.frequency).trigger("change");
 					$("#band").val(frequencyToBand(ev.data.frequency));
 				}
 				if (ev.data.frequency_rx != "") {
@@ -300,15 +373,93 @@ bc.onmessage = function (ev) {
 	}
 } /* receive */
 
-$("#sat_name").change(function () {
+$("#sat_name").on('change', function () {
 	var sat = $("#sat_name").val();
 	if (sat == "") {
 		$("#sat_mode").val("");
 		$("#selectPropagation").val("");
+		stop_az_ele_ticker();
+	} else {
+		get_tles();
 	}
 });
 
-$('#stateDropdown').change(function () {
+
+var satupdater;
+
+function stop_az_ele_ticker() {
+	if (satupdater) {
+		clearInterval(satupdater);
+	}
+	$("#ant_az").val('');
+	$("#ant_el").val('');
+}
+
+function start_az_ele_ticker(tle) {
+	const lines = tle.tle.trim().split('\n');
+
+	// Initialize a satellite record
+	var satrec = satellite.twoline2satrec(lines[0], lines[1]);
+
+	// Define the observer's location in radians
+	var observerGd = {
+		longitude: satellite.degreesToRadians(latlng[1]),
+		latitude: satellite.degreesToRadians(latlng[0]),
+		height: 0.370
+	};
+
+	function updateAzEl() {
+		let dateParts=$('#start_date').val().split("-");
+		let timeParts=$("#start_time").val().split(":");
+		try {
+			var time = new Date(Date.UTC(
+				parseInt(dateParts[2]),parseInt(dateParts[1])-1,parseInt(dateParts[0]),
+				parseInt(timeParts[0]),parseInt(timeParts[1]),(parseInt(timeParts[2] ?? 0))
+			));
+			if (isNaN(time.getTime())) {
+				throw new Error("Invalid date");
+			}
+			var positionAndVelocity = satellite.propagate(satrec, time);
+			var gmst = satellite.gstime(time);
+			var positionEcf = satellite.eciToEcf(positionAndVelocity.position, gmst);
+			var observerEcf = satellite.geodeticToEcf(observerGd);
+			var lookAngles = satellite.ecfToLookAngles(observerGd, positionEcf);
+			let az=(satellite.radiansToDegrees(lookAngles.azimuth).toFixed(2));
+			let el=(satellite.radiansToDegrees(lookAngles.elevation).toFixed(2));
+			$("#ant_az").val(parseFloat(az).toFixed(1));
+			$("#ant_el").val(parseFloat(el).toFixed(1));
+		} catch(e) {
+			$("#ant_az").val('');
+			$("#ant_el").val('');
+		}
+	}
+	satupdater=setInterval(updateAzEl, 1000);
+}
+
+function get_tles() {
+	stop_az_ele_ticker();
+	$.ajax({
+		url: base_url + 'index.php/satellite/get_tle',
+		type: 'post',
+		data: {
+			sat: $("#sat_name").val(),
+		},
+		success: function (data) {
+			if (data !== null) {
+				start_az_ele_ticker(data);
+			}
+		},
+		error: function (data) {
+			console.log('Something went wrong while trying to fetch TLE for sat: '+$("#sat_name"));
+		},
+	});
+}
+
+if ($("#sat_name").val() !== '') {
+	get_tles();
+}
+
+$('#stateDropdown').on('change', function () {
 	var state = $("#stateDropdown option:selected").text();
 	if (state != "") {
 		$("#stationCntyInputQso").prop('disabled', false);
@@ -377,7 +528,7 @@ $(document).on('change', 'input', function () {
 								}
 								$("#band").val(frequencyToBand(val2[0].Uplink_Freq));
 								$("#band_rx").val(frequencyToBand(val2[0].Downlink_Freq));
-								$("#frequency").val(val2[0].Uplink_Freq);
+								$("#frequency").val(val2[0].Uplink_Freq).trigger("change");
 								$("#frequency_rx").val(val2[0].Downlink_Freq);
 								$("#selectPropagation").val('SAT');
 							}
@@ -466,16 +617,28 @@ function changebadge(entityname) {
 	}
 }
 
-$('#btn_reset').click(function () {
+$('#btn_reset').on("click", function () {
+	preventLookup = true;
+
+	if (lookupCall) {
+		lookupCall.abort();
+	}
+
 	reset_fields();
+
+	// make sure the focusout event is finished before we allow a new lookup
+	setTimeout(() => {
+		preventLookup = false;
+	}, 100);
 });
 
-$('#btn_fullreset').click(function () {
+$('#btn_fullreset').on("click", function () {
 	reset_to_default();
 });
 
 function reset_to_default() {
 	reset_fields();
+	panMap(activeStationId);
 	$("#stationProfile").val(activeStationId);
 	$("#selectPropagation").val("");
 	$("#frequency_rx").val("");
@@ -485,6 +648,8 @@ function reset_to_default() {
 	$("#sat_mode").val("");
 	$("#ant_az").val("");
 	$("#ant_el").val("");
+	$("#distance").val("");
+	stop_az_ele_ticker();
 }
 
 /* Function: reset_fields is used to reset the fields on the QSO page */
@@ -493,6 +658,12 @@ function reset_fields() {
 	$('#comment').val("");
 	$('#country').val("");
 	$('#continent').val("");
+	$('#email').val("");
+	$('#region').val("");
+	$('#ham_of_note_info').text("");
+	$('#ham_of_note_link').html("");
+	$('#ham_of_note_link').removeAttr('href');
+	$('#ham_of_note_line').hide();
 	$('#lotw_info').text("");
 	$('#lotw_info').attr('data-bs-original-title', "");
 	$('#lotw_info').removeClass("lotw_info_red");
@@ -506,6 +677,7 @@ function reset_fields() {
 	$('#name').val("");
 	$('#qth').val("");
 	$('#locator').val("");
+	$('#ant_path').val("");
 	$('#iota_ref').val("");
 	$("#locator").removeClass("confirmedGrid");
 	$("#locator").removeClass("workedGrid");
@@ -526,6 +698,7 @@ function reset_fields() {
 	$('#qso-last-table').show();
 	$('#partial_view').hide();
 	$('.callsign-suggest').hide();
+	$("#distance").val("");
 	setRst($(".mode").val());
 	var $select = $('#sota_ref').selectize();
 	var selectize = $select[0].selectize;
@@ -558,7 +731,7 @@ function reset_fields() {
 	mymap.setView(pos, 12);
 	mymap.removeLayer(markers);
 	$('.callsign-suggest').hide();
-	$('.dxccsummary').remove();
+	$('.awardpane').remove();
 	$('#timesWorked').html(lang_qso_title_previous_contacts);
 	updateStateDropdown('#dxcc_id', '#stateInputLabel', '#location_us_county', '#stationCntyInputEdit');
 	clearTimeout();
@@ -566,8 +739,10 @@ function reset_fields() {
 	resetTimers(qso_manual);
 }
 
-$("#callsign").focusout(function () {
-	if ($(this).val().length >= 3) {
+$("#callsign").on("focusout", function () {
+	if ($(this).val().length >= 3 && preventLookup == false) {
+
+		$("#noticer").fadeOut(1000);
 
 		// Temp store the callsign
 		var temp_callsign = $(this).val();
@@ -586,13 +761,13 @@ $("#callsign").focusout(function () {
 		var callsign = find_callsign;
 
 		find_callsign = find_callsign.replace(/\//g, "-");
-		find_callsign = find_callsign.replace('Ø', '0');
+		find_callsign = find_callsign.replaceAll('Ø', '0');
 
 		// Replace / in a callsign with - to stop urls breaking
-		$.getJSON(base_url + 'index.php/logbook/json/' + find_callsign + '/' + json_band + '/' + json_mode + '/' + $('#stationProfile').val() + '/' + $('#start_date').val(), async function (result) {
+		lookupCall = $.getJSON(base_url + 'index.php/logbook/json/' + find_callsign + '/' + json_band + '/' + json_mode + '/' + $('#stationProfile').val() + '/' + $('#start_date').val() + '/' + last_qsos_count, async function (result) {
 
 			// Make sure the typed callsign and json result match
-			if ($('#callsign').val = result.callsign) {
+			if ($('#callsign').val().toUpperCase().replaceAll('Ø', '0') == result.callsign) {
 
 				// Reset QSO fields
 				resetDefaultQSOFields();
@@ -609,6 +784,10 @@ $("#callsign").focusout(function () {
 							$('#callsign').removeClass("confirmedGrid");
 							$('#callsign').removeClass("newGrid");
 							$('#callsign').attr('title', '');
+							$('#ham_of_note_info').text("");
+							$('#ham_of_note_link').html("");
+							$('#ham_of_note_link').removeAttr('href');
+							$('#ham_of_note_line').hide();
 
 							if (result.confirmed) {
 								$('#callsign').addClass("confirmedGrid");
@@ -629,6 +808,10 @@ $("#callsign").focusout(function () {
 							$('#callsign').removeClass("workedGrid");
 							$('#callsign').removeClass("newGrid");
 							$('#callsign').attr('title', '');
+							$('#ham_of_note_info').text("");
+							$('#ham_of_note_link').html("");
+							$('#ham_of_note_link').removeAttr('href');
+							$('#ham_of_note_line').hide();
 
 							if (result.confirmed) {
 								$('#callsign').addClass("confirmedGrid");
@@ -658,27 +841,27 @@ $("#callsign").focusout(function () {
 					} else if (result.lotw_days > 7) {
 						$('#lotw_info').addClass('lotw_info_yellow');
 					}
-					$('#lotw_link').attr('href', "https://lotw.arrl.org/lotwuser/act?act=" + callsign);
+					$('#lotw_link').attr('href', "https://lotw.arrl.org/lotwuser/act?act=" + callsign.replace('Ø', '0'));
 					$('#lotw_link').attr('target', "_blank");
 					$('#lotw_info').attr('data-bs-toggle', "tooltip");
-					if (result.lotw_days == 1) { 
+					if (result.lotw_days == 1) {
 						$('#lotw_info').attr('data-bs-original-title', lang_lotw_upload_day_ago);
 					} else {
 						$('#lotw_info').attr('data-bs-original-title', lang_lotw_upload_days_ago.replace('%x', result.lotw_days));
 					}
 					$('[data-bs-toggle="tooltip"]').tooltip();
 				}
-				$('#qrz_info').html('<a target="_blank" href="https://www.qrz.com/db/' + callsign + '"><img width="30" height="30" src="' + base_url + 'images/icons/qrz.com.png"></a>');
+				$('#qrz_info').html('<a target="_blank" href="https://www.qrz.com/db/' + callsign.replaceAll('Ø', '0') + '"><img width="30" height="30" src="' + base_url + 'images/icons/qrz.com.png"></a>');
 				$('#qrz_info').attr('title', 'Lookup ' + callsign + ' info on qrz.com').removeClass('d-none');
 				$('#qrz_info').show();
-				$('#hamqth_info').html('<a target="_blank" href="https://www.hamqth.com/' + callsign + '"><img width="30" height="30" src="' + base_url + 'images/icons/hamqth.com.png"></a>');
+				$('#hamqth_info').html('<a target="_blank" href="https://www.hamqth.com/' + callsign.replaceAll('Ø', '0') + '"><img width="30" height="30" src="' + base_url + 'images/icons/hamqth.com.png"></a>');
 				$('#hamqth_info').attr('title', 'Lookup ' + callsign + ' info on hamqth.com').removeClass('d-none');
 				$('#hamqth_info').show();
 
 				var $dok_select = $('#darc_dok').selectize();
 				var dok_selectize = $dok_select[0].selectize;
 				if ((result.dxcc.adif == '230') && (($("#callsign").val().trim().length) > 0)) {
-					$.get(base_url + 'index.php/lookup/dok/' + $('#callsign').val().toUpperCase(), function (result) {
+					$.get(base_url + 'index.php/lookup/dok/' + $('#callsign').val().toUpperCase().replaceAll('Ø', '0').replaceAll('/','-'), function (result) {
 						if (result) {
 							dok_selectize.addOption({ name: result });
 							dok_selectize.setValue(result, false);
@@ -688,9 +871,42 @@ $("#callsign").focusout(function () {
 					dok_selectize.clear();
 				}
 
+				$.getJSON(base_url + 'index.php/lookup/ham_of_note/' + $('#callsign').val().toUpperCase().replaceAll('Ø', '0').replaceAll('/','-'), function (result) {
+					if (result) {
+						$('#ham_of_note_info').html('<span class="minimize">'+result.description+'</span>');
+						if (result.link != null) {
+							$('#ham_of_note_link').html(" "+result.linkname);
+							$('#ham_of_note_link').attr('href', result.link);
+						}
+						$('#ham_of_note_line').show("slow");
+
+						var minimized_elements = $('span.minimize');
+						var maxlen = 50;
+
+						minimized_elements.each(function(){
+							var t = $(this).text();
+							if(t.length < maxlen) return;
+							$(this).html(
+								t.slice(0,maxlen)+'<span>... </span><a href="#" class="more">'+lang_qso_more+'</a><span style="display:none;">'+ t.slice(maxlen,t.length)+' <a href="#" class="less">'+lang_qso_less+'</a></span>'
+							);
+						});
+
+						$('a.more', minimized_elements).click(function(event){
+							event.preventDefault();
+							$(this).hide().prev().hide();
+							$(this).next().show();
+						});
+
+						$('a.less', minimized_elements).click(function(event){
+							event.preventDefault();
+							$(this).parent().hide().prev().show().prev().show();
+						});
+
+					}
+				});
 				$('#dxcc_id').val(result.dxcc.adif).multiselect('refresh');
 				await updateStateDropdown('#dxcc_id', '#stateInputLabel', '#location_us_county', '#stationCntyInputEdit');
-				if (result.callsign_cqz != '') {
+				if (result.callsign_cqz != '' && (result.callsign_cqz >= 1 && result.callsign_cqz <= 40)) {
 					$('#cqz').val(result.callsign_cqz);
 				} else {
 					$('#cqz').val(result.dxcc.cqz);
@@ -762,6 +978,11 @@ $("#callsign").focusout(function () {
 					$('#name').val(result.callsign_name);
 				}
 
+				/* Find Operators E-mail */
+				if ($('#email').val() == "") {
+					$('#email').val(result.callsign_email);
+				}
+
 				if ($('#continent').val() == "") {
 					$('#continent').val(result.dxcc.cont);
 				}
@@ -812,9 +1033,16 @@ $("#callsign").focusout(function () {
 				/* display past QSOs */
 				$('#partial_view').html(result.partial);
 
-				// Get DXX Summary
-				getDxccResult(result.dxcc.adif, convert_case(result.dxcc.entity));
+				// Get DXCC Summary
+				loadAwardTabs(function() {
+					getDxccResult(result.dxcc.adif, convert_case(result.dxcc.entity));
+				});
 			}
+			// else {
+			// 	console.log("Callsigns do not match, skipping lookup");
+			// 	console.log("Typed Callsign: " + $('#callsign').val());
+			// 	console.log("Returned Callsign: " + result.callsign);
+			// }
 		});
 	} else {
 		// Reset QSO fields
@@ -822,8 +1050,450 @@ $("#callsign").focusout(function () {
 	}
 })
 
+// This function executes the call to the backend for fetching cq summary and inserted table below qso entry
+function getCqResult() {
+	satOrBand = $('#band').val();
+	if ($('#selectPropagation').val() == 'SAT') {
+		satOrBand = 'SAT';
+	}
+	$.ajax({
+		url: base_url + 'index.php/lookup/search',
+		type: 'post',
+		data: {
+			type: 'cq',
+			cqz: $('#cqz').val(),
+			reduced_mode: true,
+			current_band: satOrBand,
+			current_mode: $('#mode').val(),
+		},
+		success: function (html) {
+            $('#cq-summary').empty();
+			$('#cq-summary').append(lang_summary_cq + ' ' + $('#cqz').val() + '.');
+            $('#cq-summary').append(html);
+		}
+	});
+}
+
+// This function executes the call to the backend for fetching was summary and inserted table below qso entry
+function getWasResult() {
+	$('#state-summary').empty();
+	if ($('#stateDropdown').val() === '') {
+		$('#state-summary').append(lang_summary_warning_empty_state);
+		return;
+	}
+
+	let dxccid = $('#dxcc_id').val();
+	if (!['291', '6', '110'].includes(dxccid)) {
+		$('#state-summary').append(lang_summary_state_valid);
+		return;
+	}
+	satOrBand = $('#band').val();
+	if ($('#selectPropagation').val() == 'SAT') {
+		satOrBand = 'SAT';
+	}
+	$.ajax({
+		url: base_url + 'index.php/lookup/search',
+		type: 'post',
+		data: {
+			type: 'was',
+			was: $('#stateDropdown').val(),
+			reduced_mode: true,
+			current_band: satOrBand,
+			current_mode: $('#mode').val(),
+		},
+		success: function (html) {
+			$('#state-summary').append(lang_summary_state + ' ' + $('#stateDropdown').val() + '.');
+            $('#state-summary').append(html);
+		}
+	});
+}
+
+// This function executes the call to the backend for fetching sota summary and inserted table below qso entry
+function getSotaResult() {
+	$('#sota-summary').empty();
+	if ($('#sota_ref').val() === '') {
+		$('#sota-summary').append(lang_summary_warning_empty_sota);
+		return;
+	}
+	satOrBand = $('#band').val();
+	if ($('#selectPropagation').val() == 'SAT') {
+		satOrBand = 'SAT';
+	}
+	$.ajax({
+		url: base_url + 'index.php/lookup/search',
+		type: 'post',
+		data: {
+			type: 'sota',
+			sota: $('#sota_ref').val(),
+			reduced_mode: true,
+			current_band: satOrBand,
+			current_mode: $('#mode').val(),
+		},
+		success: function (html) {
+			$('#sota-summary').append(lang_summary_sota + ' ' + $('#sota_ref').val() + '.');
+            $('#sota-summary').append(html);
+		}
+	});
+}
+
+// This function executes the call to the backend for fetching pota summary and inserted table below qso entry
+function getPotaResult() {
+	let potaref = $('#pota_ref').val();
+	$('#pota-summary').empty();
+	if (potaref === '') {
+		$('#pota-summary').append(lang_summary_warning_empty_pota);
+		return;
+	}
+	satOrBand = $('#band').val();
+	if ($('#selectPropagation').val() == 'SAT') {
+		satOrBand = 'SAT';
+	}
+	if (potaref.includes(',')) {
+		let values = potaref.split(',').map(function(v) {
+            return v.trim();
+        }).filter(function(v) {
+            return v;
+        });
+		let tabContent = $('#pota-summary'); // Tab content container
+		tabContent.append('<div class="card"><div class="card-header"><ul style="font-size: 15px;" class="nav nav-tabs card-header-tabs pull-right" id="awardPotaTab" role="tablist"></ul></div></div>');
+		tabContent.append('<div class="card-body"><div class="tab-content potatablist"></div>');
+
+		values.forEach(function(value, index) {
+			let tabId = `pota-tab-${index}`;
+			let contentId = `pota-content-${index}`;
+
+			// Append new tab
+			$('#awardPotaTab').append(`
+				<li class="nav-item">
+					<a class="nav-link ${index === 0 ? 'active' : ''}" id="${tabId}-tab" data-bs-toggle="tab" href="#${contentId}" role="tab" aria-controls="${contentId}" aria-selected="${index === 0}">
+						${value.toUpperCase()}
+					</a>
+				</li>
+			`);
+
+			// Append new tab content
+			$('.potatablist').append(`
+				<div class="tab-pane fade ${index === 0 ? 'show active' : ''}" id="${contentId}" role="tabpanel" aria-labelledby="${tabId}-tab">
+				</div>
+			`);
+
+			// Make AJAX request
+			$.ajax({
+				url: base_url + 'index.php/lookup/search',
+				type: 'POST',
+				data: { type: 'pota',
+						pota: value.trim(),
+						reduced_mode: true,
+						current_band: satOrBand,
+						current_mode: $('#mode').val()
+					},
+				success: function(response) {
+					$(`#${contentId}`).html(response); // Append response to correct tab
+				},
+				error: function(xhr, status, error) {
+					$(`#${contentId}`).html(`<div class="text-danger">Error loading data for ${value}</div>`);
+				}
+			});
+		});
+		return;
+	}
+	$.ajax({
+		url: base_url + 'index.php/lookup/search',
+		type: 'post',
+		data: {
+			type: 'pota',
+			pota: potaref,
+			reduced_mode: true,
+			current_band: satOrBand,
+			current_mode: $('#mode').val(),
+		},
+		success: function (html) {
+			$('#pota-summary').append(lang_summary_pota + ' ' + potaref + '.');
+            $('#pota-summary').append(html);
+		}
+	});
+}
+
+// This function executes the call to the backend for fetching continent summary and inserted table below qso entry
+function getContinentResult() {
+	satOrBand = $('#band').val();
+	if ($('#selectPropagation').val() == 'SAT') {
+		satOrBand = 'SAT';
+	}
+	$.ajax({
+		url: base_url + 'index.php/lookup/search',
+		type: 'post',
+		data: {
+			type: 'continent',
+			continent: $('#continent').val(),
+				reduced_mode: true,
+				current_band: satOrBand,
+				current_mode: $('#mode').val(),
+		},
+		success: function (html) {
+            $('#continent-summary').empty();
+			$('#continent-summary').append(lang_summary_continent + ' ' + $('#continent').val() + '.');
+            $('#continent-summary').append(html);
+		}
+	});
+}
+
+// This function executes the call to the backend for fetching iota summary and inserted table below qso entry
+function getIotaResult() {
+	satOrBand = $('#band').val();
+	if ($('#selectPropagation').val() == 'SAT') {
+		satOrBand = 'SAT';
+	}
+	$('#iota-summary').empty();
+	if ($('#iota_ref').val() === '') {
+		$('#iota-summary').append(lang_summary_warning_empty_iota);
+		return;
+	}
+	$.ajax({
+		url: base_url + 'index.php/lookup/search',
+		type: 'post',
+		data: {
+			type: 'iota',
+			iota: $('#iota_ref').val(),
+				reduced_mode: true,
+				current_band: satOrBand,
+				current_mode: $('#mode').val(),
+		},
+		success: function (html) {
+			$('#iota-summary').append(lang_summary_iota + ' ' + $('#iota_ref').val() + '.');
+            $('#iota-summary').append(html);
+		}
+	});
+}
+
+// This function executes the call to the backend for fetching wwff summary and inserted table below qso entry
+function getWwffResult() {
+	$('#wwff-summary').empty();
+	if ($('#wwff_ref').val() === '') {
+		$('#wwff-summary').append(lang_summary_warning_empty_wwff);
+		return;
+	}
+	satOrBand = $('#band').val();
+	if ($('#selectPropagation').val() == 'SAT') {
+		satOrBand = 'SAT';
+	}
+	$.ajax({
+		url: base_url + 'index.php/lookup/search',
+		type: 'post',
+		data: {
+			type: 'wwff',
+			wwff: $('#wwff_ref').val(),
+				reduced_mode: true,
+				current_band: satOrBand,
+				current_mode: $('#mode').val(),
+		},
+		success: function (html) {
+			$('#wwff-summary').append(lang_summary_wwff + ' ' + $('#wwff_ref').val() + '.');
+            $('#wwff-summary').append(html);
+		}
+	});
+}
+
+// This function executes the call to the backend for fetching gridsquare summary and inserted table below qso entry
+function getGridsquareResult() {
+	$('#gridsquare-summary').empty();
+	if ($('#locator').val() === '') {
+		$('#gridsquare-summary').append(lang_summary_warning_empty_gridsquare);
+		return;
+	}
+	satOrBand = $('#band').val();
+	if ($('#selectPropagation').val() == 'SAT') {
+		satOrBand = 'SAT';
+	}
+	if ($('#locator').val().includes(',')) {
+		let values = $('#locator').val().split(',').map(function(v) {
+            return v.trim();
+        }).filter(function(v) {
+            return v;
+        });
+		let tabContent = $('#gridsquare-summary'); // Tab content container
+		tabContent.append('<div class="card"><div class="card-header"><ul style="font-size: 15px;" class="nav nav-tabs card-header-tabs pull-right" id="awardGridTab" role="tablist"></ul></div></div>');
+		tabContent.append('<div class="card-body"><div class="tab-content gridtablist"></div>');
+
+		values.forEach(function(value, index) {
+			let tabId = `grid-tab-${index}`;
+			let contentId = `grid-content-${index}`;
+
+			// Append new tab
+			$('#awardGridTab').append(`
+				<li class="nav-item">
+					<a class="nav-link ${index === 0 ? 'active' : ''}" id="${tabId}-tab" data-bs-toggle="tab" href="#${contentId}" role="tab" aria-controls="${contentId}" aria-selected="${index === 0}">
+						${value.toUpperCase()}
+					</a>
+				</li>
+			`);
+
+			// Append new tab content
+			$('.gridtablist').append(`
+				<div class="tab-pane fade ${index === 0 ? 'show active' : ''}" id="${contentId}" role="tabpanel" aria-labelledby="${tabId}-tab">
+				</div>
+			`);
+
+			// Make AJAX request
+			$.ajax({
+				url: base_url + 'index.php/lookup/search',
+				type: 'POST',
+				data: { type: 'vucc',
+						grid: value.trim(),
+						reduced_mode: true,
+						current_band: satOrBand,
+						current_mode: $('#mode').val()
+					},
+				success: function(response) {
+					$(`#${contentId}`).html(response); // Append response to correct tab
+				},
+				error: function(xhr, status, error) {
+					$(`#${contentId}`).html(`<div class="text-danger">Error loading data for ${value}</div>`);
+				}
+			});
+		});
+		return;
+	}
+	$.ajax({
+		url: base_url + 'index.php/lookup/search',
+		type: 'post',
+		data: {
+			type: 'vucc',
+			grid: $('#locator').val(),
+				reduced_mode: true,
+				current_band: satOrBand,
+				current_mode: $('#mode').val(),
+		},
+		success: function (html) {
+			$('#gridsquare-summary').append(lang_summary_gridsquare + ' ' + $('#locator').val().substring(0, 4) + '.');
+            $('#gridsquare-summary').append(html);
+		}
+	});
+}
+
+function loadAwardTabs(callback) {
+    $.ajax({
+        url: base_url + 'index.php/qso/getAwardTabs',
+        type: 'post',
+        data: {},
+        success: function (html) {
+            $('.awardpane').remove();
+            $('.qsopane').append('<div class="awardpane col-sm-12"></div>');
+            $('.awardpane').append(html);
+
+            // Execute callback if provided
+            if (typeof callback === "function") {
+                callback();
+            }
+
+			$("a[href='#cq-summary']").on('shown.bs.tab', function (e) {
+				let $targetPane = $('#cq-summary');
+
+				if (!$targetPane.data("loaded")) {
+					$targetPane.data("loaded", true); // Mark as loaded
+					getCqResult();
+				}
+			});
+
+			$("a[href='#state-summary']").on('shown.bs.tab', function(e) {
+				let $targetPane = $('#state-summary');
+
+				if (!$targetPane.data("loaded")) {
+					$targetPane.data("loaded", true); // Mark as loaded
+					getWasResult();
+				}
+			});
+
+			$("a[href='#pota-summary']").on('shown.bs.tab', function(e) {
+				let $targetPane = $('#pota-summary');
+
+				if (!$targetPane.data("loaded")) {
+					$targetPane.data("loaded", true); // Mark as loaded
+					getPotaResult();
+				}
+			});
+
+			$("a[href='#continent-summary']").on('shown.bs.tab', function(e) {
+				let $targetPane = $('#continent-summary');
+
+				if (!$targetPane.data("loaded")) {
+					$targetPane.data("loaded", true); // Mark as loaded
+					getContinentResult();
+				}
+			});
+
+			$("a[href='#sota-summary']").on('shown.bs.tab', function(e) {
+				let $targetPane = $('#sota-summary');
+
+				if (!$targetPane.data("loaded")) {
+					$targetPane.data("loaded", true); // Mark as loaded
+					getSotaResult();
+				}
+			});
+
+			$("a[href='#gridsquare-summary']").on('shown.bs.tab', function(e) {
+				let $targetPane = $('#gridsquare-summary');
+
+				if (!$targetPane.data("loaded")) {
+					$targetPane.data("loaded", true); // Mark as loaded
+					getGridsquareResult();
+				}
+			});
+
+			$("a[href='#wwff-summary']").on('shown.bs.tab', function(e) {
+				let $targetPane = $('#wwff-summary');
+
+				if (!$targetPane.data("loaded")) {
+					$targetPane.data("loaded", true); // Mark as loaded
+					getWwffResult();
+				}
+			});
+
+			$("a[href='#iota-summary']").on('shown.bs.tab', function(e) {
+				let $targetPane = $('#iota-summary');
+
+				if (!$targetPane.data("loaded")) {
+					$targetPane.data("loaded", true); // Mark as loaded
+					getIotaResult();
+				}
+			});
+
+			$('.dxcc-summary-reload').click(function (event) {
+				let $targetPane = $('#dxcc-summary');
+				$targetPane.data("loaded", false); // Mark as loaded
+				getDxccResult($('#dxcc_id').val(), $('#dxcc_id option:selected').text());
+			});
+			$('.iota-summary-reload').click(function (event) {
+				getIotaResult();
+			});
+			$('.wwff-summary-reload').click(function (event) {
+				getWwffResult();
+			});
+			$('.pota-summary-reload').click(function (event) {
+				getPotaResult();
+			});
+			$('.sota-summary-reload').click(function (event) {
+				getSotaResult();
+			});
+			$('.cq-summary-reload').click(function (event) {
+				getCqResult();
+			});
+			$('.state-summary-reload').click(function (event) {
+				getWasResult();
+			});
+			$('.continent-summary-reload').click(function (event) {
+				getContinentResult();
+			});
+			$('.gridsquare-summary-reload').click(function (event) {
+				getGridsquareResult();
+			});
+        }
+    });
+}
+
+
 /* time input shortcut */
-$('#start_time').change(function () {
+$('#start_time').on('change', function () {
 	var raw_time = $(this).val();
 	if (raw_time.match(/^\d\[0-6]d$/)) {
 		raw_time = "0" + raw_time;
@@ -834,7 +1504,7 @@ $('#start_time').change(function () {
 	}
 });
 
-$('#end_time').change(function () {
+$('#end_time').on('change', function () {
 	var raw_time = $(this).val();
 	if (raw_time.match(/^\d\[0-6]d$/)) {
 		raw_time = "0" + raw_time;
@@ -846,7 +1516,7 @@ $('#end_time').change(function () {
 });
 
 /* date input shortcut */
-$('#start_date').change(function () {
+$('#start_date').on('change', function () {
 	raw_date = $(this).val();
 	if (raw_date.match(/^[12]\d{3}[01]\d[0123]\d$/)) {
 		raw_date = raw_date.substring(0, 4) + "-" + raw_date.substring(4, 6) + "-" + raw_date.substring(6, 8);
@@ -855,21 +1525,22 @@ $('#start_date').change(function () {
 });
 
 /* on mode change */
-$('.mode').change(function () {
-	if ($('#radio').val() == 0) {
+$('.mode').on('change', function () {
+	if ($('#radio').val() == 0 && $('#sat_name').val() == '') {
 		$.get(base_url + 'index.php/qso/band_to_freq/' + $('#band').val() + '/' + $('.mode').val(), function (result) {
-			$('#frequency').val(result);
+			$('#frequency').val(result).trigger("change");
 		});
+		$('#frequency_rx').val("");
 	}
-	$('#frequency_rx').val("");
+	$("#callsign").blur();
 });
 
 /* Calculate Frequency */
 /* on band change */
-$('#band').change(function () {
+$('#band').on('change', function () {
 	if ($('#radio').val() == 0) {
 		$.get(base_url + 'index.php/qso/band_to_freq/' + $(this).val() + '/' + $('.mode').val(), function (result) {
-			$('#frequency').val(result);
+			$('#frequency').val(result).trigger("change");
 		});
 	}
 	$('#frequency_rx').val("");
@@ -877,10 +1548,13 @@ $('#band').change(function () {
 	$("#selectPropagation").val("");
 	$("#sat_name").val("");
 	$("#sat_mode").val("");
+	set_qrg();
+	$("#callsign").blur();
+	stop_az_ele_ticker();
 });
 
 /* On Key up Calculate Bearing and Distance */
-$("#locator").keyup(function () {
+$("#locator").on("input focus", function () {
 	if ($(this).val()) {
 		var qra_input = $(this).val();
 
@@ -967,6 +1641,7 @@ $("#locator").keyup(function () {
 				type: 'post',
 				data: {
 					grid: $(this).val(),
+					ant_path: $('#ant_path').val(),
 					stationProfile: $('#stationProfile').val()
 				},
 				success: function (data) {
@@ -981,6 +1656,7 @@ $("#locator").keyup(function () {
 				type: 'post',
 				data: {
 					grid: $(this).val(),
+					ant_path: $('#ant_path').val(),
 					stationProfile: $('#stationProfile').val()
 				},
 				success: function (data) {
@@ -994,8 +1670,50 @@ $("#locator").keyup(function () {
 	}
 });
 
+$("#locator").on("focusout", function () {
+	if ($(this).val().length == 0) {
+		$('#locator_info').text("");
+		document.getElementById("distance").value = null;
+	}
+});
+
+$("#ant_path").on("change", function () {
+	if ($("#locator").val().length > 0) {
+		$.ajax({
+			url: base_url + 'index.php/logbook/searchbearing',
+			type: 'post',
+			data: {
+				grid: $('#locator').val(),
+				ant_path: $('#ant_path').val(),
+				stationProfile: $('#stationProfile').val()
+			},
+			success: function (data) {
+				$('#locator_info').html(data).fadeIn("slow");
+			},
+			error: function () {
+				$('#locator_info').text("Error loading bearing!").fadeIn("slow");
+			},
+		});
+		$.ajax({
+			url: base_url + 'index.php/logbook/searchdistance',
+			type: 'post',
+			data: {
+				grid: $('#locator').val(),
+				ant_path: $('#ant_path').val(),
+				stationProfile: $('#stationProfile').val()
+			},
+			success: function (data) {
+				$('#distance').val(data);
+			},
+			error: function () {
+				$('#distance').val("");
+			},
+		});
+	}
+});
+
 // Change report based on mode
-$('.mode').change(function () {
+$('.mode').on('change', function () {
 	setRst($('.mode').val());
 });
 
@@ -1040,16 +1758,15 @@ $('#dxcc_id').on('change', function () {
 
 //Spacebar moves to the name field when you're entering a callsign
 //Similar to contesting ux, good for pileups.
-$("#callsign").on("keypress", function (e) {
+$("#callsign").on("keydown", function (e) {
 	if (e.which == 32) {
-		$("#name").focus();
-		return false; //Eliminate space char
+		$("#name").trigger("focus");
+		e.preventDefault(); //Eliminate space char
 	}
 });
 
 
-// On Key up check and suggest callsigns
-$("#callsign").keyup(function () {
+$("#callsign").on("input focus", function () {
 	var ccall = $(this).val();
 	if ($(this).val().length >= 3) {
 		$('.callsign-suggest').show();
@@ -1064,12 +1781,12 @@ $("#callsign").keyup(function () {
 				success: function (result) {
 					$('.callsign-suggestions').text(result);
 					scps = result.split(" ");
-					highlight(ccall.toUpperCase());
+					highlightSCP(ccall.toUpperCase());
 				}
 			});
 		} else {
 			$('.callsign-suggestions').text(scps.filter((call) => call.includes($(this).val().toUpperCase())).join(' '));
-			highlight(ccall.toUpperCase());
+			highlightSCP(ccall.toUpperCase());
 		}
 	} else {
 		$('.callsign-suggest').hide();
@@ -1082,7 +1799,7 @@ RegExp.escape = function (text) {
 }
 
 
-function highlight(term, base) {
+function highlightSCP(term, base) {
 	if (!term) return;
 	base = base || document.body;
 	var re = new RegExp("(" + RegExp.escape(term) + ")", "gi");
@@ -1105,6 +1822,9 @@ function resetDefaultQSOFields() {
 	$('#locator_info').text("");
 	$('#country').val("");
 	$('#continent').val("");
+	$("#distance").val("");
+	$('#email').val("");
+	$('#region').val("");
 	$('#dxcc_id').val("").multiselect('refresh');
 	$('#cqz').val("");
 	$('#ituz').val("");
@@ -1125,7 +1845,7 @@ function resetDefaultQSOFields() {
 	$('#stateDropdown').val("");
 	$('#callsign-image').attr('style', 'display: none;');
 	$('#callsign-image-content').text("");
-	$('.dxccsummary').remove();
+	$('.awardpane').remove();
 	$('#timesWorked').html(lang_qso_title_previous_contacts);
 }
 
@@ -1161,10 +1881,41 @@ function testTimeOffConsistency() {
 	return true;
 }
 
+function panMap(stationProfileIndex) {
+	$.ajax({
+		url: base_url + 'index.php/station/stationProfileCoords/'+stationProfileIndex,
+		type: 'get',
+		success: function(data) {
+			result = JSON.parse(data);
+			if (typeof result[0] !== "undefined" && typeof result[1] !== "undefined") {
+				mymap.panTo([result[0], result[1]]);
+				pos = result;
+			}
+		},
+		error: function() {
+		},
+	});
+}
+
 $(document).ready(function () {
+	qrg_inputtype();
 	clearTimeout();
 	set_timers();
 	updateStateDropdown('#dxcc_id', '#stateInputLabel', '#location_us_county', '#stationCntyInputQso');
+
+	// Clear the localStorage for the qrg units, except the quicklogCallsign and a possible backlog
+	let quicklogCallsign = localStorage.getItem('quicklogCallsign');
+	let QsoBacklog = localStorage.getItem('qso-backlog');
+
+	localStorage.clear();
+	if (quicklogCallsign) {
+		localStorage.setItem('quicklogCallsign', quicklogCallsign);
+	}
+	set_qrg();
+
+	if (QsoBacklog) {
+		localStorage.setItem('qso-backlog', QsoBacklog);
+	}
 
 	$("#locator").popover({ placement: 'top', title: 'Gridsquare Formatting', content: "Enter multiple (4-digit) grids separated with commas. For example: IO77,IO78" })
 	.focus(function () {
@@ -1217,7 +1968,7 @@ $(document).ready(function () {
 	};
 
 	// Callsign always has focus on load
-	$("#callsign").focus();
+	$("#callsign").trigger("focus");
 
 	// reset the timers on page load
 	resetTimers(qso_manual);
@@ -1383,8 +2134,9 @@ $(document).ready(function () {
 	// Only set the frequency when not set by userdata/PHP.
 	if ($('#frequency').val() == "") {
 		$.get(base_url + 'index.php/qso/band_to_freq/' + $('#band').val() + '/' + $('.mode').val(), function (result) {
-			$('#frequency').val(result);
+			$('#frequency').val(result).trigger("change");
 			$('#frequency_rx').val("");
+			set_qrg();
 		});
 	}
 

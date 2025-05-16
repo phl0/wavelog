@@ -24,10 +24,11 @@
                 echo 'class="qslcardtab nav-item">
                 <a class="nav-link" id="qsltab" data-bs-toggle="tab" href="#qslcard" role="tab" aria-controls="home" aria-selected="false">'. __("QSL Card") .'</a>
                 </li>';
-
-            echo '<li class="nav-item">
-            <a class="nav-link" id="qslmanagementtab" data-bs-toggle="tab" href="#qslupload" role="tab" aria-controls="home" aria-selected="false">'. __("QSL Management") .'</a>
-            </li>';
+            if (clubaccess_check(9)) {
+                echo '<li class="nav-item">
+                <a class="nav-link" id="qslmanagementtab" data-bs-toggle="tab" href="#qslupload" role="tab" aria-controls="home" aria-selected="false">'. __("QSL Management") .'</a>
+                </li>';
+            }
         }
 
         ?>
@@ -131,9 +132,9 @@
                         <td><?= __("Total Distance"); //Total distance ?></td>
                         <td>
                             <?php
-                                // Cacluate Distance
-                                $distance = $this->qra->distance($row->station_gridsquare, $row->COL_GRIDSQUARE, $measurement_base);
-
+                                // Cacluate Distance if COL_DISTANCE is not set
+                                $ant_path = $row->COL_ANT_PATH ?? null;
+                                $distance = $this->qra->distance($row->station_gridsquare, $row->COL_GRIDSQUARE, $measurement_base, $ant_path);
                                 switch ($measurement_base) {
                                     case 'M':
                                         $distance .= " mi";
@@ -144,6 +145,25 @@
                                     case 'N':
                                         $distance .= " nmi";
                                         break;
+                                }
+
+                                if ($ant_path != null) {
+                                    switch ($row->COL_ANT_PATH) {
+                                        case "S":
+                                            $distance .= ' <span class="badge bg-secondary">' . __("Short Path") . "</span>";
+                                            break;
+                                        case "L":
+                                            $distance .= ' <span class="badge bg-secondary">' . __("Long Path") . "</span>";
+                                            break;
+                                        case "O":
+                                            $distance .= ' <span class="badge bg-secondary">' . __("Other Path") . "</span>";
+                                            break;
+                                        case "G":
+                                            $distance .= ' <span class="badge bg-secondary">' . __("Greyline") . "</span>";
+                                            break;
+                                        default:
+                                            break;
+                                    }
                                 }
                                 echo $distance;
                             ?>
@@ -157,7 +177,7 @@
                         <td><?php echo $row->COL_VUCC_GRIDS; ?> <a href="javascript:spawnQrbCalculator('<?php echo $row->station_gridsquare . '\',\'' . $row->COL_VUCC_GRIDS; ?>')"><i class="fas fa-globe"></i></a></td>
                             <?php
                                 // Cacluate Distance
-                                $distance = $this->qra->distance($row->station_gridsquare, $row->COL_VUCC_GRIDS, $measurement_base);
+                                $distance = $this->qra->distance($row->station_gridsquare, $row->COL_VUCC_GRIDS, $measurement_base, $row->COL_ANT_PATH ?? null);
 
                                 switch ($measurement_base) {
                                     case 'M':
@@ -205,10 +225,83 @@
                     <?php } ?>
                     <?php } ?>
 
+                    <?php if($row->COL_PROP_MODE != null and $row->COL_PROP_MODE != '') { ?>
+                    <tr>
+                        <td><?= __("Propagation"); ?></td>
+                        <td><?php switch ($row->COL_PROP_MODE) {
+                            case 'AS':
+                                echo _pgettext("Propagation Mode", "Aircraft Scatter");
+                                break;
+                            case 'AUR':
+                                echo _pgettext("Propagation Mode", "Aurora");
+                                break;
+                            case 'AUE':
+                                echo _pgettext("Propagation Mode", "Aurora-E");
+                                break;
+                            case 'BS':
+                                echo _pgettext("Propagation Mode", "Back scatter");
+                                break;
+                            case 'ECH':
+                                echo _pgettext("Propagation Mode", "EchoLink");
+                                break;
+                            case 'EME':
+                                echo _pgettext("Propagation Mode", "Earth-Moon-Earth");
+                                break;
+                            case 'ES':
+                                echo _pgettext("Propagation Mode", "Sporadic E");
+                                break;
+                            case 'FAI':
+                                echo _pgettext("Propagation Mode", "Field Aligned Irregularities");
+                                break;
+                            case 'F2':
+                                echo _pgettext("Propagation Mode", "F2 Reflection");
+                                break;
+                            case 'INTERNET':
+                                echo _pgettext("Propagation Mode", "Internet-assisted");
+                                break;
+                            case 'ION':
+                                echo _pgettext("Propagation Mode", "Ionoscatter");
+                                break;
+                            case 'IRL':
+                                echo _pgettext("Propagation Mode", "IRLP");
+                                break;
+                            case 'MS':
+                                echo _pgettext("Propagation Mode", "Meteor scatter");
+                                break;
+                            case 'RPT':
+                                echo _pgettext("Propagation Mode", "Terrestrial or atmospheric repeater or transponder");
+                                break;
+                            case 'RS':
+                                echo _pgettext("Propagation Mode", "Rain scatter");
+                                break;
+                            case 'SAT':
+                                echo _pgettext("Propagation Mode", "Satellite");
+                                break;
+                            case 'TEP':
+                                echo _pgettext("Propagation Mode", "Trans-equatorial");
+                                break;
+                            case 'TR':
+                                echo _pgettext("Propagation Mode", "Tropospheric ducting");
+                                break;
+                            default:
+                                echo __("unknown");
+                                break;
+                            }
+                        ?></td>
+                    </tr>
+                    <?php } ?>
+
                     <?php if($row->COL_SAT_NAME != null) { ?>
                     <tr>
                         <td><?= __("Satellite Name"); ?></td>
-                        <td><a href="https://db.satnogs.org/search/?q=<?php echo $row->COL_SAT_NAME; ?>" target="_blank"><?php echo $row->COL_SAT_NAME; ?></a></td>
+                        <td><a href="https://db.satnogs.org/search/?q=<?php echo $row->COL_SAT_NAME; ?>" target="_blank">
+                        <?php if ($row->sat_displayname != null) {
+                                 echo $row->sat_displayname." (".$row->COL_SAT_NAME.")";
+                            } else {
+                                 echo $row->COL_SAT_NAME;
+                            }
+                        ?>
+                        </a></td>
                     </tr>
                     <?php } ?>
 
@@ -236,7 +329,11 @@
                     <?php if($row->name != null) { ?>
                     <tr>
                         <td><?= __("Country"); ?></td>
-                        <td><?php echo ucwords(strtolower(($row->name)), "- (/"); if ($dxccFlag != null) { echo " ".$dxccFlag; } if ($row->end != null) { echo ' <span class="badge text-bg-danger">'.__("Deleted DXCC").'</span>'; } ?></td>
+                        <td><?php if ($row->adif == '0') {
+                                     echo $row->name;
+                                  } else {
+                                     echo ucwords(strtolower(($row->name)), "- (/"); if ($dxccFlag != null) { echo " ".$dxccFlag; } if ($row->end != null) { echo ' <span class="badge text-bg-danger">'.__("Deleted DXCC").'</span>'; }
+                                  } ?></td>
                     </tr>
                     <?php } ?>
 
@@ -273,10 +370,10 @@
                     </tr>
                     <?php } ?>
 
-                    <?php if($row->COL_CONTEST_ID != null) { ?>
+                    <?php if($row->contestname != null) { ?>
                     <tr>
                         <td><?= __("Contest Name"); ?></td>
-                        <td><?php echo $row->COL_CONTEST_ID; ?></td>
+                        <td><?php echo $row->contestname; ?></td>
                     </tr>
                     <?php } ?>
 
@@ -325,7 +422,7 @@
 
                     <?php if($row->COL_SIG != null) { ?>
                     <tr>
-                        <td><?= __("Sig"); ?></td>
+                        <td><?= __("SIG"); ?></td>
                         <?php
                         switch ($row->COL_SIG) {
                         case "GMA":
@@ -341,7 +438,7 @@
 
                     <?php if($row->COL_SIG_INFO != null) { ?>
                     <tr>
-                        <td><?= __("Sig Info"); ?></td>
+                        <td><?= __("SIG Info"); ?></td>
                         <?php
                         switch ($row->COL_SIG) {
                         case "GMA":
@@ -370,6 +467,20 @@
                         <?php } else { ?>
                         <td><?php echo $row->COL_DARC_DOK; ?></td>
                         <?php } ?>
+                    </tr>
+                    <?php } ?>
+
+                    <?php if($row->COL_REGION != null) { ?>
+                    <tr>
+                        <td><?= __("Region"); ?></td>
+                        <td><?php echo $this->logbook_model->getLongRegion($row->COL_REGION).' ('.$row->COL_REGION.')'; ?></td>
+                    </tr>
+                    <?php } ?>
+
+                    <?php if($row->COL_EMAIL != null) { ?>
+                    <tr>
+                        <td><?= __("E-mail"); ?></td>
+                        <td><a href="mailto:<?php echo $row->COL_EMAIL; ?>"><?php echo $row->COL_EMAIL; ?></a></td>
                     </tr>
                     <?php } ?>
 
@@ -421,9 +532,23 @@
                     <p><?= __("This QSO was confirmed on"); ?> <?php $timestamp = strtotime($row->COL_LOTW_QSLRDATE); echo date($custom_date_format, $timestamp); ?>.</p>
                     <?php } ?>
 
+					<?php if($row->COL_LOTW_QSL_RCVD == "Y" && $row->COL_LOTW_QSLRDATE == null) { ?>
+                    <h3><?= __("LoTW"); ?></h3>
+                    <p><?= __("This QSO is confirmed on LoTW."); ?></p>
+                    <?php } ?>
+
                     <?php if($row->COL_EQSL_QSL_RCVD == "Y" && $row->COL_EQSL_QSLRDATE != null) { ?>
                     <h3>eQSL</h3>
-                        <p><?= __("This QSO was confirmed on"); ?> <?php $timestamp = strtotime($row->COL_EQSL_QSLRDATE); echo date($custom_date_format, $timestamp); ?>.</p>
+                        <p><?= __("This QSO was confirmed on"); ?> <?php $timestamp = strtotime($row->COL_EQSL_QSLRDATE); echo date($custom_date_format, $timestamp); ?>.
+                        <?php if (!empty($row->COL_QSLMSG_RCVD)) { ?>
+                           <br /><?= __("QSL Message"); ?>: <?php echo htmlentities($row->COL_QSLMSG_RCVD); ?>
+                        <?php } ?>
+                        </p>
+                    <?php } ?>
+
+					<?php if($row->COL_EQSL_QSL_RCVD == "Y" && $row->COL_EQSL_QSLRDATE == null) { ?>
+                    <h3>eQSL</h3>
+                        <p><?= __("This QSO is confirmed on eQSL."); ?></p>
                     <?php } ?>
 
                     <?php if($row->COL_QRZCOM_QSO_DOWNLOAD_STATUS == "Y" && $row->COL_QRZCOM_QSO_DOWNLOAD_DATE != null) { ?>
@@ -431,9 +556,19 @@
                         <p><?= __("This QSO was confirmed on"); ?> <?php $timestamp = strtotime($row->COL_QRZCOM_QSO_DOWNLOAD_DATE); echo date($custom_date_format, $timestamp); ?>.</p>
                     <?php } ?>
 
+					<?php if($row->COL_QRZCOM_QSO_DOWNLOAD_STATUS == "Y" && $row->COL_QRZCOM_QSO_DOWNLOAD_DATE == null) { ?>
+                    <h3>QRZ.com</h3>
+                        <p><?= __("This QSO is confirmed on QRZ.com."); ?></p>
+                    <?php } ?>
+
                     <?php if($row->COL_CLUBLOG_QSO_DOWNLOAD_STATUS == "Y" && $row->COL_CLUBLOG_QSO_DOWNLOAD_DATE != null) { ?>
                     <h3><?= __("Clublog"); ?></h3>
                         <p><?= __("This QSO was confirmed on"); ?> <?php $timestamp = strtotime($row->COL_CLUBLOG_QSO_DOWNLOAD_DATE); echo date($custom_date_format, $timestamp); ?>.</p>
+                    <?php } ?>
+
+					<?php if($row->COL_CLUBLOG_QSO_DOWNLOAD_STATUS == "Y" && $row->COL_CLUBLOG_QSO_DOWNLOAD_DATE == null) { ?>
+                    <h3><?= __("Clublog"); ?></h3>
+                        <p><?= __("This QSO is confirmed on Clublog."); ?></p>
                     <?php } ?>
             </div>
 
@@ -443,7 +578,9 @@
 
                     <?php if(($this->config->item('use_auth') && ($this->session->userdata('user_type') >= 2)) || $this->config->item('use_auth') === FALSE) { ?>
                         <br>
+                            <?php if (clubaccess_check(3, $row->COL_PRIMARY_KEY)) { ?>
                             <div style="display: inline-block;"><p class="editButton"><a class="btn btn-primary" href="<?php echo site_url('qso/edit'); ?>/<?php echo $row->COL_PRIMARY_KEY; ?>" href="javascript:;"><i class="fas fa-edit"></i> <?= __("Edit QSO"); ?></a></p></div>
+                            <?php } ?>
                             <div style="display: inline-block;"><form method="POST" action="<?php echo site_url('search'); ?>"><input type="hidden" value="<?php echo strtoupper($row->COL_CALL); ?>" name="callsign"><button class="btn btn-primary" type="submit"><i class="fas fa-eye"></i> <?= __("More QSOs"); ?></button></form></div>
                     <?php } ?>
 
@@ -474,16 +611,19 @@
                         if($row->COL_SIG != null && $row->COL_SIG_INFO != null) {
                             $hashtags .= " #".$row->COL_SIG." ".$row->COL_SIG_INFO;
                         }
+                        if($row->COL_MODE == "CW") {
+                            $hashtags .= " #cwfe";
+                        }
                         if (!isset($distance)) {
-                            $twitter_string = urlencode("Just worked ".$row->COL_CALL." ");
+                            $twitter_string = "Just worked ".$row->COL_CALL." ";
                             if ($row->COL_DXCC != 0) {
-                               $twitter_string .= urlencode("in ".ucwords(strtolower(($row->COL_COUNTRY)))." ");
+                               $twitter_string .= "in ".ucwords(strtolower(($row->COL_COUNTRY)))." ";
                             }
-                            $twitter_string .= urlencode("on ".$twitter_band_sat." using ".($row->COL_SUBMODE==null?$row->COL_MODE:$row->COL_SUBMODE)." ".$hashtags);
+                            $twitter_string .= "on ".$twitter_band_sat." using ".($row->COL_SUBMODE==null?$row->COL_MODE:$row->COL_SUBMODE)." ".$hashtags;
                         } else {
-                            $twitter_string = urlencode("Just worked ".$row->COL_CALL." ");
+                            $twitter_string = "Just worked ".$row->COL_CALL." ";
                             if ($row->COL_DXCC != 0) {
-                               $twitter_string .= urlencode("in ".ucwords(strtolower(($row->COL_COUNTRY)))." ");
+                               $twitter_string .= "in ".ucwords(strtolower(($row->COL_COUNTRY)))." ";
                                if ($dxccFlag != null) {
                                   $twitter_string .= $dxccFlag." ";
                                }
@@ -500,13 +640,10 @@
                                   $distancestring = "(Grids: ".$row->COL_VUCC_GRIDS.")";
                                }
                             }
-                            $twitter_string .= urlencode($distancestring." on ".$twitter_band_sat." using ".($row->COL_SUBMODE==null?$row->COL_MODE:$row->COL_SUBMODE)." ".$hashtags);
+                            $twitter_string .= $distancestring." on ".$twitter_band_sat." using ".($row->COL_SUBMODE==null?$row->COL_MODE:$row->COL_SUBMODE)." ".$hashtags;
                         }
                     ?>
-
-                    <div style="display: inline-block;"><a class="btn btn-primary twitter-share-button" target="_blank" href="https://twitter.com/intent/tweet?text=<?php echo $twitter_string; ?>"><i class="fab fa-twitter"></i> Tweet</a></div>
-                    <?php if($this->session->userdata('user_mastodon_url') != null) { echo '<div style="display: inline-block;"><a class="btn btn-primary twitter-share-button" target="_blank" href="'.$this->session->userdata('user_mastodon_url').'/share?text='.$twitter_string.'"><i class="fab fa-mastodon"></i> Toot</a></div>'; } ?>
-
+                    <button class="btn btn-primary" onClick='shareModal(<?php echo json_encode(['qso' => $row, 'twitter_string' => $twitter_string], JSON_HEX_APOS | JSON_HEX_QUOT); ?>);'><i class="fas fa-share-square"></i> <?= __("Share"); ?></button>
                 </div>
             </div>
         </div>
@@ -586,12 +723,12 @@
 
                     <?php if($row->station_sig) { ?>
                     <tr>
-                        <td><?= __("Station") . ' ' . __("Sig"); ?></td>
+                        <td><?= __("Station") . ' ' . __("SIG"); ?></td>
                         <td><?php echo $row->station_sig; ?></td>
                     </tr>
 
                     <tr>
-                        <td><?= __("Station") . ' ' . __("Sig Info"); ?></td>
+                        <td><?= __("Station") . ' ' . __("SIG Info"); ?></td>
                         <td><?php echo $row->station_sig_info; ?></td>
                     </tr>
                     <?php } ?>

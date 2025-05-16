@@ -1,5 +1,7 @@
 /application/config/database.php
 /application/config/config.php
+/application/config/*/config.php
+/application/config/*/database.php
 /application/logs/*
 /application/cache/*
 /backup/*.adi
@@ -18,9 +20,11 @@
 .idea/*
 .DS_Store
 sync.sh
+docker-compose.yml
 *.p12
 *.swp
 .debug
 .maintenance
 .demo
 .htaccess
+.user.ini

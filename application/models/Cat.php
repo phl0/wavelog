@@ -2,8 +2,8 @@
 
 	class Cat extends CI_Model {
 
-		function update($result, $user_id) {
-
+		function update($result, $user_id, $operator) {
+			$this->load->model('User_model');
 			$timestamp = gmdate("Y-m-d H:i:s");
 
 			if (isset($result['prop_mode'])) {
@@ -16,16 +16,23 @@
 			}
 
 			$this->db->where('radio', $result['radio']);
+			$this->db->where('operator', $operator);
 			$this->db->where('user_id', $user_id);
 			$query = $this->db->get('cat');
 
 			// Let's keep uplink_freq, downlink_freq, uplink_mode and downlink_mode for backward compatibility
 			$data = array(
 				'prop_mode' => $prop_mode,
-				'power' => $result['power'] ?? NULL,
 				'sat_name' => $result['sat_name'] ?? NULL,
 				'timestamp' => $timestamp,
 			);
+
+			if ( (isset($result['power'])) && ($result['power'] != "NULL") && ($result['power'] != '') && (is_numeric($result['power']))) {
+				$data['power'] = $result['power'];
+			} else {
+				unset($data['power']);	// Do not update power since it isn't provided or not numeric
+			}
+
 			if ( (isset($result['frequency'])) && ($result['frequency'] != "NULL") && ($result['frequency'] != '') && (is_numeric($result['frequency']))) {
 				$data['frequency'] = $result['frequency'];
 			} else {
@@ -35,6 +42,7 @@
 					unset($data['frequency']);	// Do not update Frequency since it wasn't provided
 				}
 			}
+
 			if (isset($result['mode']) && $result['mode'] != "NULL") {
 				$data['mode'] = $result['mode'];
 			} else {
@@ -59,29 +67,57 @@
 				$data['mode_rx'] = NULL;
 			}
 
-			if ($query->num_rows() > 0)
-			{
+			if (($this->config->item('mqtt_server') ?? '') != '') {
+				$h_user=$this->User_model->get_by_id($user_id);
+				$this->load->library('Mh');
+				$eventdata=$data;
+				$eventdata['user_name']=$h_user->row()->user_name;
+				$eventdata['user_id']=$h_user->row()->user_id ?? '';
+			}
+			if ($query->num_rows() > 0) {
 				// Update the record
-				foreach ($query->result() as $row)
-				{
+				foreach ($query->result() as $row) {
 					$radio_id = $row->id;
-
 					$this->db->where('id', $radio_id);
 					$this->db->where('user_id', $user_id);
 					$this->db->update('cat', $data);
+					if (($this->config->item('mqtt_server') ?? '') != '') {
+                				$this->mh->wl_event('cat/'.$user_id, json_encode(array_merge($data,$eventdata)));
+					}
 				}
 			} else {
 				// Add a new record
 				$data['radio'] = $result['radio'];
 				$data['user_id'] = $user_id;
-
+				$data['operator'] = $operator;
 				$this->db->insert('cat', $data);
+				if (($this->config->item('mqtt_server') ?? '') != '') {
+                			$this->mh->wl_event('cat/'.$user_id, json_encode(array_merge($data,$eventdata)));
+				}
 			}
+			unset($eventdata);
+			unset($h_user);
+		}
+
+		/**
+		 * Get CAT radios statuses for given user ID 
+		 *
+		 * @param int|string $user_id
+		 * @return object
+		 */
+		function status_for_user_id($user_id) {
+			$this->db->where('user_id', $user_id);
+			$query = $this->db->get('cat');
+
+			return $query;
 		}
 
 		function status() {
 			//$this->db->where('radio', $result['radio']);
 			$this->db->where('user_id', $this->session->userdata('user_id'));
+			if ($this->session->userdata('clubstation') == 1 && !clubaccess_check(9)) {
+				$this->db->where('operator', $this->session->userdata('source_uid'));
+			}
 			$query = $this->db->get('cat');
 
 			return $query;
@@ -89,6 +125,9 @@
 
 		function recent_status() {
 			$this->db->where('user_id', $this->session->userdata('user_id'));
+			if ($this->session->userdata('clubstation') == 1 && !clubaccess_check(9)) {
+				$this->db->where('operator', $this->session->userdata('source_uid'));
+			}
 			$this->db->where("timestamp > date_sub(UTC_TIMESTAMP(), interval 15 minute)", NULL, FALSE);
 
 			$query = $this->db->get('cat');
@@ -96,28 +135,53 @@
 		}
 
 		/* Return list of radios */
-		function radios() {
+		function radios($only_operator = false) {
 			$this->db->select('id, radio');
 			$this->db->where('user_id', $this->session->userdata('user_id'));
+			if ($only_operator && ($this->session->userdata('clubstation') == 1 && !clubaccess_check(9))) {
+				$this->db->where('operator', $this->session->userdata('source_uid'));
+			}
 			$query = $this->db->get('cat');
 
 			return $query;
 		}
 
 		function radio_status($id) {
+			$binding = [];
 			$sql = 'SELECT * FROM `cat` WHERE id = ? AND user_id = ?';
-			return $this->db->query($sql, array($id, $this->session->userdata('user_id')));
+			$binding[] = $id;
+			$binding[] = $this->session->userdata('user_id');
+			if ($this->session->userdata('clubstation') == 1 && !clubaccess_check(9)) {
+				$sql .= ' AND operator = ?';
+				$binding[] = $this->session->userdata('source_uid');
+			}
+			return $this->db->query($sql, $binding);
 		}
 
 		function last_updated() {
-			$sql = 'SELECT * FROM cat WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1';
-			return $this->db->query($sql, $this->session->userdata('user_id'));
+			$binding = [];
+			$sql = 'SELECT * FROM cat WHERE user_id = ?';
+			$binding[] = $this->session->userdata('user_id');
+			if ($this->session->userdata('clubstation') == 1 && !clubaccess_check(9)) {
+				$sql .= ' AND operator = ?';
+				$binding[] = $this->session->userdata('source_uid');
+			}
+			$sql .= ' ORDER BY timestamp DESC LIMIT 1';
+			return $this->db->query($sql, $binding);
 		}
 
 		function delete($id) {
 			$this->db->where('id', $id);
 			$this->db->where('user_id', $this->session->userdata('user_id'));
 			$this->db->delete('cat');
+
+			return true;
+		}
+
+		function updateCatUrl($id,$caturl) {
+			$this->db->where('id', $id);
+			$this->db->where('user_id', $this->session->userdata('user_id'));
+			$this->db->update('cat',array('cat_url' => $caturl));
 
 			return true;
 		}

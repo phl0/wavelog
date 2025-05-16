@@ -5,10 +5,7 @@
 	</div>
 <?php } ?>
 <br>
-	<?php
-	if (!($this->config->item('disable_manual_lotw'))) { ?>
 	<a class="btn btn-outline-primary btn-sm float-end" href="<?php echo site_url('/lotw/import'); ?>" role="button"><i class="fas fa-cloud-download-alt"></i> <?= __("LoTW Import"); ?></a>
-	<?php } ?>
 	<h2><?= __("Logbook of the World"); ?></h2>
 
 	<!-- Card Starts -->
@@ -142,9 +139,10 @@
 
 		<div class="card-body">
             		<?php if (($next_run ?? '') != '') { echo "<p>".__("The next automatic sync with LoTW will happen at: ").$next_run."</p>"; } ?>
-			<button class="btn btn-outline-success" hx-get="<?php echo site_url('lotw/lotw_upload'); ?>"  hx-target="#lotw_manual_results">
-				<?= __("Manual Sync"); ?>
+			<button class="btn btn-outline-success" hx-on:click="document.getElementById('lotw_manual_results').innerHTML = '';" hx-get="<?php echo site_url('lotw/lotw_upload'); ?>" hx-indicator="#lotw-sync-running" hx-target="#lotw_manual_results">
+            <?= __("Manual Sync"); ?>
 			</button>
+			<span style="margin-left: 10px;" id="lotw-sync-running" class="htmx-indicator"> <?php echo __("running..."); ?></span>
 
 			<div id="lotw_manual_results"></div>
 		</div>

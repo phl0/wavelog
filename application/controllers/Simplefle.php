@@ -75,5 +75,31 @@ class SimpleFLE extends CI_Controller {
 
 		return $modes;
 	}
+
+	public function save_qsos() {
+		$qsos = $this->input->post('qsos', TRUE);
+
+		$this->load->model('logbook_model');
+
+		$qsos = json_decode($qsos, true);
+		$station_id = $qsos[0]['station_id']; // we can trust this value
+
+		$bulk_result = $this->logbook_model->import_bulk($qsos, $station_id);
+
+		$clean_result = str_replace(['<br><br/>'], "\n", $bulk_result);
+		log_message('debug', "SimpleFLE, save_qsos(); Bulk Result: \n" . $clean_result);
+
+		// Also clean up static map images
+		if (!$this->load->is_loaded('staticmap_model')) {
+			$this->load->model('staticmap_model');
+		}
+		$this->staticmap_model->remove_static_map_image($station_id);
+
+		if (empty($result)) {
+			echo "success";
+		} else {
+			echo json_encode($result);
+		}
+	}
 	
 }

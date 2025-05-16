@@ -19,7 +19,11 @@ class QSO
 	private ?string $band;
 	private string $bandRX;
 	private string $rstR;
+	private string $srx;
+	private string $srxstring;
 	private string $rstS;
+	private string $stx;
+	private string $stxstring;
 	private string $propagationMode;
 	private string $satelliteMode;
 	private string $satelliteName;
@@ -40,6 +44,7 @@ class QSO
 	private string $dxcc;
 	private string $iota;
 	private string $continent;
+	private string $region;
 	/** @var string[] */
 	private string $deVUCCGridsquares;
 	private string $dxGridsquare;
@@ -66,6 +71,7 @@ class QSO
 	private string $eqsl;
 	private string $clublog;
 	private string $qrz;
+	private string $dcl;
 	/** Lotw callsign info **/
 	private string $callsign;
 	private string $lastupload;
@@ -75,6 +81,25 @@ class QSO
 	private string $contest;
 	/** Orbit type **/
 	private string $orbit;
+
+	private string $stationpower;
+	private float $distance;
+	private string $antennaazimuth;
+	private string $antennaelevation;
+
+	private string $measurement_base;
+
+	/** ADIF 3.15 Cols **/
+	private string $cnty_alt;
+	private string $my_cnty_alt;
+	private string $my_darc_dok;
+	private ?DateTime $dcl_qslrdate;
+	private string $dcl_qsl_rcvd;
+	private ?DateTime $dcl_qslsdate;
+	private string $dcl_qsl_sent;
+	private string $morse_key_info;
+	private string $morse_key_type;
+	private string $qslmsg_rcvd;
 
 	/**
 	 * @param array $data Does no validation, it's assumed to be a row from the database in array format
@@ -152,13 +177,18 @@ class QSO
 		$this->de = $data['station_callsign'];
 		$this->dx = $data['COL_CALL'];
 		$this->continent = $data['COL_CONT'] ?? '';
+		$this->region = $this->getRegionString(strtoupper($data['COL_REGION'] ?? ''));
 
 		$this->mode = $data['COL_MODE'] ?? '';
 		$this->submode = $data['COL_SUBMODE'] ?? '';
 		$this->band = $data['COL_BAND'];
 		$this->bandRX = $data['COL_BAND_RX'] ?? '';
-		$this->rstR = $data['COL_RST_RCVD'];
-		$this->rstS = $data['COL_RST_SENT'];
+		$this->rstR = $data['COL_RST_RCVD'] ?? '';
+		$this->rstS = $data['COL_RST_SENT'] ?? '';
+		$this->srx = $data['COL_SRX'] ?? '';
+		$this->srxstring = $data['COL_SRX_STRING'] ?? '';
+		$this->stx = $data['COL_STX'] ?? '';
+		$this->stxstring = $data['COL_STX_STRING'] ?? '';
 		$this->propagationMode = $data['COL_PROP_MODE'] ?? '';
 		$this->satelliteMode = $data['COL_SAT_MODE'] != '' ? (strlen($data['COL_SAT_MODE']) == 2 ? (strtoupper($data['COL_SAT_MODE'][0]).'/'.strtoupper($data['COL_SAT_MODE'][1])) : strtoupper($data['COL_SAT_MODE'])) : '';
 		$this->satelliteName = $data['COL_SAT_NAME'] != '' ? (isset($data['orbit']) && $data['orbit'] != '' ? $data['COL_SAT_NAME']." (".$data['orbit'].") " : $data['COL_SAT_NAME']) : '';
@@ -198,16 +228,32 @@ class QSO
 		$this->QSLSentVia = ($data['COL_QSL_SENT_VIA'] === null) ? '' : $data['COL_QSL_SENT_VIA'];
 		$this->QSLVia = ($data['COL_QSL_VIA'] === null) ? '' : $data['COL_QSL_VIA'];
 
+		$this->cnty_alt = $data['COL_CNTY_ALT'] ?? '';
+		$this->my_cnty_alt = $data['COL_MY_CNTY_ALT'] ?? '';
+		$this->my_darc_dok = $data['COL_MY_DARC_DOK'] ?? '';
+		$this->dcl_qsl_rcvd = $data['COL_DCL_QSL_RCVD'] ?? '';
+		$this->dcl_qslrdate = ($data['COL_DCL_QSLRDATE'] === null) ? null : DateTime::createFromFormat("Y-m-d H:i:s", $data['COL_DCL_QSLRDATE'], new DateTimeZone('UTC'));
+		$this->dcl_qsl_sent = $data['COL_DCL_QSL_SENT'] ?? '';
+		$this->dcl_qslsdate = ($data['COL_DCL_QSLSDATE'] === null) ? null : DateTime::createFromFormat("Y-m-d H:i:s", $data['COL_DCL_QSLSDATE'], new DateTimeZone('UTC'));
+		$this->morse_key_info = $data['COL_KEY_INFO'] ?? '';
+		$this->morse_key_type = $data['COL_MORSE_KEY_TYPE'] ?? '';
+		$this->qslmsg_rcvd = $data['COL_QSLMSG_RCVD'] ?? '';
+
 		$this->qsl = $this->getQslString($data, $custom_date_format);
 		$this->lotw = $this->getLotwString($data, $custom_date_format);
 		$this->eqsl = $this->getEqslString($data, $custom_date_format);
 		$this->clublog = $this->getClublogString($data, $custom_date_format);
 		$this->qrz = $this->getQrzString($data, $custom_date_format);
+		$this->dcl = $this->getDclString($data, $custom_date_format);
 
-		$this->cqzone = ($data['COL_CQZ'] === null) ? '' : $this->geCqLink($data['COL_CQZ']);
-		$this->ituzone = $data['COL_ITUZ'] ?? '';
+		$this->cqzone = $data['COL_CQZ'] === null ? '' : $this->getCqLink($data['COL_CQZ']);
+		$this->ituzone = $data['COL_ITUZ'] === null ? '' : $this->getItuLink($data['COL_ITUZ']);
 		$this->state = ($data['COL_STATE'] === null) ? '' :$data['COL_STATE'];
-		$this->dxcc = (($data['dxccname'] ?? null) === null) ? '- NONE -' : '<a href="javascript:spawnLookupModal('.$data['COL_DXCC'].',\'dxcc\');">'.ucwords(strtolower($data['dxccname']), "- (/").'</a>';
+		if ($data['adif'] == '0') {
+			$this->dxcc = '<a href="javascript:spawnLookupModal('.$data['COL_DXCC'].',\'dxcc\');">'.$data['dxccname'].'</a>';
+		} else {
+			$this->dxcc = (($data['dxccname'] ?? null) === null) ? '- NONE -' : '<a href="javascript:spawnLookupModal('.$data['COL_DXCC'].',\'dxcc\');">'.ucwords(strtolower($data['dxccname']), "- (/").'</a>';
+		}
 		$this->iota = ($data['COL_IOTA'] === null) ? '' : $this->getIotaLink($data['COL_IOTA']);
 		if (array_key_exists('end', $data)) {
 			$this->end = ($data['end'] === null) ? null : DateTime::createFromFormat("Y-m-d", $data['end'], new DateTimeZone('UTC'));
@@ -226,18 +272,90 @@ class QSO
 		$this->contest = $data['contestname'] ?? '';
 
 		$this->profilename = $data['station_profile_name'] ?? '';
+
+		$this->stationpower = $data['COL_TX_PWR'] ?? '';
+		$this->distance = (float)$data['COL_DISTANCE'] ?? 0;
+		$this->antennaazimuth = $data['COL_ANT_AZ'] ?? '';
+		$this->antennaelevation = $data['COL_ANT_EL'] ?? '';
+
+		if ($CI->session->userdata('user_measurement_base') == NULL) {
+			$measurement_base = $CI->config->item('measurement_base');
+		} else {
+			$measurement_base = $CI->session->userdata('user_measurement_base');
+		}
+
+		$this->measurement_base = $measurement_base;
+
 	}
 
 	/**
 	 * @return string
 	 */
-	function geCqLink($cqz): string
+	function getContinentLink(): string
 	{
-		$cqz_link = '';
-		if ($cqz <= '40') {
+		if ($this->continent == '') return '';
+
+		$validContinents = ['AF', 'EU', 'AS', 'SA', 'NA', 'OC', 'AN'];
+
+		if (in_array($this->continent, $validContinents, true)) {
+			return '<a href="javascript:spawnLookupModal(\''.strtolower($this->continent).'\',\'continent\');">'.$this->continent.'</a>';
+		}
+		return '<span class="bg-danger">Invalid continent</span> ' . $this->continent;
+	}
+
+	/**
+	 * @return string
+	 */
+	function getCqLink($cqz): string
+	{
+		if ($cqz > '0' && $cqz <= '40') {
 			return '<a href="javascript:spawnLookupModal('.$cqz.',\'cq\');">'.$cqz.'</a>';
 		}
 		return $cqz;
+	}
+
+	/**
+	 * @return string
+	 */
+	function getItuLink($ituz): string
+	{
+		if ($ituz > '0' && $ituz <= '90') {
+			return '<a href="javascript:spawnLookupModal('.$ituz.',\'itu\');">'.$ituz.'</a>';
+		}
+		return $ituz;
+	}
+
+	/**
+	 * @return string
+	 */
+	function getRegionString($region): string
+	{
+		switch($region) {
+			case 'AI':
+				return 'African Italy ('.$region.')';
+				break;
+			case 'BI':
+				return 'Bear Island ('.$region.')';
+				break;
+			case 'ET':
+				return 'European Turkey ('.$region.')';
+				break;
+			case 'IV':
+				return 'ITU Vienna ('.$region.')';
+				break;
+			case 'KO':
+				return 'Kosovo ('.$region.')';
+				break;
+			case 'SY':
+				return 'Sicily ('.$region.')';
+				break;
+			case 'SI':
+				return 'Shetland Islands ('.$region.')';
+				break;
+			default:
+				return ($region ?? '');
+				break;
+			}
 	}
 
 	/**
@@ -433,11 +551,21 @@ class QSO
 				$timestamp = strtotime($data['COL_CLUBLOG_QSO_UPLOAD_DATE']);
 				$clublogstring .=  " ".($timestamp!=''?date($custom_date_format, $timestamp):'');
 			}
-
 			$clublogstring .= "\" data-bs-toggle=\"tooltip\"";
-		}
+			$clublogstring .= ' class="clublog-green';
+		} elseif ($data['COL_CLUBLOG_QSO_UPLOAD_STATUS'] == "M") {
+			$clublogstring .= "title=\"".__("Modified");
 
-		$clublogstring .= ' class="clublog-' . (($data['COL_CLUBLOG_QSO_UPLOAD_STATUS'] =='Y') ? 'green':'red') . '">&#9650;</span><span ';
+			if ($data['COL_CLUBLOG_QSO_UPLOAD_DATE'] != null) {
+				$timestamp = strtotime($data['COL_CLUBLOG_QSO_UPLOAD_DATE']);
+				$clublogstring .=  "<br />(".__("last sent")." ".($timestamp!=''?date($custom_date_format, $timestamp):'').")";
+			}
+			$clublogstring .= "\" data-bs-toggle=\"tooltip\" data-bs-html=\"true\"";
+			$clublogstring .= ' class="clublog-yellow';
+		} else {
+			$clublogstring .= ' class="clublog-red';
+		}
+		$clublogstring.= '">&#9650;</span><span ';
 
 		if ($data['COL_CLUBLOG_QSO_DOWNLOAD_STATUS'] == "Y") {
 			$clublogstring .= "title=\"".__("Received");
@@ -449,9 +577,16 @@ class QSO
 			$clublogstring .= "\" data-bs-toggle=\"tooltip\"";
 		}
 
-		$clublogstring .= ' class="clublog-' . (($data['COL_CLUBLOG_QSO_DOWNLOAD_STATUS']=='Y') ? 'green':'red') . '">&#9660;</span>';
+		$clublogstring .= ' class="clublog-';
+		if ($data['COL_CLUBLOG_QSO_DOWNLOAD_STATUS']=='Y') {
+			$clublogstring.='green';
+		} elseif ($data['COL_CLUBLOG_QSO_DOWNLOAD_STATUS']=='M') {
+			$clublogstring.='yellow';
+		} else {
+			$clublogstring.='red';
+		}
+		$clublogstring.='">&#9660;</span>';
 
-		$clublogstring .= '</span>';
 
 		return $clublogstring;
 	}
@@ -459,6 +594,67 @@ class QSO
 	/**
 	 * @return string
 	 */
+	function getDclString($data, $custom_date_format): string {
+		$CI =& get_instance();
+
+		$dclstring = '<span ';
+
+		if ($data['COL_DCL_QSL_SENT'] == "Y") {
+			$dclstring .= "title=\"".__("Sent");
+
+			if ($data['COL_DCL_QSLSDATE'] != null) {
+				$timestamp = strtotime($data['COL_DCL_QSLSDATE']);
+				$dclstring .=  " ".($timestamp!=''?date($custom_date_format, $timestamp):'');
+			}
+
+			$dclstring .= "\" data-bs-toggle=\"tooltip\"";
+		}
+
+		if ($data['COL_DCL_QSL_SENT'] == "M") {
+			$dclstring .= "title=\"".__("Modified");
+
+			if ($data['COL_DCL_QSLSDATE'] != null) {
+				$timestamp = strtotime($data['COL_DCL_QSLSDATE']);
+				$dclstring .=  "<br />(".__("last sent")." ".($timestamp!=''?date($custom_date_format, $timestamp):'').")";
+			}
+
+			$dclstring .= "\" data-bs-toggle=\"tooltip\" data-bs-html=\"true\"";
+		}
+
+		if ($data['COL_DCL_QSL_SENT'] == "I") {
+			$dclstring .= "title=\"".__("Invalid (Ignore)");
+			$dclstring .= "\" data-bs-toggle=\"tooltip\"";
+		}
+
+		$dclstring .= ' class="qrz-';
+		if ($data['COL_DCL_QSL_SENT'] =='Y') {
+			$dclstring .= 'green';
+		} elseif ($data['COL_DCL_QSL_SENT'] == 'M') {
+			$dclstring .= 'yellow';
+		} elseif ($data['COL_DCL_QSL_SENT'] == 'I') {
+			$dclstring .= 'grey';
+		} else {
+			$dclstring .= 'red';
+		}
+		$dclstring .= '">&#9650;</span><span ';
+
+		if ($data['COL_DCL_QSL_RCVD'] == "Y") {
+			$dclstring .= "title=\"".__("Received");
+
+			if ($data['COL_DCL_QSLRDATE'] != null) {
+				$timestamp = strtotime($data['COL_DCL_QSLRDATE']);
+				$dclstring .= " ".($timestamp!=''?date($custom_date_format, $timestamp):'');
+			}
+			$dclstring .= "\" data-bs-toggle=\"tooltip\"";
+		}
+
+		$dclstring .= ' class="qrz-' . (($data['COL_DCL_QSL_RCVD']=='Y') ? 'green':'red') . '">&#9660;</span>';
+
+		$dclstring .= '</span>';
+
+		return $dclstring;
+	}
+
 	function getQrzString($data, $custom_date_format): string {
 		$CI =& get_instance();
 
@@ -527,38 +723,52 @@ class QSO
 
 		$eqslstring = '<span ';
 
+		$timestamp = '';
+		if ($data['COL_EQSL_QSLSDATE'] != null) {
+			$timestamp = date($custom_date_format, strtotime($data['COL_EQSL_QSLSDATE']));
+		}
 		if ($data['COL_EQSL_QSL_SENT'] == "Y") {
-			$eqslstring .= "title=\"".__("Sent");
-
-			if ($data['COL_EQSL_QSLSDATE'] != null) {
-				$timestamp = strtotime($data['COL_EQSL_QSLSDATE']);
-				$eqslstring .=  " ".($timestamp!=''?date($custom_date_format, $timestamp):'');
-			}
-
-			$eqslstring .= "\" data-bs-toggle=\"tooltip\"";
-		}
-
-		$eqslstring .= ' class="eqsl-' . (($data['COL_EQSL_QSL_SENT'] =='Y') ? 'green':'red') . '">&#9650;</span><span ';
-
-		if ($data['COL_EQSL_QSL_RCVD'] == "Y") {
-			$eqslstring .= "title=\"".__("Received");
-
-			if ($data['COL_EQSL_QSLRDATE'] != null) {
-				$timestamp = strtotime($data['COL_EQSL_QSLRDATE']);
-				$eqslstring .= " ".($timestamp!=''?date($custom_date_format, $timestamp):'');
-			}
-			$eqslstring .= "\" data-bs-toggle=\"tooltip\"";
-		}
-
-		$eqslstring .= ' class="eqsl-' . (($data['COL_EQSL_QSL_RCVD'] =='Y')?'green':'red') . '">';
-
-		if($data['COL_EQSL_QSL_RCVD'] =='Y') {
-			$eqslstring .= '<a class="eqsl-green" href="' . site_url("eqsl/image/".$data['COL_PRIMARY_KEY']) . '" data-fancybox="images" data-width="528" data-height="336">&#9660;</a>';
+			$eqslstring .= "title=\"" . __("Sent");
+			$eqslstring .= $timestamp != '' ? " ".$timestamp : '';
+			$eqslstring .= "\" data-bs-toggle=\"tooltip\" class=\"eqsl-green\"";
+		} elseif ($data['COL_EQSL_QSL_SENT'] == "I") {
+			$eqslstring .= "title=\"" . __("Invalid (Ignore)");
+			$eqslstring .= $timestamp != '' ? " ".$timestamp : '';
+			$eqslstring .= "\" data-bs-toggle=\"tooltip\" class=\"eqsl-grey\"";
+		} elseif ($data['COL_EQSL_QSL_SENT'] == "R") {
+			$eqslstring .= "title=\"" . __("Requested");
+			$eqslstring .= $timestamp != '' ? " ".$timestamp : '';
+			$eqslstring .= "\" data-bs-toggle=\"tooltip\" class=\"eqsl-yellow\"";
 		} else {
-			$eqslstring .= '&#9660;';
+			$eqslstring .= "class=\"eqsl-red\"";
 		}
 
-		$eqslstring .= '</span>';
+		$eqslstring .= '>&#9650;</span>';
+
+		$eqslstring .= '<a ';
+
+		$timestamp = '';
+		if ($data['COL_EQSL_QSLRDATE'] != null) {
+			$timestamp = date($custom_date_format, strtotime($data['COL_EQSL_QSLRDATE']));
+		}
+		if ($data['COL_EQSL_QSL_RCVD'] == "Y") {
+			$eqslstring .= "title=\"". __("Received");
+			$eqslstring .= $timestamp != '' ? " ".$timestamp : '';
+			$eqslstring .= "\" data-bs-toggle=\"tooltip\" class=\"eqsl-green\" ";
+			$eqslstring .= "href=\"".site_url("eqsl/image/".$data['COL_PRIMARY_KEY'])."\"  data-fancybox=\"images\" data-width=\"528\" data-height=\"336\"";
+		} elseif ($data['COL_EQSL_QSL_RCVD'] == "I") {
+			$eqslstring .= "title=\"" . __("Invalid (Ignore)");
+			$eqslstring .= $timestamp != '' ? " ".$timestamp : '';
+			$eqslstring .= "\" data-bs-toggle=\"tooltip\" class=\"eqsl-grey\"";
+		} elseif ($data['COL_EQSL_QSL_RCVD'] == "R") {
+			$eqslstring .= "title=\"" . __("Requested");
+			$eqslstring .= $timestamp != '' ? " ".$timestamp : '';
+			$eqslstring .= "\" data-bs-toggle=\"tooltip\" class=\"eqsl-yellow\"";
+		} else {
+			$eqslstring .= "class=\"eqsl-red\"";
+		}
+
+		$eqslstring .= '>&#9660;</a>';
 
 		return $eqslstring;
 	}
@@ -632,7 +842,22 @@ class QSO
 	 */
 	public function getRstR(): string
 	{
-		return $this->rstR;
+		$returnstring = '';
+		if ($this->srx != '' || $this->srxstring != '') {
+			$returnstring = '<span data-bs-toggle="tooltip" title="'. $this->contest .'" class="badge text-bg-light">';
+
+			if ($this->srx != '') {
+				$returnstring .= sprintf("%03d", $this->srx);
+			}
+
+			if ($this->srxstring != '') {
+				$returnstring .= $this->srxstring;
+			}
+
+			$returnstring .= '</span>';
+		}
+
+		return $this->rstR . $returnstring;
 	}
 
 	/**
@@ -640,7 +865,22 @@ class QSO
 	 */
 	public function getRstS(): string
 	{
-		return $this->rstS;
+		$returnstring = '';
+		if ($this->stx != '' || $this->stxstring != '') {
+			$returnstring = '<span data-bs-toggle="tooltip" title="'. $this->contest .'" class="badge text-bg-light">';
+
+			if ($this->stx != '') {
+				$returnstring .= sprintf("%03d", $this->stx);
+			}
+
+			if ($this->stxstring != '') {
+				$returnstring .= $this->stxstring;
+			}
+
+			$returnstring .= '</span>';
+		}
+
+		return $this->rstS . $returnstring;
 	}
 
 	/**
@@ -889,7 +1129,15 @@ class QSO
 		return $this->clublog;
 	}
 
-		/**
+	/**
+	 * @return string
+	 */
+	public function getdcl(): string
+	{
+		return $this->dcl;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function getqrz(): string
@@ -911,6 +1159,11 @@ class QSO
 	public function getQSLVia(): string
 	{
 		return $this->QSLVia;
+	}
+
+	public function getQSLMsgRcvd(): string
+	{
+		return $this->qslmsg_rcvd;;
 	}
 
 	public function getDXCC(): string
@@ -951,8 +1204,8 @@ class QSO
 			'de' => $this->de,
 			'dx' => $this->getDx(),
 			'mode' => $this->getFormattedMode(),
-			'rstS' => $this->rstS,
-			'rstR' => $this->rstR,
+			'rstS' => $this->getRstS(),
+			'rstR' => $this->getRstR(),
 			'band' => $this->getFormattedBand(),
 			'deRefs' => $this->getFormattedDeRefs(),
 			'qslVia' => $this->QSLVia,
@@ -961,7 +1214,9 @@ class QSO
 			'eqsl' => $this->geteqsl(),
 			'clublog' => $this->getclublog(),
 			'qrz' => $this->getqrz(),
+			'dcl' => $this->getdcl(),
 			'qslMessage' => $this->getQSLMsg(),
+			'qslMessageR' => $this->getQSLMsgRcvd(),
 			'name' => $this->getName(),
 			'dxcc' => $this->getDXCC(),
 			'state' => $this->getState(),
@@ -983,9 +1238,57 @@ class QSO
 			'dok' => $this->getFormattedDok(),
 			'wwff' => $this->getFormattedWwff(),
 			'sig' => $this->getFormattedSig(),
-			'continent' => $this->continent,
-			'profilename' => $this->profilename
+			'continent' => $this->getContinentLink(),
+			'profilename' => $this->profilename,
+			'stationpower' => empty($this->stationpower) ? null : $this->stationpower.' W',
+			'distance' => $this->getFormattedDistance(),
+			'region' => $this->region,
+			'antennaelevation' => $this->antennaelevation == null ? null : $this->antennaelevation.'°',
+			'antennaazimuth' => $this->antennaazimuth == null ? null : $this->antennaazimuth.'°'
 		];
+	}
+
+	private function getFormattedDistance(): string
+	{
+		if ($this->distance == 0) return '';
+
+		switch ($this->measurement_base) {
+			case 'M':
+				$unit = "mi";
+				break;
+			case 'K':
+				$unit = "km";
+				break;
+			case 'N':
+				$unit = "nmi";
+				break;
+			default:
+				$unit = "km";
+			}
+
+		if ($unit == 'mi') {
+			$this->distance = round($this->distance * 0.621371, 1);
+		}
+		if ($unit == 'nmi') {
+			$this->distance = round($this->distance * 0.539957, 1);
+		}
+
+		return $this->distance . ' ' . $unit;
+	}
+
+	private function getFormattedMyDok(): string
+	{
+		$dokstring = '';
+		if (preg_match('/^[A-Y]\d{2}$/', $this->MY_DARC_DOK)) {
+			$dokstring = '<a href="https://www.darc.de/' .  $this->MY_DARC_DOK . '" target="_blank">' . $this->MY_DARC_DOK . '</a>';
+		} else if (preg_match('/^DV[ABCDEFGHIKLMNOPQRSTUVWXY]$/', $this->MY_DARC_DOK)) {
+			$dokstring = '<a href="https://www.darc.de/der-club/distrikte/' . strtolower(substr($this->MY_DARC_DOK, 2, 1)) . '" target="_blank">' . $this->MY_DARC_DOK . '</a>';
+		} else if (preg_match('/^Z\d{2}$/', $this->MY_DARC_DOK)) {
+			$dokstring = '<a href="https://' . $this->MY_DARC_DOK . '.vfdb.org" target="_blank">' . $this->MY_DARC_DOK . '</a>';
+		} else {
+			$dokstring = $this->MY_DARC_DOK;
+		}
+		return $dokstring;
 	}
 
 	private function getFormattedDok(): string

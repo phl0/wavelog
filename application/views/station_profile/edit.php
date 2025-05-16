@@ -43,7 +43,11 @@ if ($dxcc_list->result() > 0) {
 
 	<?php $this->load->helper('form'); ?>
 
-	<?php echo validation_errors(); ?>
+   <?php if(validation_errors()) { ?>
+      <div class="alert alert-danger">
+         <?php echo validation_errors(); ?>
+      </div>
+   <?php } ?>
 
 	<?php if($my_station_profile->station_id != NULL) {
 		$form_action = __("Update");
@@ -71,7 +75,7 @@ if ($dxcc_list->result() > 0) {
 
 					<div class="mb-3">
 						<label for="stationCallsignInput"><?= __("Station Callsign"); ?></label>
-						<input type="text" class="form-control uppercase" name="station_callsign" id="stationCallsignInput" aria-describedby="stationCallsignInputHelp" value="<?php if(set_value('station_callsign') != "") { echo set_value('station_callsign'); } else { echo $my_station_profile->station_callsign; } ?>" required>
+						<input type="text" class="form-control uppercase" pattern="^\S+$" name="station_callsign" id="stationCallsignInput" aria-describedby="stationCallsignInputHelp" value="<?php if(set_value('station_callsign') != "") { echo set_value('station_callsign'); } else { echo $my_station_profile->station_callsign; } ?>" required>
 						<small id="stationCallsignInputHelp" class="form-text text-muted"><?= __("Station callsign. For example: 4W7EST/P"); ?></small>
 					</div>
 
@@ -281,18 +285,18 @@ if ($dxcc_list->result() > 0) {
 	<div class="row">
 		<div class="col-md">
 			<div class="card">
-				<h5 class="card-header"><?= __("Signature"); ?></h5>
+				<h5 class="card-header"><?= __("Special Interest Group"); ?></h5>
 				<div class="card-body">
 					<div class="mb-3">
-						<label for="stationSigInput"><?= __("Signature Name"); ?></label>
+						<label for="stationSigInput"><?= __("Special Interest Group Name"); ?></label>
 						<input type="text" class="form-control uppercase" name="sig" id="stationSigInput" aria-describedby="stationSigInputHelp" value="<?php if(set_value('sig') != "") { echo set_value('sig'); } else { echo $my_station_profile->station_sig; } ?>">
-						<small id="stationSigInputHelp" class="form-text text-muted"><?= __("Station Signature (e.g. GMA).."); ?></small>
+						<small id="stationSigInputHelp" class="form-text text-muted"><?= __("Station Special Interest Group Name (e.g. GMA).."); ?></small>
 					</div>
 
 					<div class="mb-3">
-						<label for="stationSigInfoInput"><?= __("Signature Information"); ?></label>
+						<label for="stationSigInfoInput"><?= __("Special Interest Group Information"); ?></label>
 						<input type="text" class="form-control uppercase" name="sig_info" id="stationSigInfoInput" aria-describedby="stationSigInfoInputHelp" value="<?php if(set_value('sig_info') != "") { echo set_value('sig_info'); } else { echo $my_station_profile->station_sig_info; } ?>">
-						<small id="stationSigInfoInputHelp" class="form-text text-muted"><?= __("Station Signature Info (e.g. DA/NW-357)."); ?></small>
+						<small id="stationSigInfoInputHelp" class="form-text text-muted"><?= __("Station Special Interest Group Info (e.g. DA/NW-357)."); ?></small>
 					</div>
 				</div>
 			</div>
@@ -326,7 +330,8 @@ if ($dxcc_list->result() > 0) {
 					<div class="mb-3">
 						<label for="qrzApiKey">QRZ.com Logbook API Key</label> <!-- This does not need Multilanguage Support -->
 						<div class="input-group">
-							<input type="text" class="form-control" name="qrzapikey" pattern="^([A-F0-9]{4}-){3}[A-F0-9]{4}$" id="qrzApiKey" aria-describedby="qrzApiKeyHelp" value="<?php if(set_value('qrzapikey') != "") { echo set_value('qrzapikey'); } else { echo $my_station_profile->qrzapikey; } ?>">
+							<input type="password" class="form-control" name="qrzapikey" pattern="^([A-F0-9]{4}-){3}[A-F0-9]{4}$" id="qrzApiKey" aria-describedby="qrzApiKeyHelp" value="<?php if(set_value('qrzapikey') != "") { echo set_value('qrzapikey'); } else { echo $my_station_profile->qrzapikey; } ?>">
+						<span class="input-group-btn"><button class="btn btn-default btn-pwd-showhide" type="button"><i class="fa fa-eye-slash"></i></button></span>
 							<button class="btn btn-secondary" type="button" id="qrz_apitest_btn">Test API-Key</button>
 						</div>
 						<div class="alert mt-3" style="display: none;" id="qrz_apitest_msg"></div>
@@ -382,7 +387,10 @@ if ($dxcc_list->result() > 0) {
 					</div>
 					<div class="mb-3">
 						<label for="webadifApiKey"><?= __("HRDLog.net API Key"); ?></label>
-						<input type="text" class="form-control" name="hrdlog_code" id="hrdlog_code" aria-describedby="hrdlog_codeHelp" value="<?php if(set_value('hrdlog_code') != "") { echo set_value('hrdlog_code'); } else { echo $my_station_profile->hrdlog_code; } ?>">
+						<div class="input-group">
+							<input type="password" class="form-control" name="hrdlog_code" id="hrdlog_code" aria-describedby="hrdlog_codeHelp" value="<?php if(set_value('hrdlog_code') != "") { echo set_value('hrdlog_code'); } else { echo $my_station_profile->hrdlog_code; } ?>">
+							<span class="input-group-btn"><button class="btn btn-default btn-pwd-showhide" type="button"><i class="fa fa-eye-slash"></i></button></span>
+						</div>
 						<small id="hrdlog_codeHelp" class="form-text text-muted"><?= sprintf(_pgettext("HRDLog.net Userprofile page", "Create your API Code on your %s"), "<a href='http://www.hrdlog.net/EditUser.aspx' target='_blank'>".__("HRDLog.net Userprofile page")."</a>"); ?></a></small>
 					</div>
 					<div class="mb-3">
@@ -404,7 +412,10 @@ if ($dxcc_list->result() > 0) {
 				<div class="card-body">
 					<div class="mb-3">
 						<label for="webadifApiKey"><?php echo _pgettext("Probably no translation needed","QO-100 Dx Club API Key"); ?></label>
-						<input type="text" class="form-control" name="webadifapikey" id="webadifApiKey" aria-describedby="webadifApiKeyHelp" value="<?php if(set_value('webadifapikey') != "") { echo set_value('webadifapikey'); } else { echo $my_station_profile->webadifapikey; } ?>">
+						<div class="input-group">
+							<input type="password" class="form-control" name="webadifapikey" id="webadifApiKey" aria-describedby="webadifApiKeyHelp" value="<?php if(set_value('webadifapikey') != "") { echo set_value('webadifapikey'); } else { echo $my_station_profile->webadifapikey; } ?>">
+							<span class="input-group-btn"><button class="btn btn-default btn-pwd-showhide" type="button"><i class="fa fa-eye-slash"></i></button></span>
+						</div>
 						<small id="webadifApiKeyHelp" class="form-text text-muted"><?= sprintf(_pgettext("QO-100 Dx Club's profile page", "Create your API key on your %s"), "<a href='https://qo100dx.club' target='_blank'>".__("QO-100 Dx Club's profile page")."</a>"); ?></a></small>
 					</div>
 					<div class="mb-3">

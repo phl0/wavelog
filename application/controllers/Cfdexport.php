@@ -15,7 +15,7 @@ class Cfdexport extends CI_Controller {
 		$this->load->model('logbook_model');
 		$this->load->model('bands');
 
-		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
+		if(!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$data['page_title'] = __("CFD Export");
 
@@ -53,6 +53,9 @@ Entity                \          MHz:   ALL   1.8   3.5     7    10    14    18 
 		}
 		$dxccs=$this->dxcc->list_current('prefix');
 		foreach ($dxccs->result() as $dxcc) {	// Loop through ALL active entities
+			if ($dxcc->adif == 0) {
+				continue;
+			}
 			$vals=$dxcc_list[$dxcc->prefix] ?? [];	// Set current Entity
 			$output .= str_pad($dxcc->prefix,6," ")." ".str_pad(substr($dxcc->name,0,30),30,".")."  ";
 			$allm=0;

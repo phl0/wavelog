@@ -29,6 +29,7 @@ if ($qsos->result() != NULL) {
 <th style=\'text-align: center\'>' . __("Station") . '</th>
 <th style=\'text-align: center\'>' . __("Profile name") . '</th>
 <th style=\'text-align: center\'>' . __("Send Method") . '</th>
+<th style=\'text-align: center\'>' . __("Previous QSL") . '</th>
 <th style=\'text-align: center\'>' . __("Mark as sent") . '</th>
 <th style=\'text-align: center\'>' . __("Remove") . '</th>
 <th style=\'text-align: center\'>' . __("QSO List") . '</th>
@@ -58,6 +59,7 @@ if ($qsos->result() != NULL) {
 		echo '<td style=\'text-align: center\'><span class="badge text-bg-light">' . $qsl->station_callsign . '</span></td>';
 		echo '<td style=\'text-align: center\'>' . $qsl->station_profile_name . '</span></td>';
 		echo '<td style=\'text-align: center\'>'; echo_qsl_sent_via($qsl->COL_QSL_SENT_VIA); echo '</td>';
+		echo '<td style=\'text-align: center\'>'; if ($qsl->previous_qsl > 0 ) { echo '<span class="badge bg-warning">' . $qsl->previous_qsl . '</span>'; } else { echo '<span class="badge bg-success">0</span>'; } echo '</td>';
 		echo '<td style=\'text-align: center\'><button onclick="mark_qsl_sent(\''.$qsl->COL_PRIMARY_KEY.'\', \''. $qsl->COL_QSL_SENT_VIA. '\')" class="btn btn-sm btn-success"><i class="fa fa-check"></i></button></td>';
 		echo '<td style=\'text-align: center\'><button onclick="deleteFromQslQueue(\''.$qsl->COL_PRIMARY_KEY.'\')" class="btn btn-sm btn-danger"><i class="fas fa-trash-alt"></i></button></td>';
 		echo '<td style=\'text-align: center\'><button onclick="openQsoList(\''.$qsl->COL_CALL.'\')" class="btn btn-sm btn-success"><i class="fas fa-search"></i></button></td>';
@@ -66,9 +68,9 @@ if ($qsos->result() != NULL) {
 	echo '</tbody></table></div>';
 	?>
 
-	<p><button onclick="markSelectedQsos();" title="<?= __("Mark selected QSOs as printed"); ?>" class="btn btn-success markallprinted"><?= __("Mark selected QSOs as printed"); ?></button>
-
-	<button onclick="removeSelectedQsos();" title="<?= __("Remove selected QSOs from the queue"); ?>" class="btn btn-danger removeall"><?= __("Remove selected QSOs from the queue"); ?></button></p>
+	<p><button onclick="markSelectedQsos();" title="<?= __("Mark selected QSOs as sent"); ?>" class="btn btn-success markallprinted"><?= __("Mark selected QSOs as sent"); ?></button>
+	<button onclick="removeSelectedQsos();" title="<?= __("Remove selected QSOs from the queue"); ?>" class="btn btn-danger removeall"><?= __("Remove selected QSOs from the queue"); ?></button>
+	<button onclick="exportSelectedQsos();" title="<?= __("Export selected QSOs to ADIF-file"); ?>" class="btn btn-primary exportselected"><?= __("Export selected QSOs to ADIF-file"); ?></button></p>
 
 	<p><a href="<?php echo site_url('qslprint/exportcsv/' . $station_id); ?>" title="<?= __("Export CSV-file"); ?>" class="btn btn-primary"><?= __("Export requested QSLs to CSV-file"); ?></a>
 

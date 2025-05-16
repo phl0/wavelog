@@ -15,7 +15,7 @@ function editQsos() {
 	}
 	var id_list=[];
 	elements.each(function() {
-		let id = $(this).first().closest('tr').data('qsoID')
+		let id = $(this).closest('tr').attr('id')?.replace(/\D/g, ''); // Removes non-numeric characters
 		id_list.push(id);
 	});
 
@@ -142,6 +142,8 @@ function saveBatchEditQsos(id_list) {
 	var column = $("#editColumn").val();
 	var value;
 	var value2;
+	var value3;
+	var value4;
 
 	if (column == 'cqz') {
 		value = $("#editCqz").val();
@@ -177,6 +179,8 @@ function saveBatchEditQsos(id_list) {
 	if (column == 'satellite') {
 		value = $("#editSatellite").val();
 		value2 = $("#editSatelliteMode").val();
+		value3 = $("#editBand").val();
+		value4 = $("#editBandRx").val();
 	}
 	if (column == 'contest') {
 		value = $("#editContest").val();
@@ -187,11 +191,23 @@ function saveBatchEditQsos(id_list) {
 	if (column == 'qrzsent' || column == 'qrzreceived') {
 		value = $("#editQrz").val();
 	}
+	if (column == 'eqslsent' || column == 'eqslreceived') {
+		value = $("#editEqsl").val();
+	}
+	if (column == 'clublogsent' || column == 'clublogreceived') {
+		value = $("#editClublog").val();
+	}
 	if (column == 'continent') {
 		value = $("#editContinent").val();
 	}
-	if (column == 'sota' || column == 'pota' || column == 'wwff' || column == 'gridsquare' || column == 'comment' || column == 'operator' || column == 'qslvia' || column == 'qslmsg') {
+	if (column == 'region') {
+		value = $("#editRegion").val();
+	}
+	if (column == 'sota' || column == 'pota' || column == 'wwff' || column == 'gridsquare' || column == 'comment' || column == 'operator' || column == 'qslvia' || column == 'qslmsg' || column == 'stationpower' || column == 'stxstring') {
 		value = $("#editTextInput").val();
+	}
+	if (column == 'distance') {
+		value = $("#editDistanceInput").val();
 	}
 
 	$.ajax({
@@ -201,7 +217,9 @@ function saveBatchEditQsos(id_list) {
 			ids: JSON.stringify(id_list, null, 2),
 			column: column,
 			value: value,
-			value2: value2
+			value2: value2,
+			value3: value3,
+			value4: value4
 		},
 		success: function (data) {
 			if (data != []) {
@@ -225,6 +243,7 @@ function changeEditType(type) {
 	$('#editTextInput').hide();
 	$('#editDate').hide();
 	$('#editBand').hide();
+	$('#editBandTxLabel').hide();
 	$('#editMode').hide();
 	$('#editSatellite').hide();
 	$('#editSatelliteMode').hide();
@@ -239,6 +258,11 @@ function changeEditType(type) {
 	$('#editContinent').hide();
 	$('#editQrz').hide();
 	$('#saveButton').prop("disabled", false);
+	$('#editEqsl').hide();
+	$('#editRegion').hide();
+	$('#editClublog').hide();
+	$('#editDistanceInputLabel').hide();
+	$('#editDistanceInput').hide();
 	if (type == "dxcc") {
 		$('#editDxcc').show();
 	} else if (type == "iota") {
@@ -257,6 +281,7 @@ function changeEditType(type) {
 		$('#editStationLocation').show();
 	} else if (type == "band") {
 		$('#editBand').show();
+		$('#editBandTxLabel').show();
 		$('#editBandRx').show();
 		$('#editBandRxLabel').show();
 	}else if (type == "mode") {
@@ -267,18 +292,31 @@ function changeEditType(type) {
 		$('#editSatellite').show();
 		$('#editSatelliteMode').show();
 		$('#editSatelliteModeLabel').show();
+		$('#editBand').show();
+		$('#editBandRx').show();
+		$('#editBandTxLabel').show();
+		$('#editBandRxLabel').show();
 	} else if (type == "contest") {
 		$('#editContest').show();
 	} else if (type == "lotwsent" || type == "lotwreceived") {
 		$('#editLoTW').show();
 	} else if (type == "qrzsent" || type == "qrzreceived") {
 		$('#editQrz').show();
+	} else if (type == "eqslsent" || type == "eqslreceived") {
+		$('#editEqsl').show();
 	} else if (type == "continent") {
 		$('#editContinent').show();
-	} else if (type == "gridsquare" || type == "sota" || type == "wwff" || type == "operator" || type == "pota" || type == "comment" || type == "qslvia" || type == "contest" || type == "qslmsg") {
+	} else if (type == "gridsquare" || type == "sota" || type == "wwff" || type == "operator" || type == "pota" || type == "comment" || type == "qslvia" || type == "contest" || type == "qslmsg" || type == "stationpower" || type == 'stxstring') {
 		$('#editTextInput').show();
+	} else if (type == "region") {
+		$('#editRegion').show();
+	} else if (type == "clublogsent"  || type == "clublogreceived") {
+		$('#editClublog').show();
 	} else if (type == "") {
 		$('#saveButton').prop("disabled", true);
+	} else if (type == "distance") {
+		$('#editDistanceInput').show();
+		$('#editDistanceInputLabel').show();
 	}
 }
 

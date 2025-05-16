@@ -9,12 +9,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 |	'app_name'		Name of the App 'Wavelog'
 |	'directory'		directory where wavelog is installed eg "logger"
-|	'callbook'		Selects which Callbook lookup to use defaults "hamqth" but supports "qrz"
+|	'callbook'		Selects which Callbook lookup to use defaults "hamqth" but supports "qrz" and "qrzcq"
 */
 
 $config['app_name'] = 'Wavelog';
-$config['directory'] = '/%directory%';
-$config['callbook'] = '%callbook%'; // Options are hamqth or qrz
+$config['directory'] = '%directory%';
+$config['callbook'] = '%callbook%'; // Options are hamqth, qrz, qrzcq or qrzru
 
 $config['datadir'] = null; // default to install directory
 
@@ -24,8 +24,8 @@ $config['datadir'] = null; // default to install directory
 |--------------------------------------------------------------------------
 |
 | 	'table_name'	SQL table where log can be found
-|	'locator'	Default locator used to calculate bearings/distance
-|	'display_freq'	Show or Hide frequnecy info
+|	'locator'	    Default locator used to calculate bearings/distance
+|	'display_freq'	Show or Hide frequency info
 */
 
 $config['table_name'] = 'TABLE_HRD_CONTACTS_V01';
@@ -37,7 +37,7 @@ $config['display_freq'] = true;
 | QRZ Login Options
 |--------------------------------------------------------------------------
 |
-| 	'qrz_username'	QRZ.com user login
+| 	'qrz_username'	QRZ.com user login (callsign, not email)
 |	'qrz_password'	QRZ.com user password
 |	'use_fullname'  Get full names from QRZ, may not be GDPR compliant
 */
@@ -56,6 +56,28 @@ $config['use_fullname'] = false;
 */
 $config['hamqth_username'] = '%hamqth_username%';
 $config['hamqth_password'] = '%hamqth_password%';
+
+/*
+|--------------------------------------------------------------------------
+| QRZcq Login Options
+|--------------------------------------------------------------------------
+|
+| 	'qrzcq_username'	QRZcq.com user login
+|	'qrzcq_password'	QRZcq.com user password
+*/
+$config['qrzcq_username'] = '%qrzcq_username%';
+$config['qrzcq_password'] = '%qrzcq_password%';
+
+/*
+|--------------------------------------------------------------------------
+| QRZ.ru Login Options
+|--------------------------------------------------------------------------
+|
+| 	'qrzru_username'	QRZ.ru user login
+|	'qrzru_password'	QRZ.ru user password
+*/
+$config['qrzru_username'] = '%qrzru_username%';
+$config['qrzru_password'] = '%qrzru_password%';
 
 /*
 |--------------------------------------------------------------------------
@@ -460,7 +482,7 @@ $config['sess_match_ip'] = FALSE;
 $config['sess_time_to_update'] = 300;
 $config['sess_regenerate_destroy'] = FALSE;
 
-/* 
+/*
  * To make sure we do not collect infinite session we set some garbage collection settings
  * see https://www.php.net/manual/en/session.configuration.php#ini.session.gc-probability
  * and https://www.php.net/manual/en/session.configuration.php#ini.session.gc-divisor
@@ -663,24 +685,20 @@ $config['disable_oqrs'] = false;
 
 /*
 |--------------------------------------------------------------------------
-| Special Callsign Feature
+| Special Callsign Feature aka. Clubstations Support
 |--------------------------------------------------------------------------
 |
-| This config switch is meant to use for Special Callsign operations in a dedicated Wavelog Installation
-| If this switch is set to true it will enable a dialog which pops up for each operator after login
-| to ask for his personal callsign. This causes the QSOs to get saved with the correct operator data.
-| Example:      Special Callsign:   DL250CDF
-|               Operator:           DF2TG
+| This config switch is meant to use for Special Callsign operations or Clubstations.
+| If this switch is set to true it enables a whole bunch of features to handle Special Callsigns and Club Callsigns.
+| For more Information please visit the Wiki:
+| https://github.com/wavelog/wavelog/wiki/Clubstations
 |
-| It is recommend to enable also "Disable Syncing to 3rd party-Services at UI"
-| More Information about this feature and how to use it, you can find here:
-| https://github.com/wavelog/wavelog/wiki/Recommended-Setup-for-Special-Callsigns-and-Clubs
+| !!! Important !!!
+| $config['disable_impersonate'] has to be set to false to use this feature.
+|
 */
 
 $config['special_callsign'] = false;
-
-// hides the usermenu; takes action only if "special_callsign" is true
-$config['sc_hide_usermenu'] = true;
 
 
 /*
@@ -689,7 +707,7 @@ $config['sc_hide_usermenu'] = true;
 |--------------------------------------------------------------------------
 |
 | This config switch disables the impersonate feature. This feauture is used to impersonate another user.
-| Impersonate is enabled by default. To disable it, set the value to false.
+| Impersonate is enabled by default. To disable it, set the value to false. Also the special_callsign feature needs this to be false.
 |
 */
 
@@ -719,3 +737,65 @@ $config['cron_allow_insecure'] = false;
  */
 
 $config['disable_version_check'] = false;
+
+/*
+|--------------------------------------------------------------------------
+| trx-control Configuration
+|--------------------------------------------------------------------------
+|
+| ***
+| No Features implemented yet, Nothing is going to happen if you set this.
+| ***
+|
+| This defines server and port of your personal trx-control server.
+| If you don't have a trx-control server, you can ignore this.
+|
+| trxd_server_ip            IP of your trx-control server
+| trxd_server_port          Port of your trx-control server
+| trxd_connection_type      Connection type of your trx-control server (ws, wss or plain)
+|                           ws:     normal websocket
+|                           wss:    secure websocket (requires a valid certificate on trx-control server)
+|                           plain:  plain tcp/ip socket connection
+| trxd_ws_path              Path of your trxd websocket server (only required for ws and wss)
+| trxd_server_timeout       Timeout before the connection to trx-control server is closed
+|
+| More Information about trx-control you can find here:
+| https://github.com/hb9ssb/trx-control
+|
+|*/
+
+// $config['trxd_server_ip'] = '10.0.0.10';
+// $config['trxd_server_port'] = '14290';
+// $config['trxd_connection_type'] = 'ws';
+// $config['trxd_ws_path'] = '/trx-control';
+// $config['trxd_timeout'] = 5;
+
+/*
+|--------------------------------------------------------------------------
+| eqsl.cc Massdownloa
+|--------------------------------------------------------------------------
+|
+| The eqsl.cc mass download function is not threadsafe. So it is disabled by default.
+| Please consider enabling this carefully. Not recommended for multi-user environments.
+ */
+
+$config['enable_eqsl_massdownload'] = false;
+
+/*
+|--------------------------------------------------------------------------
+| Lock Account after n failed login-attempts
+|--------------------------------------------------------------------------
+ */
+
+ $config['max_login_attempts'] = 3;
+
+ /*
+ |--------------------------------------------------------------------------
+ | Disable User QSO Count in User List (Admin Menu)
+ | Reason for this setting is to prevent performance issues on large installations
+ | where the QSO count is not needed. Set to true to disable the QSO count.
+ | This also hides the last Operator for CLubstations. Default is false.
+ |--------------------------------------------------------------------------
+  */
+
+  $config['disable_user_stats'] = false;

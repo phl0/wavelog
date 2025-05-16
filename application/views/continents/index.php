@@ -40,7 +40,7 @@
                         <select id="mode" name="mode" class="form-select form-select-sm">
                             <option value=""><?= __("All"); ?></option>
                             <?php foreach($modes as $modeId => $mode){ ?>
-								<option value="<?php echo htmlspecialchars($mode);?>"><?php echo htmlspecialchars($mode);?></option>
+								<option value="<?php echo htmlspecialchars(strtoupper($mode));?>"><?php echo htmlspecialchars(strtoupper($mode));?></option>
 							<?php } ?>
                         </select>
                     </div>
@@ -60,7 +60,7 @@
                     <tr>
                         <th>#</th>
                         <th><?= __("Continent"); ?></th>
-                        <th><?= __("# of QSO's worked"); ?></th>
+                        <th><?= __("# of QSOs worked"); ?></th>
                     </tr>
                 </thead>
                 <tbody></tbody>

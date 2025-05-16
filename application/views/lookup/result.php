@@ -11,36 +11,65 @@ echo '
 		</thead>
 		<tbody>';
 foreach ($result as $mode => $value) {
-	echo '<tr>
-			<td>'. strtoupper($mode) .'</td>';
-	foreach ($value as $key => $val) {
-		switch($type) {
-			case 'dxcc': $linkinfo = '<a href=\'javascript:displayContacts("'.str_replace("&", "%26", $dxcc).'","' . $key . '","All","All","' . $mode . '","DXCC2")\'>'  . $val . '</a>'; break;
-			case 'iota': $linkinfo = '<a href=\'javascript:displayContacts("'.str_replace("&", "%26", $iota).'","' . $key . '","' . $mode . '","All","All","IOTA")\'>'   . $val . '</a>'; break;
-			case 'vucc': $linkinfo = '<a href=\'javascript:displayContacts("'.str_replace("&", "%26", $grid).'","' . $key . '","' . $mode . '","All","All","VUCC")\'>'   . $val . '</a>'; break;
-			case 'cq':  $linkinfo = '<a href=\'javascript:displayContacts("'.str_replace("&", "%26", $cqz).'","'  . $key . '","' . $mode . '","All","All","CQZone")\'>' . $val . '</a>'; break;
-			case 'was':  $linkinfo = '<a href=\'javascript:displayContacts("'.str_replace("&", "%26", $was).'","'  . $key . '","' . $mode . '","All","All","WAS")\'>'    . $val . '</a>'; break;
-			case 'sota': $linkinfo = '<a href=\'javascript:displayContacts("'.str_replace("&", "%26", $sota).'","' . $key . '","' . $mode . '","All","All","SOTA")\'>'   . $val . '</a>'; break;
-			case 'wwff': $linkinfo = '<a href=\'javascript:displayContacts("'.str_replace("&", "%26", $wwff).'","' . $key . '","' . $mode . '","All","All","WWFF")\'>'   . $val . '</a>'; break;
-		}
 
-		$info = '<td>';
-
-		if ($val == 'W') {
-			$info .= '<div class=\'bg-danger awardsBgDanger\'>' . $linkinfo . '</div>';
+	$showRow = true;
+	if ($reduced_mode) {
+		$showRow = false;
+		foreach ($value as $val) {
+			if ($val == 'W' || $val == 'C') {
+				$showRow = true;
+				break;
+			}
 		}
-		else if ($val == 'C') {
-			$info .= '<div class=\'bg-success awardsBgSuccess\'>' . $linkinfo . '</div>';
-		}
-		else {
-			$info .= $val;
-		}
-
-		$info .= '</td>';
-
-		echo $info;
 	}
-	echo '</tr>';
+	if (strtoupper($mode) == strtoupper($current_mode)) {
+		$showRow = true;
+	}
+
+	if ($showRow) {
+		echo '<tr><td>' . strtoupper($mode) . '</td>';
+
+		$typeMapping = [
+			'dxcc' => $dxcc,
+			'iota' => $iota,
+			'vucc' => substr(trim($grid), 0, 4),
+			'cq' => $cqz,
+			'was' => $was,
+			'sota' => $sota,
+			'wwff' => $wwff,
+			'itu' => $ituz,
+			'continent' => $continent,
+			'pota' => $pota,
+			'dxcc2' => $dxcc
+		];
+
+		if ($type == 'dxcc') {
+			$type = 'dxcc2';
+		}
+
+		foreach ($value as $key => $val) {
+			$searchPhrase = isset($typeMapping[$type]) ? str_replace("&", "%26", $typeMapping[$type]) : '';
+
+			$linkinfo = $searchPhrase
+				? "<a href='javascript:displayContacts(\"$searchPhrase\",\"$key\",\"All\",\"All\",\"$mode\",\"" . strtoupper($type) . "\")'>$val</a>"
+				: $val;
+
+			$tdClass = ($current_band == $key && strtoupper($current_mode) == strtoupper($mode))
+				? "class='border-3 border-danger'"
+				: '';
+
+			$content = $val;
+			if ($val === 'W') {
+				$content = "<div class='bg-danger awardsBgDanger'>$linkinfo</div>";
+			} elseif ($val === 'C') {
+				$content = "<div class='bg-success awardsBgSuccess'>$linkinfo</div>";
+			}
+
+			echo "<td $tdClass>$content</td>";
+		}
+
+		echo '</tr>';
+	}
 }
 echo '</tbody></table>';
 ?>

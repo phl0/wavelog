@@ -43,7 +43,7 @@ class eqsl extends CI_Controller {
 
 	public function import() {
 		$this->load->model('user_model');
-		if (!$this->user_model->authorize(2)) {
+		if (!$this->user_model->authorize(2) || !clubaccess_check(9)) {
 			$this->session->set_flashdata('error', __("You're not allowed to do that!"));
 			redirect('dashboard');
 		}
@@ -190,8 +190,13 @@ class eqsl extends CI_Controller {
 				$status = $this->eqslmethods_model->uploadQso($adif, $qsl);
 
 				if ($status == 'Login Error') {
-					log_message('error', 'eQSL Credentials-Error for '.$data['user_eqsl_name'].' Login will be disabled!');
+					log_message('error', 'eQSL Credentials-Error for '.$data['user_eqsl_name'].'. Login will be disabled!');
 					$this->eqslmethods_model->disable_eqsl_uid($this->session->userdata('user_id'));
+					$status=__("User/Pass wrong for eQSL");
+				} elseif ($status == 'Nick Error') {
+					log_message('error', 'eQSL error for user '.$data['user_eqsl_name'].' with QTH Nickname '.($qsl['eqslqthnickname'] ?? '').' at station_profile '.($qsl['eqsl_station_id'] ?? '').'. eQSL QTH Nickname will be removed from station location!');
+					$this->eqslmethods_model->disable_eqsl_station_id($this->session->userdata('user_id'),$qsl['eqsl_station_id']);
+					$status=sprintf(__("No such eQSL QTH Nickname: %s"), $qsl['eqslqthnickname'] ?? '');
 				}
 
 				if($status == 'Error') {
@@ -447,7 +452,7 @@ class eqsl extends CI_Controller {
 		$errors = 0;
 		$this->load->library('electronicqsl');
 
-		if ($this->input->post('eqsldownload') == 'download') {
+		if ($this->input->post('eqsldownload') == 'download' && $this->config->item('enable_eqsl_massdownload')) {
 			$i = 0;
 			$this->load->model('eqslmethods_model');
 			$qslsnotdownloaded = $this->eqslmethods_model->eqsl_not_yet_downloaded();

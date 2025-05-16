@@ -152,6 +152,11 @@ class Qrz extends CI_Controller {
 					$this->markqso($qso->COL_PRIMARY_KEY,'I');
 					$result['status'] = 'Error';
 					$errormessages[] = $result['message'] . ' Call: ' . $qso->COL_CALL . ' Band: ' . $qso->COL_BAND . ' Mode: ' . $qso->COL_MODE . ' Time: ' . $qso->COL_TIME_ON;
+				} elseif ( ($result['status']=='error') && (str_contains($result['message'],'required field missing mode')) ) {
+					log_message('error', 'QRZ upload failed for qso for Station_ID '.$station_id.' //  Call: ' . $qso->COL_CALL . ' Band: ' . $qso->COL_BAND . ' Mode: ' . $qso->COL_MODE . ' Time: ' . $qso->COL_TIME_ON . ' // Message: '.$result['message']);
+					$this->markqso($qso->COL_PRIMARY_KEY,'I');
+					$result['status'] = 'Error';
+					$errormessages[] = $result['message'] . ' Call: ' . $qso->COL_CALL . ' Band: ' . $qso->COL_BAND . ' Mode: ' . $qso->COL_MODE . ' Time: ' . $qso->COL_TIME_ON;
 				} elseif ( ($result['status']=='error') && (substr($result['message'],0,11)  == 'STATUS=AUTH')) {
 					log_message('error', 'QRZ upload failed for qso for Station_ID '.$station_id.' //  Call: ' . $qso->COL_CALL . ' Band: ' . $qso->COL_BAND . ' Mode: ' . $qso->COL_MODE . ' Time: ' . $qso->COL_TIME_ON . ' // Message: '.$result['message']);
 					$errormessages[] = $result['message'] . ' Call: ' . $qso->COL_CALL . ' Band: ' . $qso->COL_BAND . ' Mode: ' . $qso->COL_MODE . ' Time: ' . $qso->COL_TIME_ON;
@@ -191,6 +196,9 @@ class Qrz extends CI_Controller {
 	 * Used for displaying the uid for manually selecting log for upload to qrz
 	 */
 	public function export() {
+		$this->load->model('user_model');
+		if(!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
+
 		$this->load->model('stations');
 
 		$data['page_title'] = __("QRZ Logbook");
@@ -304,8 +312,11 @@ class Qrz extends CI_Controller {
 				if ((($user_id_to_load != null) && ($user_id_to_load != $station->user_id))) {	// Skip User if we're called with a specific user_id
 					continue;
 				} 
-				if ($lastqrz == null) {
+				if (($lastqrz == null) || ($user_id_to_load == null)) {
 					$lastqrz = $this->logbook_model->qrz_last_qsl_date($station->user_id);
+				}
+				if (($lastqrz ?? '') == '2999-12-31') {	// Nothing to do here, skip station
+					continue;
 				}
 				$qrz_api_key = $station->qrzapikey;
 				$result=($this->mass_download_qsos($qrz_api_key, $lastqrz, $station->station_ids));
@@ -345,7 +356,7 @@ class Qrz extends CI_Controller {
 
 	function mass_download_qsos($qrz_api_key = '', $lastqrz = '1900-01-01', $station_ids = '', $trusted = false) {
 		$config['upload_path'] = './uploads/';
-		$file = $config['upload_path'] . 'qrzcom_download_report.adi';
+		$file = $config['upload_path'] . 'qrzcom_download_report_'.md5($qrz_api_key).'.adi';
 		if (file_exists($file) && ! is_writable($file)) {
 			$result = "Temporary download file ".$file." is not writable. Aborting!";
 			return false;
@@ -365,11 +376,11 @@ class Qrz extends CI_Controller {
 		curl_setopt( $ch, CURLOPT_USERAGENT, 'Wavelog/'.$this->optionslib->get_option('version'));
 
 		$content = htmlspecialchars_decode(curl_exec($ch));
-		file_put_contents($file, $content);
-		if (strlen(file_get_contents($file, false, null, 0, 100))!=100) {
+		if (strlen($content)<100) {
 			$result = "QRZ downloading failed, either due to it being down or incorrect logins.";
 			return "false";
 		}
+		file_put_contents($file, $content);
 
 		ini_set('memory_limit', '-1');
 		$result = $this->loadFromFile($file, $station_ids);
@@ -439,10 +450,19 @@ class Qrz extends CI_Controller {
 				$record['qsl_rcvd'] = $config['qrz_rcvd_mark'];
 			}
 
+			// SAT-Name not given? Create array-key and fill with null
+			if (!(array_key_exists('sat_name', $record))) {
+				$record['sat_name']=null;
+			}
+			// Prop-Mode not given? Create array-key and fill with null
+			if (!(array_key_exists('prop_mode', $record))) {
+				$record['prop_mode']=null;
+			}
+
 			$record['call']=str_replace("_","/",$record['call']);
 			$record['station_callsign']=str_replace("_","/",$record['station_callsign'] ?? '');
 			if ($record['station_callsign'] ?? '' != '') {
-				$status = $this->logbook_model->import_check($time_on, $record['call'], $record['band'], $record['mode'], $record['station_callsign'], $station_ids);
+				$status = $this->logbook_model->import_check($time_on, $record['call'], $record['band'], $record['mode'], $record['prop_mode'], $record['sat_name'], $record['station_callsign'], $station_ids);
 
 				if($status[0] == "Found") {
 					$qrz_status = $this->logbook_model->qrz_update($status[1], $qsl_date, $record['qsl_rcvd']);
@@ -450,7 +470,7 @@ class Qrz extends CI_Controller {
 					$table .= "<tr>";
 					$table .= "<td>".$record['station_callsign']."</td>";
 					$table .= "<td>".$time_on."</td>";
-					$table .= "<td>".$record['call']."</td>";
+					$table .= "<td><a id=\"view_qrz_qso\" href=\"javascript:displayQso(".$status[1].")\">".$record['call']."</a></td>";
 					$table .= "<td>".($record['mode'] ?? '')."</td>";
 					$table .= "<td>".$record['qsl_rcvd']."</td>";
 					$table .= "<td>".$qsl_date."</td>";

@@ -14,11 +14,14 @@
 		var lang_statistics_years = "<?= __("Years")?>";
 		var lang_statistics_modes = "<?= __("Mode")?>";
 		var lang_statistics_bands = "<?= __("Bands")?>";
+		var lang_statistics_operators = "<?= __("Operators")?>";
 		var lang_statistics_number_of_qso_worked_each_year = "<?= __("Number of QSOs worked each year")?>";
 		var lang_statistics_year = "<?= __("Year")?>";
-		var lang_statistics_number_of_qso_worked = "<?= __("# of QSO's worked")?>";
+		var lang_statistics_number_of_qso_worked = "<?= __("# of QSOs worked")?>";
 		var lang_gen_hamradio_mode = "<?= __("Mode")?>";
 		var lang_gen_hamradio_band = "<?= __("Band")?>";
+		var lang_gen_hamradio_operator = "<?= __("Operator")?>";
+		var lang_gen_satellite = "<?= __("Satellite")?>";
 </script>
 
 <div class="container statistics">
@@ -27,7 +30,15 @@
 		<?php echo $page_title; ?>
 		<small class="text-muted"><?= __("Explore the logbook."); ?></small>
 	</h2>
-
+		<br/>
+		<select class="form-select form-select-sm me-2 w-auto" style="display:none;" id="yr" name="yr">
+			<option value='All'><?= __("All Years"); ?></option>
+		<?php 
+			foreach($years as $yr) {
+				echo '<option value="'.$yr.'">'.__("Year")." ".$yr.'</option>';
+			}
+		?>
+		</select>
 	<br>
 	<div hidden class="tabs">
 		<ul class="nav nav-tabs" id="myTab" role="tablist">
@@ -59,6 +70,9 @@
 							<a class="nav-link" id="qso-tab" data-bs-toggle="tab" href="#qsotab" role="tab" aria-controls="bandtab" aria-selected="false"><?= __("QSOs"); ?></a>
 						</li>
 						<li class="nav-item">
+							<a class="nav-link" id="operators-tab" data-bs-toggle="tab" href="#operatorstab" role="tab" aria-controls="operatorstab" aria-selected="false"><?= __("Operators"); ?></a>
+						</li>
+						<li class="nav-item">
 							<a class="nav-link" id="unique-tab" data-bs-toggle="tab" href="#uniquetab" role="tab" aria-controls="uniquetab" aria-selected="false"><?= __("Unique callsigns"); ?></a>
 						</li>
 					</ul>
@@ -77,6 +91,10 @@
 					</div>
 					<div class="tab-pane fade" id="qsotab" role="tabpanel" aria-labelledby="qso-tab">
 							<div class="qsos">
+							</div>
+					</div>
+					<div class="tab-pane fade" id="operatorstab" role="tabpanel" aria-labelledby="operators-tab">
+							<div class="operators">
 							</div>
 					</div>
 					<div class="tab-pane fade" id="uniquetab" role="tabpanel" aria-labelledby="unique-tab">
@@ -101,21 +119,7 @@
 					</ul>
 				<div class="tab-content">
 					<div class="tab-pane fade show active" id="sattab" role="tabpanel" aria-labelledby="sat-tab">
-						<div style="display: flex;" id="satContainer">
-							<div style="flex: 1;">
-								<canvas id="satChart" width="500" height="500"></canvas>
-							</div>
-							<div style="flex: 1;" id="satTable">
-								<table style="width:100%" class="sattable table table-sm table-bordered table-hover table-striped table-condensed text-center"><thead>
-									<tr>
-									<td>#</td>
-									<td><?= __("Satellite"); ?></td>
-									<td><?= __("# of QSO's worked"); ?></td>
-									</tr>
-									</thead>
-									<tbody></tbody>
-								</table>
-							</div>
+						<div class="satsummary">
 						</div>
 					</div>
 					<div class="tab-pane fade" id="satqsostab" role="tabpanel" aria-labelledby="satqsos-tab">

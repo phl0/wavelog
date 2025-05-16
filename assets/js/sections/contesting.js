@@ -7,6 +7,25 @@ $(document).ready(async function () {
 	await restoreContestSession(sessiondata);	// wait for restoring until finished
 	setRst($("#mode").val());
 	$('#contestname').val($('#contestname_select').val());
+
+	// Clear the localStorage for the qrg units
+	localStorage.clear();
+	set_qrg();
+	qrg_inputtype();
+
+	// Storing the contestid in contest session
+	$('#contestname, #copyexchangeto, #exchangesequence_select, #band, #mode, #frequency, #radio').change(function () {
+		var formdata = new FormData(document.getElementById("qso_input"));
+		setSession(formdata);
+	});
+
+	// Storing the exchange type in contest session
+	$('#exchangetype').change(function () {
+		var exchangetype = $("#exchangetype").val();
+		setExchangetype(exchangetype);
+		var formdata = new FormData(document.getElementById("qso_input"));
+		setSession(formdata);
+	});
 });
 
 // Always update the contestname
@@ -147,20 +166,6 @@ $('#moreSettingsButton').click(function () {
 	$('#moreSettingsModal').modal('show');
 });
 
-// Storing the contestid in contest session
-$('#contestname, #copyexchangeto, #exchangesequence_select, #band, #mode, #frequency, #radio').change(function () {
-	var formdata = new FormData(document.getElementById("qso_input"));
-	setSession(formdata);
-});
-
-// Storing the exchange type in contest session
-$('#exchangetype').change(function () {
-	var exchangetype = $("#exchangetype").val();
-	setExchangetype(exchangetype);
-	var formdata = new FormData(document.getElementById("qso_input"));
-	setSession(formdata);
-});
-
 async function setSession(formdata) {
     formdata.set('copyexchangeto',$("#copyexchangeto option:selected").index());
 	await $.ajax({
@@ -182,7 +187,7 @@ if ( ! manual ) {
 	});
 
 	$(function ($) {
-		          handleDate = setInterval(function() { getUTCDateStamp($('.input_date')); }, 1000);
+		handleDate = setInterval(function() { getUTCDateStamp($('.input_date')); }, 1000);
 	});
 }
 
@@ -471,8 +476,9 @@ function highlight(term, base) {
 // Only set the frequency when not set by userdata/PHP.
 if ($('#frequency').val() == "") {
 	$.get('qso/band_to_freq/' + $('#band').val() + '/' + $('.mode').val(), function (result) {
-		$('#frequency').val(result);
+		$('#frequency').val(result).trigger("change");
 		$('#frequency_rx').val("");
+		set_qrg();
 	});
 }
 
@@ -480,7 +486,7 @@ if ($('#frequency').val() == "") {
 $('#mode').change(function () {
 		if ($('#radio').val() == '0') {
 	$.get('qso/band_to_freq/' + $('#band').val() + '/' + $('.mode').val(), function (result) {
-		$('#frequency').val(result);
+		$('#frequency').val(result).trigger("change");
 		$('#frequency_rx').val("");
 	});
 	}
@@ -491,12 +497,13 @@ $('#mode').change(function () {
 /* Calculate Frequency */
 /* on band change */
 $('#band').change(function () {
-		if ($('#radio').val() == '0') {
-	$.get('qso/band_to_freq/' + $(this).val() + '/' + $('.mode').val(), function (result) {
-		$('#frequency').val(result);
-		$('#frequency_rx').val("");
-	});
+	if ($('#radio').val() == '0') {
+		$.get('qso/band_to_freq/' + $(this).val() + '/' + $('.mode').val(), function (result) {
+			$('#frequency').val(result).trigger("change");
+			$('#frequency_rx').val("");
+		});
 	}
+	set_qrg();
 	checkIfWorkedBefore();
 });
 
@@ -507,7 +514,7 @@ $('#band').change(function () {
 $('#radio').change(function () {
 	if ($('#radio').val() == '0') {
 		$.get('qso/band_to_freq/' + $('#band').val() + '/' + $('.mode').val(), function (result) {
-			$('#frequency').val(result);
+			$('#frequency').val(result).trigger("change");
 			$('#frequency_rx').val("");
 		});
 	}
@@ -675,7 +682,7 @@ function logQso() {
 				serialr = $("#exch_serial_r").val();
 			break;
 
-			case 'Serialgridsquare':
+			case 'SerialGridExchange':
 				gridr = gridsquare;
 				vuccr = vucc;
 				exchsent = $("#exch_sent").val();
@@ -767,7 +774,7 @@ async function restoreContestSession(data) {
 				$("#frequency").val(settings.freq_display);
 			} else {
 				$.get('qso/band_to_freq/' + settings.band + '/' + settings.mode, function (result) {
-					$('#frequency').val(result);
+					$('#frequency').val(result).trigger("change");
 				});
 			}
 		}

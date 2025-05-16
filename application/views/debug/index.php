@@ -39,7 +39,7 @@
                         <?php } ?>
                         <tr>
                             <td><?= __("Language"); ?></td>
-                            <td><?php echo __(ucfirst($this->config->item('language'))) . "\n"; ?></td>
+                            <td><?= __(ucfirst($this->config->item('language'))) . "\n"; ?></td>
                         </tr>
                         <tr>
                             <td><?= __("Base URL"); ?></td>
@@ -63,6 +63,10 @@
                         <tr>
                             <td><?= __("Environment"); ?></td>
                             <td><?php echo ENVIRONMENT; ?></td>
+                        </tr>
+                        <tr>
+                            <td><?= __("System Time"); ?></td>
+                            <td><?php echo $system_time; ?></td>
                         </tr>
                         <tr class="blank-row">
                             <td> </td>
@@ -120,7 +124,7 @@
                     <p><?= __("This verifies that the folders used by Wavelog have read and write permissions by PHP."); ?></p>
                     <table width="100%">
                         <tr>
-                            <td>/backup</td>
+                            <td>backup</td>
                             <td>
                                 <?php if ($backup_folder == true) { ?>
                                     <span class="badge text-bg-success"><?= __("Success"); ?></span>
@@ -131,7 +135,7 @@
                         </tr>
 
                         <tr>
-                            <td>/cache</td>
+                            <td>application/cache</td>
                             <td>
                                 <?php if ($cache_folder == true) { ?>
                                     <span class="badge text-bg-success"><?= __("Success"); ?></span>
@@ -142,7 +146,7 @@
                         </tr>
 
                         <tr>
-                            <td>/updates</td>
+                            <td>updates</td>
                             <td>
                                 <?php if ($updates_folder == true) { ?>
                                     <span class="badge text-bg-success"><?= __("Success"); ?></span>
@@ -153,7 +157,7 @@
                         </tr>
 
                         <tr>
-                            <td>/uploads</td>
+                            <td>uploads</td>
                             <td>
                                 <?php if ($uploads_folder == true) { ?>
                                     <span class="badge text-bg-success"><?= __("Success"); ?></span>
@@ -165,7 +169,7 @@
 
                         <?php if (isset($userdata_enabled)) { ?>
                             <tr>
-                                <td>/userdata</td>
+                                <td>userdata</td>
                                 <td>
                                     <?php if ($userdata_folder == true) { ?>
                                         <span class="badge text-bg-success"><?= __("Success"); ?></span>
@@ -285,6 +289,17 @@
                                     <td>php-zip</td>
                                     <td>
                                         <?php if (in_array('zip', get_loaded_extensions())) { ?>
+                                            <span class="badge text-bg-success"><?= __("Installed"); ?></span>
+                                        <?php } else { ?>
+                                            <span class="badge text-bg-danger"><?= __("Not Installed"); ?></span>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>php-gd</td>
+                                    <td>
+                                        <?php if (in_array('gd', get_loaded_extensions())) { ?>
                                             <span class="badge text-bg-success"><?= __("Installed"); ?></span>
                                         <?php } else { ?>
                                             <span class="badge text-bg-danger"><?= __("Not Installed"); ?></span>
@@ -470,7 +485,7 @@
                                     </td>
                                 </tr>
                             </table>
-                            <div class="border-bottom border-top pt-2 pb-2 mt-2 mb-2" id="version_check">
+                            <div class="border-top pt-2 pb-2 mt-2 mb-2" id="version_check">
                                 <p id="version_check_result"></p>
                                 <small id="last_version_check"></small>
                             </div>
@@ -538,6 +553,16 @@
                             <td><?= __("WWFF file download"); ?></td>
                             <td><?php echo $wwff_update->last_run ?? __("never"); ?></td>
                             <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_wwff'); ?>"><?= __("Update"); ?></a></td>
+                        </tr>
+			<tr>
+                            <td><?= __("TLE update"); ?></td>
+                            <td><?php echo $tle_update->last_run ?? __("never"); ?></td>
+                            <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_tle'); ?>"><?= __("Update"); ?></a></td>
+                        </tr>
+			<tr>
+                            <td><?= __("Hams Of Note update"); ?></td>
+                            <td><?php echo $hon_update->last_run ?? __("never"); ?></td>
+                            <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_hamsofnote'); ?>"><?= __("Update"); ?></a></td>
                         </tr>
                     </table>
                 </div>
@@ -641,6 +666,7 @@
 ?>
 <div style="display: none">
     <?= __("Albanian"); ?>
+    <?= __("Armenian"); ?>
     <?= __("Bosnian"); ?>
     <?= __("Bulgarian"); ?>
     <?= __("Chinese (Simplified)"); ?>
@@ -653,6 +679,7 @@
     <?= __("French"); ?>
     <?= __("German"); ?>
     <?= __("Greek"); ?>
+    <?= __("Hungarian"); ?>
     <?= __("Italian"); ?>
     <?= __("Latvian"); ?>
     <?= __("Lithuanian"); ?>
@@ -661,6 +688,7 @@
     <?= __("Portuguese"); ?>
     <?= __("Russian"); ?>
     <?= __("Serbian"); ?>
+    <?= __("Slovenian"); ?>
     <?= __("Spanish"); ?>
     <?= __("Swedish"); ?>
     <?= __("Turkish"); ?>

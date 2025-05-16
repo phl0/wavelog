@@ -4,6 +4,7 @@
     */
     var option_map_tile_server = '<?php echo $this->optionslib->get_option('option_map_tile_server');?>';
     var option_map_tile_server_copyright = '<?php echo $this->optionslib->get_option('option_map_tile_server_copyright');?>';
+    var option_map_tile_subdomains = '<?php echo $this->optionslib->get_option('option_map_tile_subdomains') ?? 'abc';?>';
 
     var base_url = "<?php echo base_url(); ?>"; // Base URL
     var site_url = "<?php echo site_url(); ?>"; // Site URL
@@ -29,7 +30,9 @@
     */
     var lang_general_word_qso_data = "<?= __("QSO Data"); ?>";
     var lang_general_edit_qso = "<?= __("Edit QSO"); ?>";
+    var lang_general_share_qso = "<?= __("Share QSO"); ?>";
     var lang_general_word_danger = "<?= __("DANGER"); ?>";
+    var lang_general_word_error = "<?= __("ERROR"); ?>";
     var lang_general_word_attention = "<?= __("Attention"); ?>";
     var lang_general_word_warning = "<?= __("Warning"); ?>";
     var lang_general_word_cancel = "<?= __("Cancel"); ?>";
@@ -40,6 +43,7 @@
     var lang_general_word_confirmed = "<?= __("Confirmed"); ?>";
     var lang_general_word_worked_not_confirmed = "<?= __("Worked not confirmed"); ?>";
     var lang_general_word_not_worked = "<?= __("Not worked"); ?>";
+    var lang_general_word_all = "<?= __("All"); ?>";
     var lang_general_gridsquares = "<?= __("Gridsquares"); ?>";
     var lang_admin_close = "<?= __("Close"); ?>";
     var lang_admin_save = "<?= __("Save"); ?>";
@@ -49,6 +53,9 @@
     var lang_qrbcalc_title = '<?= __("Compute QRB and QTF"); ?>';
     var lang_qrbcalc_errmsg = '<?= __("Error in locators. Please check."); ?>';
     var lang_general_refresh_list = '<?= __("Refresh List"); ?>';
+    var lang_general_word_please_wait = "<?= __("Please Wait ..."); ?>";
+    var lang_general_states_deprecated = "<?= _pgettext("Word for country states that are deprecated but kept for legacy reasons.", "deprecated"); ?>";
+    var lang_gen_hamradio_sat_info = "<?= __("Satellite Information"); ?>";
 </script>
 
 <!-- General JS Files used across Wavelog -->
@@ -131,7 +138,7 @@ if($this->session->userdata('user_id') != null) {
     if (empty($versionDialogHeader)) {
         $this->optionslib->update('version_dialog_header', __("Version Info"), 'yes');
     }
-    if($versionDialog != "disabled") {
+    if($versionDialog != "disabled" && !($is_first_login ?? false)) {
         $confirmed = $this->user_options_model->get_options('version_dialog', array('option_name'=>'confirmed'))->result();
         $confirmation_value = (isset($confirmed[0]->option_value))?$confirmed[0]->option_value:'false';
         if ($confirmation_value != 'true') {
@@ -147,7 +154,7 @@ if($this->session->userdata('user_id') != null) {
 <!-- Version Dialog END -->
 
 <!-- SPECIAL CALLSIGN OPERATOR FEATURE -->
-<?php if ($this->config->item('special_callsign') == true && $this->uri->segment(1) == "dashboard") { ?>
+<?php if ($this->config->item('special_callsign') && $this->uri->segment(1) == "dashboard" && $this->session->userdata('clubstation') == 1) { ?>
 <script type="text/javascript" src="<?php echo base_url() ;?>assets/js/sections/operator.js"></script>
 <script>
 	<?php
@@ -169,7 +176,51 @@ if($this->session->userdata('user_id') != null) {
     <?php } ?>
 </script>
 <?php } ?>
+<script>
+function clubswitch_modal(club_id, club_callsign) {
+    $.ajax({
+        url: base_url + 'index.php/club/switch_modal',
+        type: 'POST',
+        data: {
+            club_id: club_id,
+            club_callsign: club_callsign
+        },
+        success: function(response) {
+            $('#clubswitchModal-container').html(response);
+            $('#clubswitchModal').modal('show');
+        },
+        error: function() {
+            alert('<?= __("Failed to load the modal. Please try again."); ?>');
+        }
+    });
+    $(window).on('blur', function() {
+        $('#clubswitchModal').modal('hide');
+    });
+}
+function stopImpersonate_modal() {
+    $.ajax({
+        url: base_url + 'index.php/user/stop_impersonate_modal',
+        success: function(response) {
+            $('#stopImpersonateModal-container').html(response);
+            $('#stopImpersonateModal').modal('show');
+        },
+        error: function() {
+            alert('<?= __("Failed to load the modal. Please try again."); ?>');
+        }
+    });
+    $(window).on('blur', function() {
+        $('#stopImpersonateModal').modal('hide');
+    });
+}
+</script>
 <!-- SPECIAL CALLSIGN OPERATOR FEATURE END -->
+
+<script>
+    // Replace all Ø in the searchbar
+    $('#nav-bar-search-input').on('input', function () {
+        $(this).val($(this).val().replace(/0/g, 'Ø'));
+    });
+</script>
 
 <script>
     var current_active_location = "<?php echo $this->stations->find_active(); ?>";
@@ -229,8 +280,14 @@ if($this->session->userdata('user_id') != null) {
 
 <?php if ($this->uri->segment(1) == "notes" && ($this->uri->segment(2) == "add" || $this->uri->segment(2) == "edit") ) { ?>
     <!-- Javascript used for Notes Area -->
-    <script src="<?php echo base_url() ;?>assets/plugins/quill/quill.min.js"></script>
+    <script src="<?php echo base_url() ;?>assets/plugins/easymde/easymde.min.js"></script>
     <script src="<?php echo base_url() ;?>assets/js/sections/notes.js"></script>
+<?php } ?>
+
+<?php if ($this->uri->segment(1) == "notes" && ($this->uri->segment(2) == "view") ) { ?>
+    <!-- Javascript used for Notes Area -->
+    <script src="<?php echo base_url() ;?>assets/plugins/easymde/easymde.min.js"></script>
+    <script src="<?php echo base_url() ;?>assets/js/sections/notes_view.js"></script>
 <?php } ?>
 
 <script type="text/javascript" src="<?php echo base_url(); ?>assets/js/datatables.min.js"></script>
@@ -281,7 +338,7 @@ $(function () {
 </script>
 <?php } ?>
 
-<?php if ($this->uri->segment(1) == "api"  && $this->uri->segment(2) == "help") { ?>
+<?php if ($this->uri->segment(1) == "api") { ?>
 <script type="text/javascript">
 function copyApiKey(apiKey) {
    var apiKeyField = $('#'+apiKey);
@@ -479,7 +536,13 @@ $(function () {
                     },
                     dom: 'Bfrtip',
                     buttons: [
-                        'csv'
+						{
+							extend: 'csv',
+							className: 'mb-1 btn btn-primary', // Bootstrap classes
+								init: function(api, node, config) {
+									$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+								},
+						}
                     ]
                 });
                 // change color of csv-button if dark mode is chosen
@@ -588,8 +651,7 @@ $(function () {
             $(".searchbutton").prop('disabled', true);
 
             $.post("<?php echo site_url('search/search_result'); ?>", {
-                    search: JSON.stringify(result, null, 2),
-                    temp: "testvar"
+                    search: JSON.stringify(result, null, 2)
                 })
                 .done(function(data) {
                     $('.exportbutton').html('<button class="btn btn-sm btn-primary" onclick="export_search_result();">'+"<?= __("Export to ADIF"); ?>"+'</button>');
@@ -611,7 +673,13 @@ $(function () {
                         },
                         dom: 'Bfrtip',
                         buttons: [
-                            'csv'
+							{
+								extend: 'csv',
+								className: 'mb-1 btn btn-primary', // Bootstrap classes
+									init: function(api, node, config) {
+										$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+									},
+							}
                         ]
                     });
                     // change color of csv-button if dark mode is chosen
@@ -781,7 +849,13 @@ function showActivatorsMap(call, count, grids) {
             <?php } else { ?>
               var grid = "No";
             <?php } ?>
-            initmap(grid,'map',{'dataPost':{'nb_qso':'18'}});
+
+            <?php printf("var dashboard_qso_count = '%d';", $this->session->userdata('dashboard_last_qso_count')) ?>
+            initmap(grid,'map',{'dataPost':{'nb_qso': dashboard_qso_count}});
+
+            <?php if ($is_first_login ?? false) : ?>
+                $('#firstLoginWizardModal').modal('show');
+            <?php endif; ?>
 
       });
     </script>
@@ -814,7 +888,13 @@ function findlotwunconfirmed(){
             },
             dom: 'Bfrtip',
             buttons: [
-                'csv'
+				{
+					extend: 'csv',
+					className: 'mb-1 btn btn-primary', // Bootstrap classes
+						init: function(api, node, config) {
+							$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
+				}
             ]
         });
         // change color of csv-button if dark mode is chosen
@@ -827,52 +907,92 @@ function findlotwunconfirmed(){
 function findincorrectcqzones() {
     event.preventDefault();
     $('#partial_view').load(base_url+"index.php/logbook/search_incorrect_cq_zones/"+$("#station_id").val(), function() {
-        $('.qsolist').DataTable({
-            "pageLength": 25,
-            responsive: false,
-            ordering: false,
-            "scrollY":        "500px",
-            "scrollCollapse": true,
-            "paging":         false,
-            "scrollX": true,
-            "language": {
-                url: getDataTablesLanguageUrl(),
-            },
-            dom: 'Bfrtip',
-            buttons: [
-                'csv'
-            ]
-        });
-        // change color of csv-button if dark mode is chosen
-        if (isDarkModeTheme()) {
-            $(".buttons-csv").css("color", "white");
-        }
+	    $('.qsolist').DataTable({
+	    "pageLength": 25,
+		    responsive: false,
+		    ordering: false,
+		    "scrollY":        "500px",
+		    "scrollCollapse": true,
+		    "paging":         false,
+		    "scrollX": true,
+		    "language": {
+		    url: getDataTablesLanguageUrl(),
+    },
+	    dom: 'Bfrtip',
+	    buttons: [
+			{
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
+	    ]
+    });
+	    // change color of csv-button if dark mode is chosen
+	    if (isDarkModeTheme()) {
+		    $(".buttons-csv").css("color", "white");
+	    }
+	    $(document).ready(function() {
+		    var target = document.body;
+		    var observer = new MutationObserver(function() {
+			    $('#dt-search-0').on('keyup', function (e) {
+				    tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
+				    $(this).val(tocrappyzero);
+				    $(this).trigger("input");
+			    });
+		    });
+		    var config = { childList: true, subtree: true};
+		    // pass in the target node, as well as the observer options
+		    observer.observe(target, config);
+	    });
     });
 }
 
 function findincorrectituzones() {
     event.preventDefault();
     $('#partial_view').load(base_url+"index.php/logbook/search_incorrect_itu_zones/"+$("#station_id").val(), function() {
-        $('.qsolist').DataTable({
-            "pageLength": 25,
-            responsive: false,
-            ordering: false,
-            "scrollY":        "500px",
-            "scrollCollapse": true,
-            "paging":         false,
-            "scrollX": true,
-            "language": {
-                url: getDataTablesLanguageUrl(),
-            },
-            dom: 'Bfrtip',
-            buttons: [
-                'csv'
-            ]
-        });
-        // change color of csv-button if dark mode is chosen
-        if (isDarkModeTheme()) {
-            $(".buttons-csv").css("color", "white");
-        }
+	    $('.qsolist').DataTable({
+	    "pageLength": 25,
+		    responsive: false,
+		    ordering: false,
+		    "scrollY":        "500px",
+		    "scrollCollapse": true,
+		    "paging":         false,
+		    "scrollX": true,
+		    "language": {
+		    url: getDataTablesLanguageUrl(),
+    },
+	    dom: 'Bfrtip',
+	    buttons: [
+			{
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
+]
+    });
+	    // change color of csv-button if dark mode is chosen
+	    if (isDarkModeTheme()) {
+		    $(".buttons-csv").css("color", "white");
+	    }
+
+	    $(document).ready(function() {
+		    var target = document.body;
+		    var observer = new MutationObserver(function() {
+			    $('#dt-search-0').on('keyup', function (e) {
+				    tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
+				    $(this).val(tocrappyzero);
+				    $(this).trigger("input");
+			    });
+		    });
+		    var config = { childList: true, subtree: true};
+		    // pass in the target node, as well as the observer options
+		    observer.observe(target, config);
+	    });
+
     });
 }
 
@@ -880,7 +1000,7 @@ function searchButtonPress() {
     if (event) { event.preventDefault(); }
     if ($('#callsign').val()) {
         let fixedcall = $('#callsign').val().trim();
-        $('#partial_view').load("logbook/search_result/" + fixedcall.replace('Ø', '0'), function() {
+        $('#partial_view').load("logbook/search_result/" + fixedcall.replaceAll('Ø', '0'), function() {
             $('[data-bs-toggle="tooltip"]').tooltip();
             $('.table-responsive .dropdown-toggle').off('mouseenter').on('mouseenter', function() {
                 showQsoActionsMenu($(this).closest('.dropdown'));
@@ -941,6 +1061,7 @@ $($('#callsign')).on('keypress',function(e) {
 <?php if ($this->uri->segment(1) == "qso") { ?>
 
 <script src="<?php echo base_url() ;?>assets/js/sections/qso.js"></script>
+<script src="<?php echo base_url() ;?>assets/js/sections/satellite_functions.js"></script>
 <script src="<?php echo base_url() ;?>assets/js/bootstrap-multiselect.js"></script>
 <?php if ($this->session->userdata('isWinkeyEnabled')) { ?>
 	<script src="<?php echo base_url() ;?>assets/js/winkey.js"></script>
@@ -1026,7 +1147,7 @@ $($('#callsign')).on('keypress',function(e) {
 				data: {'sota': sota},
 				success: function(res) {
 					$('#qth').val(res.name);
-					$('#locator').val(res.locator);
+					$('#locator').val(res.locator).trigger('input');
 				},
 				error: function() {
 					$('#qth').val('');
@@ -1047,7 +1168,7 @@ $($('#callsign')).on('keypress',function(e) {
 				data: {'wwff': wwff},
 				success: function(res) {
 					$('#qth').val(res.name);
-					$('#locator').val(res.locator);
+					$('#locator').val(res.locator).trigger('input');
 				},
 				error: function() {
 					$('#qth').val('');
@@ -1068,7 +1189,7 @@ $($('#callsign')).on('keypress',function(e) {
 				data: {'pota': pota},
 				success: function(res) {
 					$('#qth').val(res.name);
-					$('#locator').val(res.grid6);
+					$('#locator').val(res.grid6).trigger('input');
 				},
 				error: function() {
 					$('#qth').val('');
@@ -1149,6 +1270,7 @@ $($('#callsign')).on('keypress',function(e) {
 
 <?php } ?>
 <?php if ( $this->uri->segment(1) == "qso" || ($this->uri->segment(1) == "contesting" && $this->uri->segment(2) != "add")) { ?>
+    <script type="text/javascript" src="<?php echo base_url(); ?>assets/js/sections/qrg_handler.js"></script>
     <script type="text/javascript" src="<?php echo base_url(); ?>assets/js/moment.min.js"></script>
     <script type="text/javascript" src="<?php echo base_url(); ?>assets/js/datetime-moment.js"></script>
 
@@ -1191,7 +1313,7 @@ $($('#callsign')).on('keypress',function(e) {
 						    if (data.error == 'not_logged_in') {
 							    $(".radio_cat_state" ).remove();
 							    if($('.radio_login_error').length == 0) {
-								    $('.qso_panel').prepend('<div class="alert alert-danger radio_login_error" role="alert"><i class="fas fa-broadcast-tower"></i> ' + '<?= sprintf(__("You're not logged in. Please %slogin%s"), '<a href="' . base_url() . '">', '</a>'); ?>' + '</div>');
+								    $('.qso_panel').prepend('<div class="alert alert-danger radio_login_error" role="alert"><i class="fas fa-broadcast-tower"></i> ' + "<?= sprintf(__("You're not logged in. Please %slogin%s"), '<a href=\"' . base_url() . '\">', '</a>'); ?>" + '</div>');
 							    }
 						    }
 						    // Put future Errorhandling here
@@ -1200,6 +1322,7 @@ $($('#callsign')).on('keypress',function(e) {
 							    $(".radio_login_error" ).remove();
 						    }
 						    cat2UI($('#frequency'),data.frequency,false,true,function(d){
+                                $('#frequency').trigger('change');
 							    if ($("#band").val() != frequencyToBand(d)) {
 								    $("#band").val(frequencyToBand(d)).trigger('change');	// Let's only change if we really have a different band!
 							    }
@@ -1224,24 +1347,28 @@ $($('#callsign')).on('keypress',function(e) {
 							    }
 						    } else {
 							    $(".radio_timeout_error" ).remove();
-							    text = '<i class="fas fa-broadcast-tower"></i><span style="margin-left:10px;"></span><b>TX:</b> ' + data.frequency_formatted;
+                                separator = '<span style="margin-left:10px"></span>';
+							    text = '<i class="fas fa-broadcast-tower"></i>' + separator + '<b>TX:</b> ' + data.frequency_formatted;
 							    if(data.mode != null) {
-								    text = text+'<span style="margin-left:10px"></span>'+data.mode;
+								    text = text + separator + data.mode;
 							    }
 							    if(data.power != null && data.power != 0) {
-								    text = text+'<span style="margin-left:10px"></span>'+data.power+' W';
+								    text = text + separator + data.power+' W';
 							    }
-							    ptext = '';
+                                complementary_info = []
 							    if(data.prop_mode != null && data.prop_mode != '') {
-								    ptext = ptext + data.prop_mode;
 								    if (data.prop_mode == 'SAT') {
-									    ptext = ptext + ' ' + data.satname;
-								    }
+									    complementary_info.push(data.prop_mode + ' ' + data.satname);
+								    } else {
+                                        complementary_info.push(data.prop_mode);
+                                    }
 							    }
 							    if(data.frequency_rx != null && data.frequency_rx != 0) {
-								    ptext = ptext + '<span style="margin-left:10px"></span><b>RX:</b> ' + data.frequency_rx_formatted;
+                                    complementary_info.push('<b>RX:</b> ' + data.frequency_rx_formatted);
 							    }
-							    if( ptext != '') { text = text + '<span style="margin-left:10px"></span>(' + ptext + ')';}
+							    if( complementary_info.length > 0) {
+                                    text = text + separator + '(' + complementary_info.join(separator) + ')';
+                                }
 							    if (! $('#radio_cat_state').length) {
 								    $('#radio_status').prepend('<div aria-hidden="true"><div id="radio_cat_state" class="alert alert-success radio_cat_state" role="alert">'+text+'</div></div>');
 							    } else {
@@ -1666,7 +1793,7 @@ $(document).ready(function(){
 		<script src="<?php echo base_url(); ?>assets/js/sections/webadif.js"></script>
 	<?php } ?>
 
-<?php if ($this->uri->segment(2) == "dxcc") { ?>
+<?php if ($this->uri->segment(2) == "dxcc" || $this->uri->segment(2) == "wae") { ?>
 <script>
     $('.tabledxcc').DataTable({
         "pageLength": 25,
@@ -1681,7 +1808,13 @@ $(document).ready(function(){
         },
         dom: 'Bfrtip',
         buttons: [
-            'csv'
+			{
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
         ]
     });
 
@@ -1698,7 +1831,13 @@ $(document).ready(function(){
             url: getDataTablesLanguageUrl(),
         },
         buttons: [
-            'csv'
+            {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
         ]
     });
 
@@ -1707,6 +1846,29 @@ $(document).ready(function(){
         $(".buttons-csv").css("color", "white");
     }
  </script>
+    <?php } ?>
+	<?php if ($this->uri->segment(2) == "wae") { ?>
+		<script>
+	$('#band2').change(function(){
+   var band = $("#band2 option:selected").text();
+   if (band != "SAT") {
+      $("#sats").val('All');
+      $("#orbits").val('All');
+      $("#satrow").hide();
+      $("#orbitrow").hide();
+   } else {
+      $("#satrow").show();
+      $("#orbitrow").show();
+   }
+});
+
+$('#sats').change(function(){
+   var sat = $("#sats option:selected").text();
+      $("#band2").val('SAT');
+   if (sat != "All") {
+   }
+});
+</script>
     <?php } ?>
 
 <?php if ($this->uri->segment(2) == "waja") { ?>
@@ -1724,7 +1886,13 @@ $(document).ready(function(){
         },
         dom: 'Bfrtip',
         buttons: [
-            'csv'
+            {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
         ]
     });
 
@@ -1741,7 +1909,13 @@ $(document).ready(function(){
             url: getDataTablesLanguageUrl(),
         },
         buttons: [
-            'csv'
+            {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
         ]
     });
 
@@ -1767,7 +1941,13 @@ $(document).ready(function(){
         },
         dom: 'Bfrtip',
         buttons: [
-            'csv'
+            {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
         ]
     });
 
@@ -1784,7 +1964,13 @@ $(document).ready(function(){
             url: getDataTablesLanguageUrl(),
         },
         buttons: [
-            'csv'
+            {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
         ]
     });
 
@@ -1810,7 +1996,13 @@ $(document).ready(function(){
         },
         dom: 'Bfrtip',
         buttons: [
-            'csv'
+            {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
         ]
     });
 
@@ -1837,7 +2029,13 @@ $(document).ready(function(){
             },
             dom: 'Bfrtip',
             buttons: [
-                'csv'
+                {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
             ]
         });
 
@@ -1854,7 +2052,13 @@ $(document).ready(function(){
                 url: getDataTablesLanguageUrl(),
             },
             buttons: [
-                'csv'
+                {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
             ]
         });
 
@@ -1881,7 +2085,13 @@ $(document).ready(function(){
             },
             dom: 'Bfrtip',
             buttons: [
-                'csv'
+                {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
             ]
         });
 
@@ -1898,7 +2108,13 @@ $(document).ready(function(){
                 url: getDataTablesLanguageUrl(),
             },
             buttons: [
-                'csv'
+                {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
             ]
         });
 
@@ -1924,7 +2140,13 @@ $(document).ready(function(){
             },
             dom: 'Bfrtip',
             buttons: [
-                'csv'
+                {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
             ]
         });
 
@@ -1941,7 +2163,13 @@ $(document).ready(function(){
                 url: getDataTablesLanguageUrl(),
             },
             buttons: [
-                'csv'
+                {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
             ]
         });
 
@@ -1987,10 +2215,18 @@ $(document).ready(function(){
                 dom: 'Bfrtip',
                 buttons: [
                     {
-                        extend: 'csv'
-                    },
+						extend: 'csv',
+						className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
+					},
                     {
                         extend: 'clear',
+						className: 'mb-1 btn btn-primary', // Bootstrap classes
+						init: function(api, node, config) {
+							$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
                         text: lang_admin_clear
                     }
                 ]
@@ -2114,16 +2350,33 @@ $(document).ready(function(){
             "order": [ 2, 'desc' ],
             dom: 'Bfrtip',
             buttons: [
-               {
-                  extend: 'clear',
-                  text: lang_admin_clear
-               }
+				{
+					extend: 'clear',
+					className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+					text: lang_admin_clear
+				}
             ]
         });
         // change color of csv-button if dark mode is chosen
         if (isDarkModeTheme()) {
             $('[class*="buttons"]').css("color", "white");
         }
+	$(document).ready(function() {
+		var target = document.body;
+		var observer = new MutationObserver(function() {
+			$('#dt-search-0').on('keyup', function (e) {
+				tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
+				$(this).val(tocrappyzero);
+				$(this).trigger("input");
+			});
+		});
+		var config = { childList: true, subtree: true};
+		// pass in the target node, as well as the observer options
+		observer.observe(target, config);
+	});
 
     </script>
 <?php } ?>
@@ -2273,12 +2526,30 @@ function viewEqsl(picture, callsign) {
                             },
                             dom: 'Bfrtip',
                             buttons: [
-                                'csv'
+								{
+								extend: 'csv',
+								className: 'mb-1 btn btn-primary', // Bootstrap classes
+									init: function(api, node, config) {
+										$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+									},
+							}
                             ]
                         });
                         $('.table-responsive .dropdown-toggle').off('mouseenter').on('mouseenter', function () {
                             showQsoActionsMenu($(this).closest('.dropdown'));
                         });
+
+                       var target = document.body;
+                       var observer = new MutationObserver(function() {
+                               $('#dt-search-0').on('keyup', function (e) {
+                                       tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
+                                       $(this).val(tocrappyzero);
+                                       $(this).trigger("input");
+                               });
+                       });
+                       var config = { childList: true, subtree: true};
+                       // pass in the target node, as well as the observer options
+                       observer.observe(target, config);
                     },
                     buttons: [{
                         label: lang_admin_close,
@@ -2287,6 +2558,7 @@ function viewEqsl(picture, callsign) {
                         }
                     }]
                 });
+
             }
         });
     }
@@ -2326,7 +2598,13 @@ function viewEqsl(picture, callsign) {
                         },
 					    dom: 'Bfrtip',
 					    buttons: [
-						    'csv'
+							{
+								extend: 'csv',
+								className: 'mb-1 btn btn-primary', // Bootstrap classes
+									init: function(api, node, config) {
+										$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+								},
+							}
 					    ]
 				    });
                     $('.table-responsive .dropdown-toggle').off('mouseenter').on('mouseenter', function () {
@@ -2517,7 +2795,13 @@ function viewEqsl(picture, callsign) {
         },
         dom: 'Bfrtip',
         buttons: [
-            'csv'
+			{
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+				},
+			}
         ]
     });
 
@@ -2570,7 +2854,13 @@ function viewEqsl(picture, callsign) {
 			},
 			dom: 'Bfrtip',
 			buttons: [
-				'csv'
+				{
+					extend: 'csv',
+					className: 'mb-1 btn btn-primary', // Bootstrap classes
+						init: function(api, node, config) {
+							$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+				}
 			]
 		});
 
@@ -2620,11 +2910,32 @@ function viewEqsl(picture, callsign) {
                    dt.search('').draw();
                 }
             };
+            $.fn.dataTable.ext.type.order['distance-pre'] = function(data) {
+               var num = parseFloat(data);
+               return isNaN(num) ? 0 : num;
+            };
+            $('#distrectable').on('order.dt search.dt', function() {
+               var disttable = $('#distrectable').DataTable();
+               let i = 1;
+               disttable
+                  .cells(null, 0, { search: 'applied', order: 'applied' })
+                  .every(function (cell) {
+                     this.data(i++);
+                  });
+            });
             $('#distrectable').DataTable({
                 "pageLength": 25,
                 responsive: false,
                 ordering: true,
-                "columnDefs": [ 2, 'num' ],
+                "columnDefs": [
+                   {
+                      2: 'num'
+                   },
+                   {
+                      "targets": $(".distance-column-sort").index(),
+                      "type": "distance",
+                   }
+                ],
                 "scrollCollapse": true,
                 "paging":         false,
                 "scrollX": true,
@@ -2634,11 +2945,19 @@ function viewEqsl(picture, callsign) {
                 "order": [ 2, 'desc' ],
                 dom: 'Bfrtip',
                 buttons: [
-                   {
-                      extend: 'csv'
-                   },
+					{
+						extend: 'csv',
+						className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
+					},
                    {
                       extend: 'clear',
+					  className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
                       text: lang_admin_clear
                    }
                 ]
@@ -2673,6 +2992,21 @@ function viewEqsl(picture, callsign) {
     }
 
     ?>
+    <script>
+    	    $(document).ready(function() {
+		    var target = document.body;
+		    var observer = new MutationObserver(function() {
+			    $('#dt-search-1').on('keyup', function (e) {
+				    tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
+				    $(this).val(tocrappyzero);
+				    $(this).trigger("input");
+			    });
+		    });
+		    var config = { childList: true, subtree: true};
+		    // pass in the target node, as well as the observer options
+		    observer.observe(target, config);
+	    });
+    </script>
     <script type="text/javascript" src="<?php echo base_url(); ?>assets/js/moment.min.js"></script>
     <script type="text/javascript" src="<?php echo base_url(); ?>assets/js/datetime-moment.js"></script>
     <?php if ($this->uri->segment(2) == "wwff") { ?>
@@ -2698,11 +3032,19 @@ function viewEqsl(picture, callsign) {
                 "order": [ 0, 'asc' ],
                 dom: 'Bfrtip',
                 buttons: [
-                   {
-                      extend: 'csv'
-                   },
+					{
+						extend: 'csv',
+						className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
+					},
                    {
                       extend: 'clear',
+					  className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
                       text: lang_admin_clear
                    }
                 ]
@@ -2735,11 +3077,19 @@ function viewEqsl(picture, callsign) {
                 "order": [ 0, 'asc' ],
                 dom: 'Bfrtip',
                 buttons: [
-                   {
-                      extend: 'csv'
-                   },
+					{
+						extend: 'csv',
+						className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
+					},
                    {
                       extend: 'clear',
+					  className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
                       text: lang_admin_clear
                    }
                 ]
@@ -2770,11 +3120,19 @@ function viewEqsl(picture, callsign) {
                 },
                 dom: 'Bfrtip',
                 buttons: [
-                   {
-                      extend: 'csv'
-                   },
+					{
+						extend: 'csv',
+						className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
+					},
                    {
                       extend: 'clear',
+					  className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
                       text: lang_admin_clear
                    }
                 ]
@@ -2811,10 +3169,6 @@ function viewEqsl(picture, callsign) {
             }
         </script>
     <?php } ?>
-<?php } ?>
-
-<?php if ($this->uri->segment(1) == "user") { ?>
-    <script src="<?php echo base_url() ;?>assets/js/sections/user.js"></script>
 <?php } ?>
 
 <?php
