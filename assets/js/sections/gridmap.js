@@ -68,7 +68,7 @@ function gridPlot(form, visitor=true) {
             eqsl: $("#eqsl").is(":checked"),
             qrz: $("#qrz").is(":checked"),
             sat: $("#sat").val(),
-            orbit: $("#orbits").val(),
+            orbits: $("#orbits").val(),
             propagation: $('#propagation').val()
 		},
 		success: function (data) {
@@ -252,4 +252,16 @@ $(document).ready(function(){
 	var config = { childList: true, subtree: true};
 	// pass in the target node, as well as the observer options
 	observer.observe(target, config);
+
+	$('#orbits').multiselect({
+		enableFiltering: true,
+		enableCaseInsensitiveFiltering: true,
+		filterPlaceholder: lang_general_word_search,
+		templates: {
+			button: '<button type="button" class="multiselect dropdown-toggle btn btn-sm btn-secondary me-2 w-auto" data-bs-toggle="dropdown" aria-expanded="false"><span class="multiselect-selected-text"></span></button>',
+		},
+		numberDisplayed: 1,
+		inheritClass: true,
+		includeSelectAllOption: true
+	});
 });

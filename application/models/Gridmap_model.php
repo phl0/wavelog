@@ -2,7 +2,7 @@
 
 class Gridmap_model extends CI_Model {
 
-	function get_band_confirmed($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation, $logbooks_locations_array = NULL) {
+	function get_band_confirmed($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbits, $propagation, $logbooks_locations_array = NULL) {
 		if ($logbooks_locations_array == NULL) {
 			$this->load->model('logbooks_model');
 			$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
@@ -58,9 +58,9 @@ class Gridmap_model extends CI_Model {
 			$binding[] = $mode;
 		}
 
-		if ($orbit != 'All') {
-			$sql .= " AND satellite.orbit = ?";
-			$binding[] = $orbit;
+		if ($orbits !== '') {
+			$sql .= " AND satellite.orbit in ?";
+			$binding[] = $orbits;
 		}
 
 		$sql .= $this->addQslToQuery($qsl, $lotw, $eqsl, $qrz);
@@ -68,7 +68,7 @@ class Gridmap_model extends CI_Model {
 		return $this->db->query($sql, $binding);
 	}
 
-	function get_band($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation, $logbooks_locations_array = NULL) {
+	function get_band($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbits, $propagation, $logbooks_locations_array = NULL) {
 		if ($logbooks_locations_array == NULL) {
 
 			$this->load->model('logbooks_model');
@@ -125,15 +125,15 @@ class Gridmap_model extends CI_Model {
 			$binding[] = $mode;
 		}
 
-		if ($orbit != 'All') {
-			$sql .= " AND satellite.orbit = ?";
-			$binding[] = $orbit;
+		if ($orbits !== '') {
+			$sql .= " AND satellite.orbit in ?";
+			$binding[] = $orbits;
 		}
 
 		return $this->db->query($sql, $binding);
 	}
 
-	function get_band_worked_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation, $logbooks_locations_array = NULL) {
+	function get_band_worked_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbits, $propagation, $logbooks_locations_array = NULL) {
 		if ($logbooks_locations_array == NULL) {
 
 			$this->load->model('logbooks_model');
@@ -190,15 +190,15 @@ class Gridmap_model extends CI_Model {
 			$binding[] = $mode;
 		}
 
-		if ($orbit != 'All') {
-			$sql .= " AND satellite.orbit = ?";
-			$binding[] = $orbit;
+		if ($orbits !== '') {
+			$sql .= " AND satellite.orbit in ?";
+			$binding[] = $orbits;
 		}
 
 		return $this->db->query($sql, $binding);
 	}
 
-	function get_band_confirmed_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation, $logbooks_locations_array = NULL) {
+	function get_band_confirmed_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbits, $propagation, $logbooks_locations_array = NULL) {
 		if ($logbooks_locations_array == NULL) {
 
 			$this->load->model('logbooks_model');
@@ -258,9 +258,9 @@ class Gridmap_model extends CI_Model {
 
 		$sql .= $this->addQslToQuery($qsl, $lotw, $eqsl, $qrz);
 
-		if ($orbit != 'All') {
-			$sql .= " AND satellite.orbit = ?";
-			$binding[] = $orbit;
+		if ($orbits !== '') {
+			$sql .= " AND satellite.orbit in ?";
+			$binding[] = $orbits;
 		}
 
 		return $this->db->query($sql, $binding);

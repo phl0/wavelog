@@ -5,7 +5,7 @@
     <h2><?php echo $page_title; ?></h2>
 
     <?php if ($visitor == false) { ?>
-        <form class="form">
+        <form class="form" name="gridmapform" id="gridmapform">
             <div class="row mb-2">
                 <label class="col-md-1" for="band"><?= __("Band"); ?></label>
                 <div class="col-sm-2">
@@ -79,11 +79,10 @@
                 </div>
                 <label class="col-md-1" id="orbitslabel" for="orbits" <?php if ($user_default_band != "SAT") { ?>style="display: none;" <?php } ?>><?= __("Orbit"); ?></label>
                 <div class="col-sm-2" id="orbits_div" <?php if ($user_default_band != "SAT") { ?>style="display: none;" <?php } ?>>
-                    <select class="form-select form-select-sm" id="orbits">
-                        <option value="All"><?= __("All") ?></option>
+                    <select id="orbits" name="orbits" class="form-select" multiple="multiple">
                         <?php
                         foreach ($orbits as $orbit) {
-                            echo '<option value="' . $orbit . '">' . strtoupper($orbit) . '</option>' . "\n";
+                            echo '<option value="'.$orbit.'" selected>' . strtoupper($orbit) . '</option>'."\n";
                         }
                         ?>
                     </select>

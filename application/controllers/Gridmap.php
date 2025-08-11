@@ -9,8 +9,8 @@ class Gridmap extends CI_Controller {
     public function index() {
 		$data['page_title'] = __("Gridsquare Map");
 
-        $this->load->model('bands');
-        $this->load->model('gridmap_model');
+		$this->load->model('bands');
+		$this->load->model('gridmap_model');
 		$this->load->model('stations');
 
 		$data['visitor'] = false;
@@ -38,11 +38,12 @@ class Gridmap extends CI_Controller {
 		$data['gridsquares_fields_not_confirmed'] 	= __("Fields not confirmed");
 		$data['gridsquares_fields_total_worked'] 	= __("Total fields worked");
 
-        $footerData = [];
+		$footerData = [];
 		$footerData['scripts'] = [
 			'assets/js/leaflet/geocoding.js',
 			'assets/js/leaflet/L.MaidenheadColouredGridMap.js',
-			'assets/js/sections/gridmap.js?'
+			'assets/js/sections/gridmap.js?',
+			'assets/js/bootstrap-multiselect.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/bootstrap-multiselect.js")),
 		];
 
 		$this->load->view('interface_assets/header', $data);
@@ -58,7 +59,7 @@ class Gridmap extends CI_Controller {
 		$eqsl = $this->input->post('eqsl', TRUE);
 		$qrz = $this->input->post('qrz', TRUE);
 		$sat = $this->input->post('sat', TRUE);
-		$orbit = $this->input->post('orbit', TRUE);
+		$orbits = $this->input->post('orbits', TRUE);
 		$propagation = $this->input->post('propagation', TRUE);
 		$this->load->model('gridmap_model');
 
@@ -78,7 +79,7 @@ class Gridmap extends CI_Controller {
 		$grid_4char_confirmed = "";
 		$grid_6char_confirmed = "";
 
-		$query = $this->gridmap_model->get_band_confirmed($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation);
+		$query = $this->gridmap_model->get_band_confirmed($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbits, $propagation);
 
 		if ($query && $query->num_rows() > 0) {
 			foreach ($query->result() as $row) 	{
@@ -105,7 +106,7 @@ class Gridmap extends CI_Controller {
 			}
 		}
 
-		$query = $this->gridmap_model->get_band($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation);
+		$query = $this->gridmap_model->get_band($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbits, $propagation);
 
 		if ($query && $query->num_rows() > 0) {
 			foreach ($query->result() as $row) {
@@ -132,7 +133,7 @@ class Gridmap extends CI_Controller {
 				}
 			}
 		}
-		$query_vucc = $this->gridmap_model->get_band_worked_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation);
+		$query_vucc = $this->gridmap_model->get_band_worked_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbits, $propagation);
 
 		if ($query_vucc && $query_vucc->num_rows() > 0) {
 			foreach ($query_vucc->result() as $row) {
@@ -157,7 +158,7 @@ class Gridmap extends CI_Controller {
 		}
 
 		// // Confirmed Squares
-		$query_vucc = $this->gridmap_model->get_band_confirmed_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation);
+		$query_vucc = $this->gridmap_model->get_band_confirmed_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbits, $propagation);
 
 		if ($query_vucc && $query_vucc->num_rows() > 0) {
 			foreach ($query_vucc->result() as $row) 			{
