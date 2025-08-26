@@ -620,10 +620,9 @@ switch ($date_format) {
 
             <div class="mb-3">
               <label for="sat_mode"><?= __("Satellite Mode"); ?></label>
-
-              <input list="satellite_modes" id="sat_mode" type="text" name="sat_mode" class="form-control" value="<?php echo $this->session->userdata('sat_mode'); ?>">
-
-              <datalist id="satellite_modes" class="satellite_modes_list"></datalist>
+              <select id="sat_mode" class="form-select mode" name="sat_mode">
+                 <option value=""></option>
+              </select>
             </div>
 
             <div class="mb-3">

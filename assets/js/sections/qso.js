@@ -684,45 +684,6 @@ $('#stateDropdown').on('change', function () {
 	}
 });
 
-$(document).on('change', 'input', function () {
-	var optionslist = $('.satellite_modes_list')[0].options;
-	var value = $(this).val();
-	for (var x = 0; x < optionslist.length; x++) {
-		if (optionslist[x].value === value) {
-
-			// Store selected sat mode
-			selected_sat_mode = value;
-
-			// get Json file
-			$.getJSON(site_url + "/satellite/satellite_data", function (data) {
-
-				// Build the options array
-				var sat_modes = [];
-				$.each(data, function (key, val) {
-					if (key == selected_sat) {
-						$.each(val.Modes, function (key1, val2) {
-							if (key1 == selected_sat_mode) {
-
-								if ((val2[0].Downlink_Mode == "LSB" && val2[0].Uplink_Mode == "USB") || (val2[0].Downlink_Mode == "USB" && val2[0].Uplink_Mode == "LSB")) { // inverting Transponder? set to SSB
-									$("#mode").val("SSB");
-								} else {
-									$("#mode").val(val2[0].Uplink_Mode);
-								}
-								$("#band").val(frequencyToBand(val2[0].Uplink_Freq));
-								$("#band_rx").val(frequencyToBand(val2[0].Downlink_Freq));
-								$("#frequency").val(val2[0].Uplink_Freq).trigger("change");
-								$("#frequency_rx").val(val2[0].Downlink_Freq);
-								$("#selectPropagation").val('SAT');
-							}
-						});
-					}
-				});
-
-			});
-		}
-	}
-});
-
 function changebadge(entityname) {
 	if ($("#sat_name").val() != "") {
 		$.getJSON(base_url + 'index.php/logbook/jsonlookupdxcc/' + convert_case(entityname) + '/SAT/0/0', function (result) {
