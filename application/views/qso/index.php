@@ -621,7 +621,6 @@ switch ($date_format) {
             <div class="mb-3">
               <label for="sat_mode"><?= __("Satellite Mode"); ?></label>
               <select id="sat_mode" class="form-select mode" name="sat_mode">
-                 <option value=""></option>
               </select>
             </div>
 
