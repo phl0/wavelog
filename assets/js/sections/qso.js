@@ -723,36 +723,6 @@ $(document).on('change', 'input', function () {
 	}
 });
 
-$(document).on('change', 'input', function () {
-	var optionslist = $('.satellite_names_list')[0].options;
-	var value = $(this).val();
-	for (var x = 0; x < optionslist.length; x++) {
-		if (optionslist[x].value === value) {
-			$("#sat_mode").val("");
-			$('.satellite_modes_list').find('option').remove().end();
-			selected_sat = value;
-			// get Json file
-			$.getJSON(site_url + "/satellite/satellite_data", function (data) {
-
-				// Build the options array
-				var sat_modes = [];
-				$.each(data, function (key, val) {
-					if (key == value) {
-						$.each(val.Modes, function (key1, val2) {
-							//console.log (key1);
-							sat_modes.push('<option value="' + key1 + '">' + key1 + '</option>');
-						});
-					}
-				});
-
-				// Add to the datalist
-				$('.satellite_modes_list').append(sat_modes.join(""));
-
-			});
-		}
-	}
-});
-
 function changebadge(entityname) {
 	if ($("#sat_name").val() != "") {
 		$.getJSON(base_url + 'index.php/logbook/jsonlookupdxcc/' + convert_case(entityname) + '/SAT/0/0', function (result) {
@@ -2413,8 +2383,6 @@ $(document).ready(function () {
 			);
 		});
 
-		// Add to the datalist
-		$('.satellite_names_list').append(items.join(""));
 	});
 
 	// Only set the frequency when not set by userdata/PHP.

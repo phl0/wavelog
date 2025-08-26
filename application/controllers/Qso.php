@@ -19,6 +19,7 @@ class QSO extends CI_Controller {
 		$this->load->model('user_model');
 		$this->load->model('usermodes');
 		$this->load->model('bands');
+		$this->load->model('satellite_model');
 		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		// Getting the live/post mode from GET command
@@ -45,6 +46,7 @@ class QSO extends CI_Controller {
 		[$data['lat'], $data['lng']] = $this->qra->qra2latlong($this->stations->gridsquare_from_station($this->stations->find_active()));
 		$data['user_default_band'] = $this->session->userdata('user_default_band');
 		$data['sat_active'] = array_search("SAT", $this->bands->get_user_bands(), true);
+		$data['satellites'] = $this->satellite_model->get_all_satellites();
 
 		$qkey_opt=$this->user_options_model->get_options('qso_tab',array('option_name'=>'iota','option_key'=>'show'))->result();
 		if (count($qkey_opt)>0) {

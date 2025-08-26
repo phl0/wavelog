@@ -609,10 +609,13 @@ switch ($date_format) {
           <div class="tab-pane fade" id="satellite" role="tabpanel" aria-labelledby="satellite-tab">
             <div class="mb-3">
               <label for="sat_name"><?= __("Satellite Name"); ?></label>
-
-              <input list="satellite_names" id="sat_name" type="text" name="sat_name" class="form-control" value="<?php echo $this->session->userdata('sat_name'); ?>">
-
-              <datalist id="satellite_names" class="satellite_names_list"></datalist>
+              <select id="sat_name" class="form-select mode" name="sat_name">
+                <?php
+                foreach ($satellites as $satellite) {
+                   printf("<option value=\"%s\" %s>%s</option>", $satellite->satname, $this->session->userdata('sat_name') == $satellite->satname ? "selected=\"selected\"" : "", $satellite->displayname. " (".$satellite->satname.")");
+                }
+                ?>
+              </select>
             </div>
 
             <div class="mb-3">
