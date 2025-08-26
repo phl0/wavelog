@@ -534,12 +534,11 @@ bc.onmessage = function (ev) {
 
 $("#sat_name").on('change', function () {
 	var sat = $("#sat_name option:selected").val();
+	$("#sat_mode").empty();
 	if (sat == "") {
-		$("#sat_mode").empty();
 		$("#selectPropagation").val("");
 		stop_az_ele_ticker();
 	} else {
-		$("#sat_mode").empty();
 		$.getJSON(site_url + "/satellite/satellite_data", function (data) {
 			var sat_modes = [];
 			$.each(data, function (key, val) {
