@@ -2331,21 +2331,6 @@ $(document).ready(function () {
 		}
 	});
 
-	/*
-	Populate the Satellite Names Field on the QSO Panel
-	*/
-	$.getJSON(site_url + "/satellite/satellite_data", function (data) {
-
-		// Build the options array
-		var items = [];
-		$.each(data, function (key, val) {
-			items.push(
-				'<option value="' + key + '">' + key + '</option>'
-			);
-		});
-
-	});
-
 	// Only set the frequency when not set by userdata/PHP.
 	if ($('#frequency').val() == "") {
 		$.get(base_url + 'index.php/qso/band_to_freq/' + $('#band').val() + '/' + $('.mode').val(), function (result) {
