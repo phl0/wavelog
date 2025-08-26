@@ -2357,6 +2357,24 @@ $(document).ready(function () {
 		});
 	}
 
+	if ($('#sat_name').val()) {
+		var sat = $("#sat_name option:selected").val();
+		$("#sat_mode").empty();
+		$.getJSON(site_url + "/satellite/satellite_data", function (data) {
+			var sat_modes = [];
+			$.each(data, function (key, val) {
+				if (key == sat) {
+					$.each(val.Modes, function (key1, val2) {
+						$("#sat_mode").append($('<option>', {
+							value: key1,
+							text: key1
+						}));
+					});
+				}
+			});
+		});
+	}
+
 	// everything loaded and ready 2 go
 	bc.postMessage('ready');
 });
