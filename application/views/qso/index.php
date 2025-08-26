@@ -610,6 +610,7 @@ switch ($date_format) {
             <div class="mb-3">
               <label for="sat_name"><?= __("Satellite Name"); ?></label>
               <select id="sat_name" class="form-select mode" name="sat_name">
+                <option value=""></option>
                 <?php
                 foreach ($satellites as $satellite) {
                    printf("<option value=\"%s\" %s>%s</option>", $satellite->satname, $this->session->userdata('sat_name') == $satellite->satname ? "selected=\"selected\"" : "", $satellite->displayname. " (".$satellite->satname.")");
