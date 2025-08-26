@@ -684,6 +684,25 @@ $('#stateDropdown').on('change', function () {
 	}
 });
 
+$('#sat_name').on('change', function() {
+	selected_sat = $("#sat_name option:selected").val();
+	$("#sat_mode").empty();
+	$.getJSON(site_url + "/satellite/satellite_data", function (data) {
+		var sat_modes = [];
+		$.each(data, function (key, val) {
+			if (key == selected_sat) {
+				$.each(val.Modes, function (key1, val2) {
+					sat_modes.push('<option value="' + key1 + '">' + key1 + '</option>');
+					$("#sat_mode").append($('<option>', {
+						value: key1,
+						text: key1
+					}));
+				});
+			}
+		});
+	});
+});
+
 function changebadge(entityname) {
 	if ($("#sat_name").val() != "") {
 		$.getJSON(base_url + 'index.php/logbook/jsonlookupdxcc/' + convert_case(entityname) + '/SAT/0/0', function (result) {
