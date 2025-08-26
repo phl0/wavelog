@@ -280,6 +280,7 @@ class QSO extends CI_Controller {
 		$this->load->model('modes');
 		$this->load->model('bands');
 		$this->load->model('contesting_model');
+		$this->load->model('satellite_model');
 
 		$this->load->library('form_validation');
 
@@ -295,6 +296,7 @@ class QSO extends CI_Controller {
 		$data['iota'] = $this->logbook_model->fetchIota();
 		$data['modes'] = $this->modes->all();
 		$data['bands'] = $this->bands->get_user_bands_for_qso_entry(true);
+		$data['satellites'] = $this->satellite_model->get_all_satellites();
 		$data['contest'] = $this->contesting_model->getActivecontests();
 
 		$this->load->view('qso/edit_ajax', $data);

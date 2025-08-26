@@ -282,7 +282,13 @@
                                 <div class="tab-pane fade" id="nav-satellites" role="tabpanel" aria-labelledby="nav-satellites-tab">
                                     <div class="mb-3">
                                         <label for="sat_name"><?= __("Sat Name"); ?></label>
-                                        <input type="text" class="form-control" name="sat_name" id="sat_name" value="<?php echo $qso->COL_SAT_NAME; ?>">
+                                        <select id="sat_name" class="form-select mode" name="sat_name">
+                                            <?php
+                                            foreach ($satellites as $satellite) {
+                                                printf("<option value=\"%s\" %s>%s</option>", $satellite->satname, $qso->COL_SAT_NAME == $satellite->satname ? "selected=\"selected\"" : "", $satellite->displayname. " (".$satellite->satname.")");
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
 
                                     <div class="mb-3">
