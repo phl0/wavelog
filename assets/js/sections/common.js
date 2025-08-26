@@ -572,6 +572,29 @@ function qso_edit(id) {
                     $("#dxcc_id_edit").change(async function () {
                         await updateStateDropdown('#dxcc_id_edit', '#stateInputLabelEdit', '#location_us_county_edit', '#stationCntyInputEdit', '#stateDropdownEdit');
                     });
+
+                    $("#sat_name").on('change', function () {
+                       var sat = $("#sat_name option:selected").val();
+                        $("#sat_mode").empty();
+                        if (sat == "") {
+                           $("#selectPropagation").val("");
+                        } else {
+                           $.getJSON(site_url + "/satellite/satellite_data", function (data) {
+                              var sat_modes = [];
+                              $.each(data, function (key, val) {
+                                 if (key == sat) {
+                                    $.each(val.Modes, function (key1, val2) {
+                                       sat_modes.push('<option value="' + key1 + '">' + key1 + '</option>');
+                                       $("#sat_mode").append($('<option>', {
+                                          value: key1,
+                                          text: key1
+                                       }));
+                                    });
+                                 }
+                              });
+                           });
+                        }
+                    });
                 },
             });
         }
