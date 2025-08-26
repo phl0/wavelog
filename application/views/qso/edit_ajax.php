@@ -293,7 +293,8 @@
 
                                     <div class="mb-3">
                                         <label for="sat_mode"><?= __("Sat Mode"); ?></label>
-                                        <input type="text" class="form-control" name="sat_mode" id="sat_mode" value="<?php echo $qso->COL_SAT_MODE; ?>">
+                                        <select id="sat_mode" class="form-select mode" name="sat_mode">
+                                        </select>
                                     </div>
 
                                     <div class="mb-3">
