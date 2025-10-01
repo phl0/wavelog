@@ -381,6 +381,21 @@ class Update extends CI_Controller {
 		}
     }
 
+    public function eqsl_agmembers() {
+       $this->load->model('Update_model');
+       $result = $this->Update_model->eqsl_agmembers();
+       if($this->session->userdata('user_type') == '99') {
+          if (substr($result, 0, 7) == 'Records') {
+             $this->session->set_flashdata('success', __("eQSL AG Members Update complete. Result: ") . "'" . $result . "'");
+          } else {
+             $this->session->set_flashdata('error', __("eQSL AG Members Update failed. Result: ") . "'" . $result . "'");
+          }
+          redirect('debug');
+       } else {
+          echo $result;
+       }
+    }
+
     /*
      * Used for autoupdating the DOK file which is used in the QSO entry dialog for autocompletion.
      */

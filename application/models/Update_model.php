@@ -314,6 +314,59 @@ class Update_model extends CI_Model {
         return "Records inserted: " . $i . " in " . $totaltime . " seconds";
     }
 
+    function eqsl_agmembers() {
+        // set the last run in cron table for the correct cron id
+        $this->load->model('cron_model');
+        $this->cron_model->set_last_run($this->router->class . '_' . $this->router->method);
+
+        $mtime = microtime();
+        $mtime = explode(" ", $mtime);
+        $mtime = $mtime[1] + $mtime[0];
+        $starttime = $mtime;
+
+        $url = 'https://www.eqsl.cc/qslcard/DownloadedFiles/AGMemberList.txt';
+
+        $f = fopen('php://temp', 'w+');
+        if ($f === FALSE) {
+           return "Something went wrong creating the temporary eQSL AG members file";
+        }
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog eQSL AG members Updater');
+        curl_setopt($ch, CURLOPT_URL,$url);
+        curl_setopt($ch, CURLOPT_FILE, $f);
+        curl_exec($ch);
+        if (curl_getinfo($ch, CURLINFO_HTTP_CODE) != 200) {
+           return "Something went wrong with fetching the eQSL AG members file";
+        }
+        rewind($f);
+        $this->db->empty_table("eQSL_agmembers");
+        $this->db->query("ALTER TABLE eQSL_agmembers AUTO_INCREMENT 1");
+        $i = 0;
+        fgets($f);
+        $data = fgetcsv($f, 1000, ",", '"', '\\');
+        do {
+            if ($data[0]) {
+                $eqsldata[$i]['callsign'] = $data[0];
+                if (($i % 2000) == 0) {
+                    $this->db->insert_batch('eQSL_agmembers', $eqsldata);
+                    unset($eqsldata);
+                }
+                $i++;
+            }
+        } while ($data = fgetcsv($f, 1000, ",", '"', '\\'));
+        fclose($f);
+
+        $this->db->insert_batch('eQSL_agmembers', $eqsldata);
+
+        $mtime = microtime();
+        $mtime = explode(" ", $mtime);
+        $mtime = $mtime[1] + $mtime[0];
+        $endtime = $mtime;
+        $totaltime = ($endtime - $starttime);
+        return "Records inserted: " . $i . " in " . $totaltime . " seconds";
+    }
+
     function wavelog_latest_release() {
         $latest_tag = null;
         $url = "https://api.github.com/repos/wavelog/wavelog/releases";
