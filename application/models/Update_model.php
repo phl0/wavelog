@@ -353,7 +353,7 @@ class Update_model extends CI_Model {
                 }
                 if (isset($eqsldata)) {
                    // Checking current batch for dupes
-                   for ($j=0; $j < $i; $j++) {
+                   for ($j=1; $j < $i; $j++) {
                       if ($eqsldata[$j]['callsign'] == $callsign) {
                          continue 2;
                       }
