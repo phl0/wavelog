@@ -347,10 +347,29 @@ class Update_model extends CI_Model {
         $data = fgetcsv($f, 1000, ",", '"', '\\');
         do {
             if ($data[0]) {
-                $eqsldata[$i]['callsign'] = $data[0];
+                $callsign = strtoupper(trim(preg_replace('/\xD8/', '0', $data[0])));
+                if (preg_match ('/[^a-z0-9\/]/i', $callsign)) {
+                   continue;
+                }
+                if (isset($eqsldata)) {
+                   // Checking current batch for dupes
+                   for ($j=0; $j < $i; $j++) {
+                      if ($eqsldata[$j]['callsign'] == $callsign) {
+                         continue 2;
+                      }
+                   }
+                   // Check already inserted callsigns for dupes
+                   $sql = "SELECT `id` FROM eQSL_agmembers WHERE `callsign` = ?;";
+                   $query = $this->db->query($sql, array($callsign));
+                   if ($query->num_rows() > 0) {
+                         continue;
+                   }
+                }
+                $eqsldata[$i]['callsign'] = $callsign;
                 if (($i % 2000) == 0) {
                     $this->db->insert_batch('eQSL_agmembers', $eqsldata);
                     unset($eqsldata);
+                    $i=0;
                 }
                 $i++;
             }
