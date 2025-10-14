@@ -47,12 +47,20 @@
 			<td><div class="form-check"><input class="form-check-input" name="band" type="checkbox" <?php if (($options->band->show ?? "true") == "true") { echo 'checked'; } ?>></div></td>
 		</tr>
 		<tr>
+			<td><?= __("Frequency"); ?></td>
+			<td><div class="form-check"><input class="form-check-input" name="frequency" type="checkbox" <?php if (($options->frequency->show ?? "true") == "true") { echo 'checked'; } ?>></div></td>
+		</tr>
+		<tr>
 			<td><?= __("Gridsquare"); ?></td>
 			<td><div class="form-check"><input class="form-check-input" name="gridsquare" type="checkbox" <?php if (($options->gridsquare->show ?? "true") == "true") { echo 'checked'; } ?>></div></td>
 		</tr>
 		<tr>
 			<td><?= __("Name"); ?></td>
 			<td><div class="form-check"><input class="form-check-input" name="name" type="checkbox" <?php if (($options->name->show ?? "true") == "true") { echo 'checked'; } ?>></div></td>
+		</tr>
+		<tr>
+			<td><?= __("QTH"); ?></td>
+			<td><div class="form-check"><input class="form-check-input" name="qth" type="checkbox" <?php if (($options->qth->show ?? "true") == "true") { echo 'checked'; } ?>></div></td>
 		</tr>
 		<tr>
 			<td><?= __("QSL via"); ?></td>
@@ -79,6 +87,10 @@
 			<td><div class="form-check"><input class="form-check-input" name="qrz" type="checkbox" <?php if (($options->qrz->show ?? "true") == "true") { echo 'checked'; } ?>></div></td>
 		</tr>
 		<tr>
+			<td><?= __("DCL"); ?></td>
+			<td><div class="form-check"><input class="form-check-input" name="dcl" type="checkbox" <?php if (($options->dcl->show ?? "true") == "true") { echo 'checked'; } ?>></div></td>
+		</tr>
+		<tr>
 			<td><?= __("QSL Msg (S)"); ?></td>
 			<td><div class="form-check"><input class="form-check-input" name="qslmsgs" type="checkbox" <?php if (($options->qslmsgs->show ?? "false") == "true") { echo 'checked'; } ?>></div></td>
 		</tr>
@@ -93,6 +105,10 @@
 		<tr>
 			<td><?= __("State"); ?></td>
 			<td><div class="form-check"><input class="form-check-input" name="state" type="checkbox" <?php if (($options->state->show ?? "true") == "true") { echo 'checked'; } ?>></div></td>
+		</tr>
+		<tr>
+			<td><?= __("County"); ?></td>
+			<td><div class="form-check"><input class="form-check-input" name="county" type="checkbox" <?php if (($options->county->show ?? "true") == "true") { echo 'checked'; } ?>></div></td>
 		</tr>
 		<tr>
 			<td><?= __("CQ Zone"); ?></td>

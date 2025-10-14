@@ -1,22 +1,48 @@
 $(document).ready(function() {
     loadPassSettingsList();
-}); 
+
+	$('#satlist').multiselect({
+		// template is needed for bs5 support
+		enableFiltering: true,
+		enableCaseInsensitiveFiltering: true,
+		filterPlaceholder: lang_general_word_search,
+		templates: {
+		  button: '<button type="button" class="multiselect dropdown-toggle btn btn-sm btn-secondary me-2 w-auto" data-bs-toggle="dropdown" aria-expanded="false"><span class="multiselect-selected-text"></span></button>',
+		},
+		numberDisplayed: 1,
+		inheritClass: true,
+		includeSelectAllOption: true
+	});
+
+	if (localStorage.hasOwnProperty(`user_${user_id}_selectedsatellites`)) {
+		const selectedSatellites = localStorage.getItem(`user_${user_id}_selectedsatellites`);
+		const satelliteArray = selectedSatellites ? selectedSatellites.split(',') : [];
+		// First, deselect all options
+		$('#satlist').multiselect('deselectAll', false);
+
+		// Then, select the stored locations
+		$('#satlist').multiselect('select', satelliteArray);
+	}
+});
 
 function searchpasses() {
-	$(".ld-ext-right-plot").addClass('running');
-    $(".ld-ext-right-plot").prop('disabled', true);
-    $('#searchpass').prop("disabled", true);
-	if ($('#addskedpartner').is(':hidden')) {
-		loadPasses();
-	} else {
-		let skedgrid = $("#skedgrid").val();
-		if (skedgrid == '') {
-			$(".ld-ext-right-plot").removeClass('running');
-            $(".ld-ext-right-plot").prop('disabled', false);
-            $('#searchpass').prop("disabled", false);
-			return;
+	localStorage.setItem(`user_${user_id}_selectedsatellites`, $('#satlist').val());
+	if ($("#satlist").val().length > 0) {;
+		$(".ld-ext-right-plot").addClass('running');
+		$(".ld-ext-right-plot").prop('disabled', true);
+		$('#searchpass').prop("disabled", true);
+		if ($('#addskedpartner').is(':hidden')) {
+			loadPasses();
+		} else {
+			let skedgrid = $("#skedgrid").val();
+			if (skedgrid == '') {
+				$(".ld-ext-right-plot").removeClass('running');
+				$(".ld-ext-right-plot").prop('disabled', false);
+				$('#searchpass').prop("disabled", false);
+				return;
+			}
+			loadSkedPasses();
 		}
-		loadSkedPasses();
 	}
 	return;
 
@@ -24,30 +50,30 @@ function searchpasses() {
 
 function loadPasses() {
 	$.ajax({
-        url: base_url + 'index.php/satellite/searchPasses',
-        type: 'post',
-        data: {'sat': $("#satlist").val(),
-            'yourgrid': $("#yourgrid").val(),
-            'minelevation': $("#minelevation").val(),
-            'minazimuth': $("#minazimuth").val(),
-            'maxazimuth': $("#maxazimuth").val(),
-            'date': $("#date").val(),
-            'mintime': $("#mintime").val(),
-            'maxtime': $("#maxtime").val(),
-        },
-        success: function (html) {
-            $("#resultpasses").html(html);
+		url: base_url + 'index.php/satellite/searchPasses',
+		type: 'post',
+		data: {'sat': $("#satlist").val(),
+			'yourgrid': $("#yourgrid").val(),
+			'minelevation': $("#minelevation").val(),
+			'minazimuth': $("#minazimuth").val(),
+			'maxazimuth': $("#maxazimuth").val(),
+			'date': $("#date").val(),
+			'mintime': $("#mintime").val(),
+			'maxtime': $("#maxtime").val(),
+		},
+		success: function (html) {
+			$("#resultpasses").html(html);
 			$(".ld-ext-right-plot").removeClass('running');
-            $(".ld-ext-right-plot").prop('disabled', false);
-            $('#searchpass').prop("disabled", false);
+			$(".ld-ext-right-plot").prop('disabled', false);
+			$('#searchpass').prop("disabled", false);
 			$('.satelliteinfo').click(function (event) {
 				getSatelliteInfo(this);
 			});
-        },
-        error: function(e) {
-            modalloading=false;
-        }
-    });
+		},
+		error: function(e) {
+			modalloading=false;
+		}
+	});
 }
 
 function getSatelliteInfo(element) {

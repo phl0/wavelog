@@ -5,18 +5,6 @@ class Stations extends CI_Model {
 	public function __construct() {
 	}
 
-    function all_with_count() {
-		$this->db->select('station_profile.*, dxcc_entities.name as station_country, dxcc_entities.end as dxcc_end, count('.$this->config->item('table_name').'.station_id) as qso_total, exists(select 1 from station_logbooks_relationship where station_location_id = station_profile.station_id and station_logbook_id = '.($this->session->userdata('active_station_logbook') ?? 0).') as linked');
-        $this->db->from('station_profile');
-        $this->db->join($this->config->item('table_name'),'station_profile.station_id = '.$this->config->item('table_name').'.station_id','left');
-        $this->db->join('dxcc_entities','station_profile.station_dxcc = dxcc_entities.adif','left outer');
-		$this->db->group_by('station_profile.station_id');
-		$this->db->where('station_profile.user_id', $this->session->userdata('user_id'));
-		$this->db->or_where('station_profile.user_id =', NULL);
-
-		return $this->db->get();
-	}
-
 	// Returns ALL station profiles regardless of user logged in
 	// This is also used by LoTW sync so must not be changed.
 	function all() {
@@ -49,7 +37,7 @@ class Stations extends CI_Model {
 			foreach ($query->result() as $row) {
 				array_push($a_station_ids, $row->station_id);
 			}
-			$station_ids=implode(', ', $a_station_ids);	
+			$station_ids=implode(', ', $a_station_ids);
 			return $station_ids;
 		} else {
 			return '';
@@ -114,11 +102,28 @@ class Stations extends CI_Model {
 			$state = xss_clean($this->input->post('station_state', true));
 		}
 
-		// Check if DXCC is USA, Alaska or Hawaii. If not true, we clear the County field due to complex adif specs
-		if (($this->input->post('dxcc') == 291 || $this->input->post('dxcc') == 006 || $this->input->post('dxcc') == 110) && $this->input->post('station_cnty') !="") {
-			$county = xss_clean($this->input->post('station_cnty', true));
-		} else {
-			$county = '';
+		// Check if DXCC is USA, Alaska or Hawaii, RU, UR, and others with subareas.
+		// If not true, we clear the County field due to complex adif specs
+		switch ($this->input->post('dxcc')) {
+			case 6:
+			case 110:
+			case 291:
+			case 15:
+			case 54:
+			case 61:
+			case 126:
+			case 151:
+			case 288:
+			case 339:
+			case 170:
+			case 21:
+			case 29:
+			case 32:
+			case 281:
+				$county = xss_clean($this->input->post('station_cnty', true));
+				break;
+			default:
+				$county = '';
 		}
 
 		// Create data array with field values
@@ -179,11 +184,28 @@ class Stations extends CI_Model {
 			$state = xss_clean($this->input->post('station_state', true));
 		}
 
-		// Check if DXCC is USA, Alaska or Hawaii. If not true, we clear the County field due to complex adif specs
-		if (($this->input->post('dxcc') == 291 || $this->input->post('dxcc') == 006 || $this->input->post('dxcc') == 110) && $this->input->post('station_cnty') !="") {
-			$county = xss_clean($this->input->post('station_cnty', true));
-		} else {
-			$county = '';
+		// Check if DXCC is USA, Alaska or Hawaii, RU, UR, and others with subareas.
+		// If not true, we clear the County field due to complex adif specs
+		switch ($this->input->post('dxcc')) {
+			case 6:
+			case 110:
+			case 291:
+			case 15:
+			case 54:
+			case 61:
+			case 126:
+			case 151:
+			case 288:
+			case 339:
+			case 170:
+			case 21:
+			case 29:
+			case 32:
+			case 281:
+				$county = xss_clean($this->input->post('station_cnty', true));
+				break;
+			default:
+				$county = '';
 		}
 
 		$data = array(
@@ -263,7 +285,7 @@ class Stations extends CI_Model {
 		}
 		// Delete QSOs
 		$this->db->query("DELETE FROM ".$this->config->item('table_name')." WHERE station_id = ?",$clean_id);
-		
+
 		// Also clean up static map images
 		if (!$this->load->is_loaded('staticmap_model')) {
 			$this->load->model('staticmap_model');

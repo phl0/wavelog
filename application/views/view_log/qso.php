@@ -529,7 +529,7 @@
 
                     <?php if($row->COL_LOTW_QSL_RCVD == "Y" && $row->COL_LOTW_QSLRDATE != null) { ?>
                     <h3><?= __("LoTW"); ?></h3>
-                    <p><?= __("This QSO was confirmed on"); ?> <?php $timestamp = strtotime($row->COL_LOTW_QSLRDATE); echo date($custom_date_format, $timestamp); ?>.</p>
+                    <p><?= __("This QSO was confirmed on"); ?> <?php $timestamp = strtotime($row->COL_LOTW_QSLRDATE); echo date($custom_date_format, $timestamp); if (date('H:i', $timestamp) != '00:00') { echo " ".date('H:i', $timestamp);?> UTC<?php } ?>.</p>
                     <?php } ?>
 
 					<?php if($row->COL_LOTW_QSL_RCVD == "Y" && $row->COL_LOTW_QSLRDATE == null) { ?>
@@ -566,9 +566,19 @@
                         <p><?= __("This QSO was confirmed on"); ?> <?php $timestamp = strtotime($row->COL_CLUBLOG_QSO_DOWNLOAD_DATE); echo date($custom_date_format, $timestamp); ?>.</p>
                     <?php } ?>
 
-					<?php if($row->COL_CLUBLOG_QSO_DOWNLOAD_STATUS == "Y" && $row->COL_CLUBLOG_QSO_DOWNLOAD_DATE == null) { ?>
+			<?php if($row->COL_CLUBLOG_QSO_DOWNLOAD_STATUS == "Y" && $row->COL_CLUBLOG_QSO_DOWNLOAD_DATE == null) { ?>
                     <h3><?= __("Clublog"); ?></h3>
                         <p><?= __("This QSO is confirmed on Clublog."); ?></p>
+                    <?php } ?>
+
+                    <?php if($row->COL_DCL_QSL_RCVD == "Y" && $row->COL_DCL_QSLRDATE != null) { ?>
+                    <h3><?= __("DCL"); ?></h3>
+                        <p><?= __("This QSO was confirmed on"); ?> <?php $timestamp = strtotime($row->COL_DCL_QSLRDATE); echo date($custom_date_format, $timestamp); ?>.</p>
+                    <?php } ?>
+
+					<?php if($row->COL_DCL_QSL_RCVD == "Y" && $row->COL_DCL_QSLRDATE == null) { ?>
+                    <h3><?= __("DCL"); ?></h3>
+                        <p><?= __("This QSO is confirmed on DCL."); ?></p>
                     <?php } ?>
             </div>
 

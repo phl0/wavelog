@@ -352,7 +352,7 @@ function copyApiKey(apiKey) {
 
 function copyApiUrl() {
    var apiUrlField = $('#apiUrl');
-   navigator.clipboard.writeText("<?php echo base_url(); ?>").then(function() {
+   navigator.clipboard.writeText("<?php echo site_url(); ?>").then(function() {
    });
    apiUrlField.addClass('flash-copy')
       .delay('1000').queue(function() {
@@ -518,7 +518,8 @@ $(function () {
             })
             .done(function(data) {
 
-                $('.exportbutton').html('<button class="btn btn-sm btn-primary" onclick="export_stored_query(' + id + ')">'+"<?= __("Export to ADIF"); ?>"+'</button>');
+                $('.exportbutton').html('<button class="btn btn-sm btn-primary me-1" onclick="export_stored_query(' + id + ')">'+"<?= __("Export to ADIF"); ?>"+'</button>');
+				$('.exportbutton').append('<button class="btn btn-sm btn-primary me-1" id="btn-lba" onclick="open_in_lba();"><?= __("Open in the Advanced Logbook"); ?></button>');
                 $('.card-body.result').empty();
                 $(".search-results-box").show();
 
@@ -654,7 +655,8 @@ $(function () {
                     search: JSON.stringify(result, null, 2)
                 })
                 .done(function(data) {
-                    $('.exportbutton').html('<button class="btn btn-sm btn-primary" onclick="export_search_result();">'+"<?= __("Export to ADIF"); ?>"+'</button>');
+                    $('.exportbutton').html('<button class="btn btn-sm btn-primary me-1" onclick="export_search_result();">'+"<?= __("Export to ADIF"); ?>"+'</button>');
+					$('.exportbutton').append('<button class="btn btn-sm btn-primary me-1" id="btn-lba" onclick="open_in_lba();"><?= __("Open in the Advanced Logbook"); ?></button>');
 
                     $('.card-body.result').empty();
                     $(".search-results-box").show();
@@ -761,6 +763,7 @@ $('#dxcc_id').on('change', function() {
             return dxcc.adif == dxccadif;
         });
         $("#stationCQZoneInput").val(dxccinfo[0].cq);
+		$("#stationITUZoneInput").val(dxccinfo[0].itu);
         if (dxccadif == 0) {
             $("#stationITUZoneInput").val(dxccinfo[0].itu); // Only set ITU zone to none if DXCC none is selected. We don't have ITU data for other DXCCs.
         }
@@ -870,6 +873,20 @@ function showActivatorsMap(call, count, grids) {
 
 <?php if ($this->uri->segment(1) == "search") { ?>
 <script type="text/javascript">
+	function open_in_lba() {
+		var user_id = <?php echo $this->session->userdata('user_id'); ?>;
+		var elements = $('.table tbody tr');
+
+		var id_list=[];
+		elements.each(function() {
+			let id = $(this).first().closest('tr').attr('id')?.replace(/\D/g, '')
+			id_list.push(id);
+		});
+
+		localStorage.setItem(`user_${user_id}_qsoids`, id_list);
+		window.location.href = base_url + 'index.php/logbookadvanced';
+	}
+
 i=0;
 
 function findlotwunconfirmed(){
@@ -933,6 +950,7 @@ function findincorrectcqzones() {
 	    if (isDarkModeTheme()) {
 		    $(".buttons-csv").css("color", "white");
 	    }
+		$('#btn-lba').removeAttr('hidden');
 	    $(document).ready(function() {
 		    var target = document.body;
 		    var observer = new MutationObserver(function() {
@@ -978,6 +996,7 @@ function findincorrectituzones() {
 	    if (isDarkModeTheme()) {
 		    $(".buttons-csv").css("color", "white");
 	    }
+		$('#btn-lba').removeAttr('hidden');
 
 	    $(document).ready(function() {
 		    var target = document.body;
@@ -999,6 +1018,7 @@ function findincorrectituzones() {
 function searchButtonPress() {
     if (event) { event.preventDefault(); }
     if ($('#callsign').val()) {
+		$('#btn-lba').removeAttr('hidden');
         let fixedcall = $('#callsign').val().trim();
         $('#partial_view').load("logbook/search_result/" + fixedcall.replaceAll('Ø', '0'), function() {
             $('[data-bs-toggle="tooltip"]').tooltip();
@@ -1082,11 +1102,25 @@ $($('#callsign')).on('keypress',function(e) {
         $user_gridsquare = ($active_station_info->station_gridsquare ?? '');
     }
 ?>
-
+<style>
+.grid-text {
+  word-wrap: normal !important;
+}
+</style>
 <script>
+  var lang_gen_hamradio_gridsquares = '<?= _pgettext("Map Options", "Gridsquares"); ?>';
+  var maidenhead;
   var markers = L.layerGroup();
   var pos = [51.505, -0.09];
-  var mymap = L.map('qsomap').setView(pos, 12);
+  var mymap = L.map('qsomap', {
+    fullscreenControl: true,
+    fullscreenControlOptions: {
+			position: 'topleft'
+		},
+}).setView(pos, 12);
+
+maidenhead = L.maidenheadqrb().addTo(mymap);
+mymap.on('mousemove', onQsoMapMove);
   $.ajax({
      url: base_url + 'index.php/logbook/qralatlngjson',
      type: 'post',
@@ -1113,9 +1147,49 @@ $($('#callsign')).on('keypress',function(e) {
 
   L.tileLayer('<?php echo $this->optionslib->get_option('option_map_tile_server');?>', {
     maxZoom: 18,
+    minZoom: 1,
     attribution: '<?php echo $this->optionslib->get_option('option_map_tile_server_copyright');?>',
     id: 'mapbox.streets'
   }).addTo(mymap);
+  mymap.on('click', function(e) {
+    $('#locator').val((latLngToLocator(e.latlng.lat, e.latlng.lng).toUpperCase()));
+    $('#locator').trigger('input');
+	if (mymap._isFullscreen) {
+    	mymap.toggleFullscreen(); // only exits if in fullscreen
+  	}
+  });
+
+   var legend = L.control({ position: "topright" });
+
+    legend.onAdd = function(mymap) {
+        var div = L.DomUtil.create("div", "legend");
+        div.innerHTML += '<div id="qsomapgrid"></div>';
+		div.innerHTML += '<input type="checkbox" onclick="toggleGridsquares(this.checked)" ' + (typeof gridsquare_layer !== 'undefined' && gridsquare_layer ? 'checked' : '') + ' style="outline: none;"><span> ' + lang_gen_hamradio_gridsquares + '</span><br>';
+        return div;
+    };
+
+    legend.addTo(mymap);
+
+    if (typeof gridsquare_layer !== 'undefined') {
+		toggleGridsquares(gridsquare_layer);
+	} else {
+		toggleGridsquares(false);
+	}
+
+  function onQsoMapMove(event) {
+	var LatLng = event.latlng;
+	var lat = LatLng.lat;
+	var lng = LatLng.lng;
+	var locator = latLngToLocator(lat,lng);
+	$('#qsomapgrid').html(locator.toUpperCase());
+  }
+  function toggleGridsquares(bool) {
+	if(!bool) {
+		mymap.removeLayer(maidenhead);
+	} else {
+		maidenhead.addTo(mymap);
+	}
+};
 
 </script>
 
@@ -1871,6 +1945,61 @@ $('#sats').change(function(){
 </script>
     <?php } ?>
 
+<?php if ($this->uri->segment(2) == "wapc") { ?>
+<script>
+    $('.tablewapc').DataTable({
+        "pageLength": 25,
+        responsive: false,
+        ordering: false,
+        "scrollY":        "400px",
+        "scrollCollapse": true,
+        "paging":         false,
+        "scrollX": true,
+        "language": {
+            url: getDataTablesLanguageUrl(),
+        },
+        dom: 'Bfrtip',
+        buttons: [
+            {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
+        ]
+    });
+
+    $('.tablesummary').DataTable({
+        info: false,
+        searching: false,
+        ordering: false,
+        "paging":         false,
+        "language": {
+            url: getDataTablesLanguageUrl(),
+        },
+        dom: 'Bfrtip',
+        "language": {
+            url: getDataTablesLanguageUrl(),
+        },
+        buttons: [
+            {
+				extend: 'csv',
+				className: 'mb-1 btn btn-primary', // Bootstrap classes
+					init: function(api, node, config) {
+						$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+					},
+			}
+        ]
+    });
+
+    // change color of csv-button if dark mode is chosen
+    if (isDarkModeTheme()) {
+        $(".buttons-csv").css("color", "white");
+    }
+ </script>
+<?php } ?>
+
 <?php if ($this->uri->segment(2) == "waja") { ?>
 <script>
     $('.tablewaja').DataTable({
@@ -2275,6 +2404,10 @@ $('#sats').change(function(){
         <?php } ?>
 
 
+    <?php if ($this->uri->segment(1) == "usermode") { ?>
+		<script src="<?php echo base_url(); ?>assets/js/sections/usermode.js"></script>
+    <?php } ?>
+
     <?php if ($this->uri->segment(1) == "mode") { ?>
 		<script src="<?php echo base_url(); ?>assets/js/sections/mode.js"></script>
     <?php } ?>
@@ -2296,7 +2429,7 @@ $('#sats').change(function(){
 	<script src="<?php echo base_url(); ?>assets/js/sections/timeplot.js"></script>
 <?php } ?>
 
-<?php if ($this->uri->segment(1) == "qsl" || $this->uri->segment(1) == "eqsl") {
+<?php if ($this->uri->segment(1) == "generic_qsl" || $this->uri->segment(1) == "qsl" || $this->uri->segment(1) == "eqsl") {
     	// Get Date format
 	if($this->session->userdata('user_date_format')) {
 		// If Logged in and session exists
@@ -2331,6 +2464,8 @@ $('#sats').change(function(){
         };
     </script>
     <?php if ($this->uri->segment(1) == "qsl") {
+        $qsl_eqsl_table = '.qsltable';
+    } else if ($this->uri->segment(1) == "generic_qsl") {
         $qsl_eqsl_table = '.qsltable';
     } else if ($this->uri->segment(1) == "eqsl") {
         $qsl_eqsl_table = '.eqsltable';
@@ -2475,7 +2610,8 @@ function viewEqsl(picture, callsign) {
         var awardInfoLines = [
             lang_award_info_ln2,
             lang_award_info_ln3,
-            lang_award_info_ln4
+            lang_award_info_ln4,
+            typeof lang_award_info_ln5 !== 'undefined' ? lang_award_info_ln5 : ''
         ];
         var awardInfoContent = "";
         awardInfoLines.forEach(function (line) {
@@ -2513,7 +2649,7 @@ function viewEqsl(picture, callsign) {
                     message: html,
                     onshown: function(dialog) {
                        $('[data-bs-toggle="tooltip"]').tooltip();
-                       $('.contacttable').DataTable({
+                       $('.displaycontactstable').DataTable({
                             "pageLength": 7,
                             responsive: false,
                             ordering: false,
@@ -2585,7 +2721,7 @@ function viewEqsl(picture, callsign) {
 			    message: html,
 			    onshown: function(dialog) {
 				    $('[data-bs-toggle="tooltip"]').tooltip();
-				    $('.contacttable').DataTable({
+				    $('.displaycontactstable').DataTable({
 				    "pageLength": 25,
 					    responsive: false,
 					    ordering: false,
@@ -2762,17 +2898,6 @@ function viewEqsl(picture, callsign) {
 		});
 	}
 
-	function searchAdditionalQsos(filename) {
-		$.ajax({
-			url: base_url + 'index.php/qsl/searchQsos',
-			type: 'post',
-			data: {'callsign': $('#callsign').val(), 'filename': filename},
-			success: function(html) {
-				$('#searchresult').empty();
-				$('#searchresult').append(html);
-			}
-		});
-	}
 </script>
 <?php if ($this->uri->segment(1) == "contesting" && ($this->uri->segment(2) != "add" && $this->uri->segment(2) != "edit")) { ?>
     <script>
@@ -3019,6 +3144,51 @@ function viewEqsl(picture, callsign) {
                 }
             };
             $('#wwfftable').DataTable({
+                "pageLength": 25,
+                responsive: false,
+                ordering: true,
+                "scrollY":        "500px",
+                "scrollCollapse": true,
+                "paging":         false,
+                "scrollX": true,
+                "language": {
+                    url: getDataTablesLanguageUrl(),
+                },
+                "order": [ 0, 'asc' ],
+                dom: 'Bfrtip',
+                buttons: [
+					{
+						extend: 'csv',
+						className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
+					},
+                   {
+                      extend: 'clear',
+					  className: 'mb-1 btn btn-primary', // Bootstrap classes
+							init: function(api, node, config) {
+								$(node).removeClass('dt-button').addClass('btn btn-primary'); // Ensure Bootstrap class applies
+						},
+                      text: lang_admin_clear
+                   }
+                ]
+            });
+            // change color of csv-button if dark mode is chosen
+            if (isDarkModeTheme()) {
+               $('[class*="buttons"]').css("color", "white");
+            }
+        </script>
+    <?php } else if ($this->uri->segment(2) == 'sota') { ?>
+        <script>
+            $.fn.dataTable.moment('<?php echo $usethisformat ?>');
+            $.fn.dataTable.ext.buttons.clear = {
+                className: 'buttons-clear',
+                action: function ( e, dt, node, config ) {
+                   dt.search('').draw();
+                }
+            };
+            $('#sotatable').DataTable({
                 "pageLength": 25,
                 responsive: false,
                 ordering: true,

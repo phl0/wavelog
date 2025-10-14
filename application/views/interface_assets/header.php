@@ -109,6 +109,8 @@
 							<div class="dropdown-divider"></div>
 							<?php } ?>
 							<li><a class="dropdown-item" href="<?php echo site_url('eqsl'); ?>" title="eQSL"><i class="fa fa-id-card"></i> <?= __("View eQSL Cards"); ?></a></li>
+							<div class="dropdown-divider"></div>
+							<li><a class="dropdown-item" href="<?php echo site_url('generic_qsl/confirmations'); ?>" title="eQSL"><i class="fa fa-id-card"></i> <?= __("View last confirmations"); ?></a></li>
 						</ul>
 					</li>
 
@@ -164,6 +166,8 @@
 								<li><a class="dropdown-item" href="<?php echo site_url('continents'); ?>" title="Continents"><i class="fas fa-globe-europe"></i> <?= __("Continents"); ?></a></li>
 								<div class="dropdown-divider"></div>
 								<li><a class="dropdown-item" href="<?php echo site_url('callstats'); ?>" title="Callsign Statistics"><i class="fas fa-chart-area"></i> <?= __("Callsign Statistics"); ?></a></li>
+								<div class="dropdown-divider"></div>
+								<li><a class="dropdown-item" href="<?php echo site_url('statistics/initials'); ?>" title="EME Initials"><i class="fas fa-chart-area"></i> <?= __("EME Initials"); ?></a></li>
 							</ul>
 						</li>
 						<li class="nav-item dropdown"> <!-- AWARDS -->
@@ -211,6 +215,12 @@
 									</ul>
 								</li>
 								<div class="dropdown-divider"></div>
+								<li><a class="dropdown-item dropdown-toggle dropdown-toggle-submenu" data-bs-toggle="dropdown" href="#">🇨🇳 <?= __("China"); ?></a>
+									<ul class="submenu dropdown-menu">
+										<li><a class="dropdown-item" href="<?php echo site_url('awards/wapc'); ?>"><i class="fas fa-trophy"></i> <?= __("WAPC"); ?></a></li>
+									</ul>
+								</li>
+								<div class="dropdown-divider"></div>
 								<li><a class="dropdown-item dropdown-toggle dropdown-toggle-submenu" data-bs-toggle="dropdown" href="#">🇩🇪 <?= __("Germany"); ?></a>
 									<ul class="submenu dropdown-menu">
 										<li><a class="dropdown-item" href="<?php echo site_url('awards/dok'); ?>"><i class="fas fa-trophy"></i> <?= __("DOK"); ?></a></li>
@@ -244,6 +254,12 @@
 								<li><a class="dropdown-item dropdown-toggle dropdown-toggle-submenu" data-bs-toggle="dropdown" href="#">🇨🇭 <?= __("Switzerland"); ?></a>
 									<ul class="submenu dropdown-menu">
 										<li><a class="dropdown-item" href="<?php echo site_url('awards/helvetia'); ?>"><i class="fas fa-trophy"></i> H26</a></li>
+									</ul>
+								</li>
+							    <div class="dropdown-divider"></div>
+								<li><a class="dropdown-item dropdown-toggle dropdown-toggle-submenu" data-bs-toggle="dropdown" href="#">🇳🇱️ <?= __("The Netherlands"); ?></a>
+									<ul class="submenu dropdown-menu">
+										<li><a class="dropdown-item" href="<?php echo site_url('awards/wap'); ?>"><i class="fas fa-trophy"></i> <?= __("WAP Worked All Provinces"); ?></a></li>
 									</ul>
 								</li>
 								<div class="dropdown-divider"></div>
@@ -405,6 +421,8 @@
 									<li><a class="dropdown-item" href="<?php echo site_url('stationsetup'); ?>" title="Manage station setup"><i class="fas fa-home"></i> <?= __("Station Setup"); ?></a></li>
 								<?php } ?>
 								<li><a class="dropdown-item" href="<?php echo site_url('band'); ?>" title="Manage Bands"><i class="fas fa-cog"></i> <?= __("Bands"); ?></a></li>
+								<li><a class="dropdown-item" href="<?php echo site_url('band/edges'); ?>" title="Manage Band Edgeds"><i class="fas fa-cog"></i> <?= __("Band Edges"); ?></a></li>
+								<li><a class="dropdown-item" href="<?php echo site_url('usermode'); ?>" title="Manage Modes"><i class="fas fa-cog"></i> <?= __("Modes"); ?></a></li>
 
 								<?php if ($this->config->item('special_callsign') && $this->session->userdata('clubstation') == 0) { ?>
 									<?php if (!empty($this->session->userdata('available_clubstations'))) { ?>
@@ -479,6 +497,10 @@
 										<li><a class="dropdown-item" href="<?php echo site_url('qrz/export'); ?>" title="Upload to QRZ.com logbook"><i class="fas fa-sync"></i> <?= __("QRZ Logbook"); ?></a></li>
 										<li><a class="dropdown-item" href="<?php echo site_url('webadif/export'); ?>" title="Upload to webADIF"><i class="fas fa-sync"></i> <?= __("QO-100 Dx Club Upload"); ?></a></li>
 										<li><a class="dropdown-item" href="<?php echo site_url('clublog/export'); ?>" title="Upload to Clublog"><i class="fas fa-sync"></i> <?= __("Clublog Import / Export"); ?></a></li>
+										<?php
+										if ($this->config->item('enable_dcl_interface') ?? false) { ?>
+										<li><a class="dropdown-item" href="<?php echo site_url('dcl'); ?>" title="Upload to DCL"><i class="fas fa-sync"></i> <?= __("DCL Export"); ?></a></li>
+										<?php } ?>
 									</ul>
 								</li>
 								<div class="dropdown-divider"></div>

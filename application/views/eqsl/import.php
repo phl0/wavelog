@@ -4,7 +4,7 @@
 		<div class="card-header">
 			<ul class="nav nav-tabs card-header-tabs">
 				<li class="nav-item">
-					<a class="nav-link active" href="<?php echo site_url('eqsl/import'); ?>"><?= __("Download QSOs"); ?></a>
+					<a class="nav-link active" href="<?php echo site_url('eqsl/import'); ?>"><?= __("Download QSLs"); ?></a>
 				</li>
 				<?php if (!($this->config->item('disable_manual_eqsl'))) { ?>
 					<li class="nav-item">
@@ -25,7 +25,7 @@
 			<?php echo form_open_multipart('eqsl/import'); ?>
 
 			<div class="form-check">
-            			<?php if (($next_run ?? '') != '') { echo "<p>".__("The next automatic sync with eQSL will happen at: ").$next_run."</p>"; } ?>
+            			<?php if (($next_run ?? '') != '') { echo "<p>".__("The next automatic sync with eQSL will happen at: ").$next_run." UTC</p>"; } ?>
 				<input class="form-check-input" type="radio" name="eqslimport" id="upload" value="upload" checked />
 				<label class="form-check-label" for="exampleRadios1">
 					<?= __("Import from file..."); ?>

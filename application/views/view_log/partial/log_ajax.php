@@ -18,6 +18,7 @@ function echo_table_header_col($ctx, $name) {
 		case 'Location': echo '<th>'.__("Station Location").'</th>'; break;
 		case 'Name': echo '<th>'.__("Name").'</th>'; break;
 		case 'Bearing': echo '<th>'.__("Bearing").'</th>'; break;
+        case 'Propagation': echo '<th>'.__("Propagation").'</th>'; break;
 	}
 }
 
@@ -47,6 +48,71 @@ function echo_table_col($row, $name) {
 		case 'Operator':echo '<td>' . ($row->COL_OPERATOR ?? '') . '</td>'; break;
 		case 'Location':echo '<td>' . ($row->station_profile_name ?? '') . '</td>'; break;
 		case 'Name':echo '<td>' . ($row->COL_NAME ?? '') . '</td>'; break;
+        case 'Propagation':
+            if (isset($row->COL_PROP_MODE)) {
+            switch($row->COL_PROP_MODE) {
+                case 'AS':
+                    echo '<td>' . _pgettext("Propagation Mode","Aircraft Scatter") . '</td>';
+                    break;
+                case 'AUR':
+                    echo '<td>' . _pgettext("Propagation Mode","Aurora") . '</td>';
+                    break;
+                case 'AUE':
+                    echo '<td>' . _pgettext("Propagation Mode","Aurora-E") . '</td>';
+                    break;
+                case 'BS':
+                    echo '<td>' . _pgettext("Propagation Mode","Back scatter") . '</td>';
+                    break;
+                case 'ECH':
+                    echo '<td>' . _pgettext("Propagation Mode","EchoLink") . '</td>';
+                    break;
+                case 'EME':
+                    echo '<td>' . _pgettext("Propagation Mode","Earth-Moon-Earth") . '</td>';
+                    break;
+                case 'ES':
+                    echo '<td>' . _pgettext("Propagation Mode","Sporadic E") . '</td>';
+                    break;
+                case 'FAI':
+                    echo '<td>' . _pgettext("Propagation Mode","Field Aligned Irregularities") . '</td>';
+                    break;
+                case 'F2':
+                    echo '<td>' . _pgettext("Propagation Mode","F2 Reflection") . '</td>';
+                    break;
+                case 'INTERNET':
+                    echo '<td>' . _pgettext("Propagation Mode","Internet-assisted") . '</td>';
+                    break;
+                case 'ION':
+                    echo '<td>' . _pgettext("Propagation Mode","Ionoscatter") . '</td>';
+                    break;
+                case 'IRL':
+                    echo '<td>' . _pgettext("Propagation Mode","IRLP") . '</td>';
+                    break;
+                case 'MS':
+                    echo '<td>' . _pgettext("Propagation Mode","Meteor scatter") . '</td>';
+                    break;
+                case 'RPT':
+                    echo '<td>' . _pgettext("Propagation Mode","Terrestrial or atmospheric repeater or transponder") . '</td>';
+                    break;
+                case 'RS':
+                    echo '<td>' . _pgettext("Propagation Mode","Rain scatter") . '</td>';
+                    break;
+                case 'SAT':
+                    echo '<td>' . _pgettext("Propagation Mode","Satellite") . '</td>';
+                    break;
+                case 'TEP':
+                    echo '<td>' . _pgettext("Propagation Mode","Trans-equatorial") . '</td>';
+                    break;
+                case 'TR':
+                    echo '<td>' . _pgettext("Propagation Mode","Tropospheric ducting") . '</td>';
+                    break;
+                default:
+                    echo '<td>' . htmlspecialchars($row->COL_PROP_MODE ?? '') . '</td>';
+                    break;
+            }
+            } else {
+                echo '<td></td>';
+            }
+            break;
 	}
 }
 
@@ -114,10 +180,17 @@ function echoQrbCalcLink($mygrid, $grid, $vucc, $isVisitor = false) {
 
 ?>
 
-<?php if ($results) { ?>
+<?php
+	if ($results) {
+		$tableid = "contacttable";
+		if (!empty($ispopup)) {
+			$tableid = "displaycontactstable";
+		}
+
+?>
 
 <div class="table-responsive">
-    <table style="width:100%" id="contacttable" class="table contacttable table-striped table-hover">
+    <table style="width:100%" id="<?= $tableid ?>" class="table <?= $tableid ?> table-striped table-hover">
         <thead>
             <tr class="titles">
                 <th><?= __("Date"); ?></th>
@@ -147,6 +220,9 @@ function echoQrbCalcLink($mygrid, $grid, $vucc, $isVisitor = false) {
                     <?php } ?>
     		    <?php if ( strpos($this->session->userdata('user_default_confirmation'),'C') !== false  ) { ?>
                         <th><?= __("Clublog"); ?></th>
+                    <?php } ?>
+    		    <?php if ( strpos($this->session->userdata('user_default_confirmation'),'D') !== false  ) { ?>
+                        <th><?= __("DCL"); ?></th>
                     <?php } ?>
                 <?php } ?>
                         <th><?= __("Station"); ?></th>
@@ -390,6 +466,42 @@ function echoQrbCalcLink($mygrid, $grid, $vucc, $isVisitor = false) {
 					echo "\" data-bs-toggle=\"tooltip\"";
 				} ?> class="clublog-<?php
 					echo ($row->COL_CLUBLOG_QSO_DOWNLOAD_STATUS=='Y')?'green':'red'?>">&#9660;</span>
+                    </td>
+                <?php } 
+		 if ( strpos($this->session->userdata('user_default_confirmation'),'D') !== false ) { ?>
+                    <td class="dcl">
+                        <span <?php
+				if ($row->COL_DCL_QSL_SENT == "Y") {
+					echo 'title="'.__("Sent").($row->COL_DCL_QSLSDATE != null ? " ".date($custom_date_format, strtotime($row->COL_DCL_QSLSDATE)) : '').'" data-bs-toggle="tooltip"';
+				} elseif ($row->COL_DCL_QSL_SENT == 'M') {
+					echo 'title="'.__("Modified");
+					if ($row->COL_DCL_QSLSDATE != null) {
+						echo "<br />(".__("last sent")." ".date($custom_date_format, strtotime($row->COL_DCL_QSLSDATE)).")";
+					}
+					echo '" data-bs-toggle="tooltip" data-bs-html="true"';
+				} elseif ($row->COL_DCL_QSL_SENT == 'I') {
+					echo 'title="'.__("Invalid (Ignore)").'" data-bs-toggle="tooltip"';
+				}?> class="dcl-<?php
+
+				if ($row->COL_DCL_QSL_SENT == 'Y') {
+					echo 'green';
+				} elseif ($row->COL_DCL_QSL_SENT == 'M') {
+					echo 'yellow';
+				} elseif ($row->COL_DCL_QSL_SENT == 'I') {
+					echo 'grey';
+				} else {
+					echo 'red';
+				} ?>">&#9650;</span>
+                        <span <?php
+				if ($row->COL_DCL_QSL_RCVD == "Y") {
+					echo "title=\"".__("Received");
+					if ($row->COL_DCL_QSLRDATE != null) {
+						$timestamp = strtotime($row->COL_DCL_QSLRDATE);
+						echo " ".($timestamp!=''?date($custom_date_format, $timestamp):'');
+					}
+					echo "\" data-bs-toggle=\"tooltip\"";
+				} ?> class="dcl-<?php
+					echo ($row->COL_DCL_QSL_RCVD=='Y')?'green':'red'?>">&#9660;</span>
                     </td>
                 <?php } ?>
 

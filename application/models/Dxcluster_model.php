@@ -3,7 +3,26 @@
 use Wavelog\Dxcc\Dxcc;
 
 class Dxcluster_model extends CI_Model {
-	public function dxc_spotlist($band = '20m', $maxage = 60, $de = '') {
+
+ 	protected $bandedges = [];
+
+	public function __construct() {
+		$this->load->Model('Modes');
+		$this->db->where('bandedges.userid', $this->session->userdata('user_id'));
+		$query = $this->db->get('bandedges');
+		$result = $query->result_array();
+
+		if ($result) {
+			$this->bandedges = $result;
+		} else {
+			// Load bandedges into a class property
+			$this->db->where('userid', -1);
+			$query = $this->db->get('bandedges');
+			$this->bandedges = $query->result_array();
+		}
+	}
+
+	public function dxc_spotlist($band = '20m', $maxage = 60, $de = '', $mode = 'All') {
 		$this->load->helper(array('psr4_autoloader'));
 
 		if($this->session->userdata('user_date_format')) {
@@ -51,7 +70,9 @@ class Dxcluster_model extends CI_Model {
 					continue;
 				}
 				$singlespot->band=$spotband;
+				$singlespot->mode=$this->get_mode($singlespot);
 				if (($band != 'All') && ($band != $spotband)) { continue; }
+				if (($mode != 'All') && ($mode != $this->modefilter($singlespot, $mode))) { continue; }
 				$datetimecurrent = new DateTime("now", new DateTimeZone('UTC')); // Today's Date/Time
 				$datetimespot = new DateTime($singlespot->when, new DateTimeZone('UTC'));
 				$spotage = $datetimecurrent->diff($datetimespot);
@@ -78,12 +99,12 @@ class Dxcluster_model extends CI_Model {
 					}
 					if ( ($de != '') && ($de != 'Any') && (property_exists($singlespot->dxcc_spotter,'cont')) ){	// If we have a "de continent" and a filter-wish filter on that
 						if (strtolower($de) == strtolower($singlespot->dxcc_spotter->cont ?? '')) {
-							$singlespot->worked_dxcc = ($this->logbook_model->check_if_dxcc_worked_in_logbook($singlespot->dxcc_spotted->dxcc_id, $logbooks_locations_array, $singlespot->band) >= 1);
-							$singlespot->cnfmd_dxcc = ($this->logbook_model->check_if_dxcc_cnfmd_in_logbook($singlespot->dxcc_spotted->dxcc_id, $logbooks_locations_array, $singlespot->band) >= 1);
-							$singlespot->worked_call = ($this->logbook_model->check_if_callsign_worked_in_logbook($singlespot->spotted, $logbooks_locations_array, $singlespot->band) >= 1);
-							$singlespot->cnfmd_call = ($this->logbook_model->check_if_callsign_cnfmd_in_logbook($singlespot->spotted, $logbooks_locations_array, $singlespot->band) >= 1);
-							$singlespot->cnfmd_continent = ($this->check_if_continent_cnfmd_in_logbook($singlespot->dxcc_spotted->cont, $logbooks_locations_array, $singlespot->band) >= 1);
-							$singlespot->worked_continent = ($this->check_if_continent_cnfmd_in_logbook($singlespot->dxcc_spotted->cont, $logbooks_locations_array, $singlespot->band) >= 1);
+							$singlespot->worked_dxcc = ($this->logbook_model->check_if_dxcc_worked_in_logbook($singlespot->dxcc_spotted->dxcc_id, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
+							$singlespot->cnfmd_dxcc = ($this->logbook_model->check_if_dxcc_cnfmd_in_logbook($singlespot->dxcc_spotted->dxcc_id, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
+							$singlespot->worked_call = ($this->logbook_model->check_if_callsign_worked_in_logbook($singlespot->spotted, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
+							$singlespot->cnfmd_call = ($this->logbook_model->check_if_callsign_cnfmd_in_logbook($singlespot->spotted, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
+							$singlespot->cnfmd_continent = ($this->check_if_continent_cnfmd_in_logbook($singlespot->dxcc_spotted->cont, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
+							$singlespot->worked_continent = ($this->check_if_continent_cnfmd_in_logbook($singlespot->dxcc_spotted->cont, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
 							if ($singlespot->worked_call) {
 								$singlespot->last_wked=$this->logbook_model->last_worked_callsign_in_logbook($singlespot->spotted, $logbooks_locations_array, $singlespot->band)[0];
 								if ($this->session->userdata('user_date_format')) {
@@ -96,12 +117,12 @@ class Dxcluster_model extends CI_Model {
 							array_push($spotsout,$singlespot);
 						}
 					} else {	// No de continent? No Filter --> Just push
-						$singlespot->worked_dxcc = ($this->logbook_model->check_if_dxcc_worked_in_logbook($singlespot->dxcc_spotted->dxcc_id, $logbooks_locations_array, $singlespot->band) >= 1);
-						$singlespot->worked_call = ($this->logbook_model->check_if_callsign_worked_in_logbook($singlespot->spotted, $logbooks_locations_array, $singlespot->band) >= 1);
-						$singlespot->cnfmd_dxcc = ($this->logbook_model->check_if_dxcc_cnfmd_in_logbook($singlespot->dxcc_spotted->dxcc_id, $logbooks_locations_array, $singlespot->band) >= 1);
-						$singlespot->cnfmd_call = ($this->logbook_model->check_if_callsign_cnfmd_in_logbook($singlespot->spotted, $logbooks_locations_array, $singlespot->band) >= 1);
-						$singlespot->cnfmd_continent = ($this->check_if_continent_cnfmd_in_logbook($singlespot->dxcc_spotted->cont, $logbooks_locations_array, $singlespot->band) >= 1);
-						$singlespot->worked_continent = ($this->check_if_continent_worked_in_logbook($singlespot->dxcc_spotted->cont, $logbooks_locations_array, $singlespot->band) >= 1);
+						$singlespot->worked_dxcc = ($this->logbook_model->check_if_dxcc_worked_in_logbook($singlespot->dxcc_spotted->dxcc_id, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
+						$singlespot->worked_call = ($this->logbook_model->check_if_callsign_worked_in_logbook($singlespot->spotted, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
+						$singlespot->cnfmd_dxcc = ($this->logbook_model->check_if_dxcc_cnfmd_in_logbook($singlespot->dxcc_spotted->dxcc_id, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
+						$singlespot->cnfmd_call = ($this->logbook_model->check_if_callsign_cnfmd_in_logbook($singlespot->spotted, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
+						$singlespot->cnfmd_continent = ($this->check_if_continent_cnfmd_in_logbook($singlespot->dxcc_spotted->cont, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
+						$singlespot->worked_continent = ($this->check_if_continent_worked_in_logbook($singlespot->dxcc_spotted->cont, $logbooks_locations_array, $singlespot->band, $singlespot->mode) >= 1);
 						array_push($spotsout,$singlespot);
 					}
 				}
@@ -111,6 +132,79 @@ class Dxcluster_model extends CI_Model {
 			return '';
 		}
 
+	}
+
+	// We need to build functions that check the frequency limit
+	// Right now this is just a proof of concept to determine mode
+	function get_mode($spot) {
+		if ($this->Frequency2Mode($spot->frequency) != '') {
+			return $this->Frequency2Mode($spot->frequency);
+		}
+
+		// Fallbacks using message keywords
+		if (isset($spot->message)) {
+			$message = strtolower($spot->message);
+			if (strpos($message, 'cw') !== false) {
+				return 'cw';;
+			}
+			if ((strpos($message, 'ft8') !== false || strpos($message, 'rtty') !== false || strpos($message, 'sstv') !== false)) {
+				return 'digi';;
+			}
+		}
+
+		return '';
+	}
+
+	function modefilter($spot, $mode) {
+		$mode = strtolower($mode); // Normalize case
+
+		if ($this->isFrequencyInMode($spot->frequency, $mode)) {
+			return true;
+		}
+
+		// Fallbacks using message keywords
+		if (isset($spot->message)) {
+			$message = strtolower($spot->message);
+			if ($mode === 'cw' && strpos($message, 'cw') !== false) {
+				return true;
+			}
+			if ($mode === 'digi' && (strpos($message, 'ft8') !== false || strpos($message, 'rtty') !== false || strpos($message, 'sstv') !== false)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	public function Frequency2Mode($frequency) {
+		// Ensure frequency is in Hz if input is in kHz
+		if ($frequency < 1_000_000) {
+			$frequency *= 1000;
+		}
+
+		foreach ($this->bandedges as $band) {
+			if ($frequency >= $band['frequencyfrom'] && $frequency < $band['frequencyto']) {
+				return $band['mode'];
+			}
+		}
+		return '';
+	}
+
+	public function isFrequencyInMode($frequency, $mode) {
+		// Ensure frequency is in Hz if input is in kHz
+		if ($frequency < 1_000_000) {
+			$frequency *= 1000;
+		}
+
+		foreach ($this->bandedges as $band) {
+			if (strtolower($band['mode']) === strtolower($mode)) {
+				if ($frequency >= $band['frequencyfrom'] && $frequency < $band['frequencyto']) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
     public function dxc_qrg_lookup($qrg, $maxage = 120) {
@@ -157,7 +251,7 @@ class Dxcluster_model extends CI_Model {
 	    }
     }
 
-	function check_if_continent_worked_in_logbook($cont, $StationLocationsArray = null, $band = null) {
+	function check_if_continent_worked_in_logbook($cont, $StationLocationsArray = null, $band = null, $mode = null) {
 
 		if ($StationLocationsArray == null) {
 			$this->load->model('logbooks_model');
@@ -169,6 +263,10 @@ class Dxcluster_model extends CI_Model {
 		$this->db->select('COL_CONT');
 		$this->db->where_in('station_id', $logbooks_locations_array);
 		$this->db->where('COL_CONT', $cont);
+
+		if (isset($mode)) {
+			$this->db->where(" COL_MODE in ".$this->Modes->get_modes_from_qrgmode($mode,true));
+		}
 
 		$band = ($band == 'All') ? null : $band;
 		if ($band != null && $band != 'SAT') {
@@ -183,7 +281,7 @@ class Dxcluster_model extends CI_Model {
 		return $query->num_rows();
 	}
 
-	function check_if_continent_cnfmd_in_logbook($cont, $StationLocationsArray = null, $band = null) {
+	function check_if_continent_cnfmd_in_logbook($cont, $StationLocationsArray = null, $band = null, $mode = null) {
 
 		if ($StationLocationsArray == null) {
 			$this->load->model('logbooks_model');
@@ -221,6 +319,10 @@ class Dxcluster_model extends CI_Model {
 		$this->db->select('COL_CONT');
 		$this->db->where_in('station_id', $logbooks_locations_array);
 		$this->db->where('COL_CONT', $cont);
+
+		if (isset($mode)) {
+			$this->db->where(" COL_MODE in ".$this->Modes->get_modes_from_qrgmode($mode,true));
+		}
 
 		$band = ($band == 'All') ? null : $band;
 		if ($band != null && $band != 'SAT') {

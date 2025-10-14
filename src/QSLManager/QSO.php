@@ -18,6 +18,8 @@ class QSO
 	private string $submode;
 	private ?string $band;
 	private string $bandRX;
+	private string $frequency;
+	private string $frequencyRX;
 	private string $rstR;
 	private string $srx;
 	private string $srxstring;
@@ -28,6 +30,7 @@ class QSO
 	private string $satelliteMode;
 	private string $satelliteName;
 	private string $name;
+	private string $qth;
 	private string $email;
 	private string $address;
 	private string $deGridsquare;
@@ -42,9 +45,11 @@ class QSO
 	private string $ituzone;
 	private string $state;
 	private string $dxcc;
+	private string $dxccid;
 	private string $iota;
 	private string $continent;
 	private string $region;
+	private string $county;
 	/** @var string[] */
 	private string $deVUCCGridsquares;
 	private string $dxGridsquare;
@@ -100,6 +105,8 @@ class QSO
 	private string $morse_key_info;
 	private string $morse_key_type;
 	private string $qslmsg_rcvd;
+
+	private $CI;
 
 	/**
 	 * @param array $data Does no validation, it's assumed to be a row from the database in array format
@@ -163,14 +170,14 @@ class QSO
 
 		$this->qsoID = $data['COL_PRIMARY_KEY'];
 
-		$CI =& get_instance();
+		$this->CI =& get_instance();
 		// Get Date format
-		if($CI->session->userdata('user_date_format')) {
+		if($this->CI->session->userdata('user_date_format')) {
 			// If Logged in and session exists
-			$custom_date_format = $CI->session->userdata('user_date_format');
+			$custom_date_format = $this->CI->session->userdata('user_date_format');
 		} else {
 			// Get Default date format from /config/wavelog.php
-			$custom_date_format = $CI->config->item('qso_date_format');
+			$custom_date_format = $this->CI->config->item('qso_date_format');
 		}
 		$this->qsoDateTime = date($custom_date_format . " H:i", strtotime($data['COL_TIME_ON'] ?? '1970-01-01 00:00:00'));
 
@@ -183,6 +190,8 @@ class QSO
 		$this->submode = $data['COL_SUBMODE'] ?? '';
 		$this->band = $data['COL_BAND'];
 		$this->bandRX = $data['COL_BAND_RX'] ?? '';
+		$this->frequency = $data['COL_FREQ'] ?? '';
+		$this->frequencyRX = $data['COL_FREQ_RX'] ?? '';
 		$this->rstR = $data['COL_RST_RCVD'] ?? '';
 		$this->rstS = $data['COL_RST_SENT'] ?? '';
 		$this->srx = $data['COL_SRX'] ?? '';
@@ -194,6 +203,7 @@ class QSO
 		$this->satelliteName = $data['COL_SAT_NAME'] != '' ? (isset($data['orbit']) && $data['orbit'] != '' ? $data['COL_SAT_NAME']." (".$data['orbit'].") " : $data['COL_SAT_NAME']) : '';
 
 		$this->name = $data['COL_NAME'] ?? '';
+		$this->qth = $data['COL_QTH'] ?? '';
 		$this->email = $data['COL_EMAIL'] ?? '';
 		$this->address = $data['COL_ADDRESS'] ?? '';
 
@@ -249,11 +259,13 @@ class QSO
 		$this->cqzone = $data['COL_CQZ'] === null ? '' : $this->getCqLink($data['COL_CQZ']);
 		$this->ituzone = $data['COL_ITUZ'] === null ? '' : $this->getItuLink($data['COL_ITUZ']);
 		$this->state = ($data['COL_STATE'] === null) ? '' :$data['COL_STATE'];
+		$this->county = ($data['COL_CNTY'] === null) ? '' :$data['COL_CNTY'];
 		if ($data['adif'] == '0') {
 			$this->dxcc = '<a href="javascript:spawnLookupModal('.$data['COL_DXCC'].',\'dxcc\');">'.$data['dxccname'].'</a>';
 		} else {
 			$this->dxcc = (($data['dxccname'] ?? null) === null) ? '- NONE -' : '<a href="javascript:spawnLookupModal('.$data['COL_DXCC'].',\'dxcc\');">'.ucwords(strtolower($data['dxccname']), "- (/").'</a>';
 		}
+		$this->dxccid = $data['adif'] ?? '0';
 		$this->iota = ($data['COL_IOTA'] === null) ? '' : $this->getIotaLink($data['COL_IOTA']);
 		if (array_key_exists('end', $data)) {
 			$this->end = ($data['end'] === null) ? null : DateTime::createFromFormat("Y-m-d", $data['end'], new DateTimeZone('UTC'));
@@ -278,10 +290,10 @@ class QSO
 		$this->antennaazimuth = $data['COL_ANT_AZ'] ?? '';
 		$this->antennaelevation = $data['COL_ANT_EL'] ?? '';
 
-		if ($CI->session->userdata('user_measurement_base') == NULL) {
-			$measurement_base = $CI->config->item('measurement_base');
+		if ($this->CI->session->userdata('user_measurement_base') == NULL) {
+			$measurement_base = $this->CI->config->item('measurement_base');
 		} else {
-			$measurement_base = $CI->session->userdata('user_measurement_base');
+			$measurement_base = $this->CI->session->userdata('user_measurement_base');
 		}
 
 		$this->measurement_base = $measurement_base;
@@ -383,8 +395,6 @@ class QSO
 	 */
 	function getQSLString($data, $custom_date_format): string
 	{
-		$CI =& get_instance();
-
 		$qslstring = '<span ';
 
 		if ($data['COL_QSL_SENT'] != "N") {
@@ -484,8 +494,6 @@ class QSO
 	 */
 	function getLotwString($data, $custom_date_format): string
 	{
-		$CI =& get_instance();
-
 		$lotwstring = '<span ';
 
 		$timestamp = '';
@@ -540,8 +548,6 @@ class QSO
 	 * @return string
 	 */
 	function getClublogString($data, $custom_date_format): string {
-		$CI =& get_instance();
-
 		$clublogstring = '<span ';
 
 		if ($data['COL_CLUBLOG_QSO_UPLOAD_STATUS'] == "Y") {
@@ -595,8 +601,6 @@ class QSO
 	 * @return string
 	 */
 	function getDclString($data, $custom_date_format): string {
-		$CI =& get_instance();
-
 		$dclstring = '<span ';
 
 		if ($data['COL_DCL_QSL_SENT'] == "Y") {
@@ -656,8 +660,6 @@ class QSO
 	}
 
 	function getQrzString($data, $custom_date_format): string {
-		$CI =& get_instance();
-
 		$qrzstring = '<span ';
 
 		if ($data['COL_QRZCOM_QSO_UPLOAD_STATUS'] == "Y") {
@@ -719,8 +721,6 @@ class QSO
 
 	function getEqslString($data, $custom_date_format): string
 	{
-		$CI =& get_instance();
-
 		$eqslstring = '<span ';
 
 		$timestamp = '';
@@ -819,22 +819,6 @@ class QSO
 	public function getSubmode(): string
 	{
 		return $this->submode;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getBand(): string
-	{
-		return $this->band;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getBandRX(): string
-	{
-		return $this->bandRX;
 	}
 
 	/**
@@ -1171,6 +1155,11 @@ class QSO
 		return '<span id="dxcc">' . $this->dxcc . '</span>';
 	}
 
+	public function getDXCCId(): string
+	{
+		return $this->dxccid;
+	}
+
 	public function getCqzone(): string
 	{
 		return '<span id="cqzone">' . $this->cqzone . '</span>';
@@ -1219,6 +1208,7 @@ class QSO
 			'qslMessageR' => $this->getQSLMsgRcvd(),
 			'name' => $this->getName(),
 			'dxcc' => $this->getDXCC(),
+			'dxccid' => $this->getDXCCId(),
 			'state' => $this->getState(),
 			'pota' => $this->getFormattedPota(),
 			'operator' => $this->getOperator(),
@@ -1244,7 +1234,10 @@ class QSO
 			'distance' => $this->getFormattedDistance(),
 			'region' => $this->region,
 			'antennaelevation' => $this->antennaelevation == null ? null : $this->antennaelevation.'°',
-			'antennaazimuth' => $this->antennaazimuth == null ? null : $this->antennaazimuth.'°'
+			'antennaazimuth' => $this->antennaazimuth == null ? null : $this->antennaazimuth.'°',
+			'county' => $this->county,
+			'qth' => $this->qth,
+			'frequency' => $this->getFormattedFrequency(),
 		];
 	}
 
@@ -1303,6 +1296,10 @@ class QSO
 		} else {
 			$dokstring = $this->dxDARCDOK;
 		}
+		if ($dokstring !== '') {
+			$dokstring .= '<a href="javascript:spawnLookupModal(\''.$this->dxDARCDOK.'\',\'dok\');"> <i class="fas fa-globe"></a>';
+		}
+
 		return $dokstring;
 	}
 
@@ -1331,6 +1328,23 @@ class QSO
 		if ($this->bandRX !== '' && $this->band !== '') {
 			$label .= "/" . $this->bandRX;
 		}
+		return trim($label);
+	}
+
+	private function getFormattedFrequency(): string
+	{
+		$label = '';
+		if ($this->frequency) {
+			$label .= $this->CI->frequency->qrg_conversion($this->frequency ?? 0);
+		}
+
+		if ($this->frequencyRX && $this->frequency) {
+			$converted_rx = $this->CI->frequency->qrg_conversion($this->frequencyRX);
+			if ($converted_rx) {
+				$label .= "/" . $converted_rx;
+			}
+		}
+
 		return trim($label);
 	}
 

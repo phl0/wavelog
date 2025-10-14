@@ -1,4 +1,4 @@
-<?php if ( ! defined('BASEPATH')) exit('No direct script access allowed'); 
+<?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
 /*
 	Controls the interaction with the QRZ.com Subscription based XML API.
@@ -12,7 +12,7 @@ class Qrz {
 		// URL to the XML Source
 		$ci = & get_instance();
 		$xml_feed_url = 'https://xmldata.qrz.com/xml/current/?username='.$username.';password='.urlencode($password).';agent=wavelog';
-		
+
 		// CURL Functions
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL, $xml_feed_url);
@@ -23,22 +23,22 @@ class Qrz {
 		curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog/'.$ci->optionslib->get_option('version'));
 		$xml = curl_exec($ch);
 		curl_close($ch);
-		
+
 		// Create XML object
 		$xml = simplexml_load_string($xml);
-		
+
 		// Return Session Key
 		return (string) $xml->Session->Key;
 	}
-	
+
 	// Set Session Key session.
 	public function set_session($username, $password) {
-	
+
 		$ci = & get_instance();
-		
+
 		// URL to the XML Source
 		$xml_feed_url = 'https://xmldata.qrz.com/xml/current/?username='.$username.';password='.urlencode($password).';agent=wavelog';
-		
+
 		// CURL Functions
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL, $xml_feed_url);
@@ -49,14 +49,14 @@ class Qrz {
 		curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog/'.$ci->optionslib->get_option('version'));
 		$xml = curl_exec($ch);
 		curl_close($ch);
-		
+
 		// Create XML object
 		$xml = simplexml_load_string($xml);
-		
+
 		$key = (string) $xml->Session->Key;
-	
+
 		$ci->session->set_userdata('qrz_session_key', $key);
-		
+
 		return true;
 	}
 
@@ -78,15 +78,19 @@ class Qrz {
 			curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog/'.$ci->optionslib->get_option('version'));
 			$xml = curl_exec($ch);
 			$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			if ($httpcode != 200) {
+				$message = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+				log_message('debug', 'QRZ.com search for callsign: ' . $callsign . ' returned message: ' . $message . ' HTTP code: ' . $httpcode);
+				curl_close($ch);
+				return $data['error'] = 'Problems with qrz.com communication'; // Exit function if no 200. If request fails, 0 is returned
+			}
 			curl_close($ch);
-			if ($httpcode != 200) return $data['error'] = 'Problems with qrz.com communication'; // Exit function if no 200. If request fails, 0 is returned
-			
 			// Create XML object
 			$xml = simplexml_load_string($xml);
 			if (!empty($xml->Session->Error)) {
 				return $data['error'] = $xml->Session->Error;
 			}
-			
+
 			// Return Required Fields
 			$data['callsign'] = (string)$xml->Callsign->call;
 
@@ -108,16 +112,17 @@ class Qrz {
 			if ($reduced == false) {
 
 				$data['gridsquare'] = $clean_gridsquare;
-				$data['city'] 	= (string)$xml->Callsign->addr2;
-				$data['lat'] 	= (string)$xml->Callsign->lat;
-				$data['long'] 	= (string)$xml->Callsign->lon;
-				$data['dxcc'] 	= (string)$xml->Callsign->dxcc;
-				$data['state'] 	= (string)$xml->Callsign->state;
-				$data['iota'] 	= (string)$xml->Callsign->iota;
+				$data['geoloc'] = (string)$xml->Callsign->geoloc;
+				$data['city'] = (string)$xml->Callsign->addr2;
+				$data['lat'] = (string)$xml->Callsign->lat;
+				$data['long'] = (string)$xml->Callsign->lon;
+				$data['dxcc'] = (string)$xml->Callsign->dxcc;
+				$data['state'] = (string)$xml->Callsign->state;
+				$data['iota'] = (string)$xml->Callsign->iota;
 				$data['qslmgr'] = (string)$xml->Callsign->qslmgr;
-				$data['image'] 	= (string)$xml->Callsign->image;
-				$data['ituz'] 	= (string)$xml->Callsign->ituzone;
-				$data['cqz'] 	= (string)$xml->Callsign->cqzone;
+				$data['image'] = (string)$xml->Callsign->image;
+				$data['ituz'] = (string)$xml->Callsign->ituzone;
+				$data['cqz'] = (string)$xml->Callsign->cqzone;
 
 				if ($xml->Callsign->country == "United States") {
 					$data['us_county'] = (string)$xml->Callsign->county;
@@ -128,14 +133,14 @@ class Qrz {
 			} else {
 
 				$data['gridsquare'] = '';
-				$data['city'] 	= '';
-				$data['lat'] 	= '';
-				$data['long'] 	= '';
-				$data['dxcc'] 	= '';
-				$data['state'] 	= '';
-				$data['iota'] 	= '';
+				$data['city'] = '';
+				$data['lat'] = '';
+				$data['long'] = '';
+				$data['dxcc'] = '';
+				$data['state'] = '';
+				$data['iota'] = '';
 				$data['qslmgr'] = (string)$xml->Callsign->qslmgr;
-				$data['image'] 	= (string)$xml->Callsign->image;
+				$data['image'] = (string)$xml->Callsign->image;
 				$data['us_county'] = '';
 				$data['ituz'] = '';
 				$data['cqz'] = '';

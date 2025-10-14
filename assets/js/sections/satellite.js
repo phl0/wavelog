@@ -1,11 +1,9 @@
+var tablex;
 $(document).ready(function () {
-	$('.sattable').DataTable({
+	tablex = $('.sattable').DataTable({
 		"pageLength": 25,
-		"language": {
-			url: getDataTablesLanguageUrl(),
-		},
 		responsive: false,
-		ordering: false,
+		ordering: true,
 		"scrollY": "500px",
 		"scrollCollapse": true,
 		"paging": false,
@@ -14,6 +12,10 @@ $(document).ready(function () {
 			url: getDataTablesLanguageUrl(),
 		}
 	});
+
+	var presetSearch = sessionStorage.getItem('datatableSearch') || '';
+	sessionStorage.removeItem('datatableSearch');
+	tablex.search(presetSearch);
 
 	$(document).on('click','.deleteSatmode', function (e) {
 		deleteSatmode(e.currentTarget.id,e.currentTarget.attributes.infotext.value);
@@ -48,6 +50,7 @@ function editTle(id) {
 					label: lang_admin_close,
 					action: function (dialogItself) {
 						dialogItself.close();
+						sessionStorage.setItem('datatableSearch', tablex.search());
 						location.reload();
 					}
 				}]
@@ -245,6 +248,7 @@ function editSatelliteDialog(id) {
 					label: lang_admin_close,
 					action: function (dialogItself) {
 						dialogItself.close();
+						sessionStorage.setItem('datatableSearch', tablex.search());
 						location.reload();
 					}
 				}]
@@ -269,6 +273,7 @@ function saveUpdatedSatellite(form) {
 					'orbit': form.orbit.value,
 			},
 			success: function (html) {
+				sessionStorage.setItem('datatableSearch', tablex.search());
 				location.reload();
 			}
 		});
@@ -404,9 +409,23 @@ function addSatMode() {
 	$('.satmodetable tbody').append($('<tr class="editRow">')
 		.append($('<td class="row_data" style="text-align: center; vertical-align: middle;">').append("").attr('contenteditable', 'true').addClass('bg-danger'))
 		.append($('<td class="row_data" style="text-align: center; vertical-align: middle;">').append("").attr('contenteditable', 'true').addClass('bg-danger'))
+		.append(
+		$('<td>', {
+			class: 'row_data bg-danger',
+			contenteditable: 'true',
+			style: 'text-align: center; vertical-align: middle;',
+			onblur: 'this.textContent = this.textContent.replace(/[^0-9]/g, "")'
+		})
+		)
 		.append($('<td class="row_data" style="text-align: center; vertical-align: middle;">').append("").attr('contenteditable', 'true').addClass('bg-danger'))
-		.append($('<td class="row_data" style="text-align: center; vertical-align: middle;">').append("").attr('contenteditable', 'true').addClass('bg-danger'))
-		.append($('<td class="row_data" style="text-align: center; vertical-align: middle;">').append("").attr('contenteditable', 'true').addClass('bg-danger'))
+		.append(
+		$('<td>', {
+			class: 'row_data bg-danger',
+			contenteditable: 'true',
+			style: 'text-align: center; vertical-align: middle;',
+			onblur: 'this.textContent = this.textContent.replace(/[^0-9]/g, "")'
+		})
+		)
 		.append($('<td id="saveButton" style="text-align: center; vertical-align: middle;">').append('<button type="button" class="btn btn-sm btn-success savenewline">Save</button>'))
 		.append($('<td id="cancelButton" style="text-align: center; vertical-align: middle;">').append('<button type="button" class="btn btn-sm btn-danger cancelnewline">Cancel</button>'))
 	)

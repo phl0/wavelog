@@ -54,8 +54,6 @@ class Logbook extends CI_Controller {
 				$data['qra'] = "none";
 		}
 
-
-
 		// load the view
 		$data['page_title'] = __("Logbook");
 
@@ -76,8 +74,27 @@ class Logbook extends CI_Controller {
 
 	function json($tempcallsign, $tempband, $tempmode, $tempstation_id = null, $date = "", $count = 5) {
 		session_write_close();
-		if (($date ?? '') != '') {
-			$date=date("Y-m-d",strtotime($date));
+
+		// Normalize the date only if it's not empty
+		if (!empty($date)) {
+			if (strpos($date, '_') !== false) {
+				// Replace slashes with dashes for URL processing
+				$date = str_replace('_', '/', $date);
+			}
+			// Get user-preferred date format
+			if ($this->session->userdata('user_date_format')) {
+				$date_format = $this->session->userdata('user_date_format');
+			} else {
+				$date_format = $this->config->item('qso_date_format');
+			}
+			$date = urldecode($date);
+			$dt = DateTime::createFromFormat($date_format, $date);
+			if ($dt !== false) {
+				$date = $dt->format('Y-m-d'); // or any normalized format
+			} else {
+				// Invalid date for the expected format, handle gracefully
+				$date = null;
+			}
 		}
 		// Cleaning for security purposes
 		$callsign = $this->security->xss_clean($tempcallsign);
@@ -142,6 +159,7 @@ class Logbook extends CI_Controller {
 
 		$return['callsign_name'] 		= $this->nval($callbook['name'] ?? '', $this->logbook_model->call_name($callsign));
 		$return['callsign_qra'] 		= $this->nval($callbook['gridsquare'] ?? '',  $this->logbook_model->call_qra($callsign));
+		$return['callsign_geoloc'] 		= $callbook['geoloc'] ?? '';
 		$return['callsign_distance'] 	= $this->distance($return['callsign_qra'], $station_id);
 		$return['callsign_qth'] 		= $this->nval($callbook['city'] ?? '', $this->logbook_model->call_qth($callsign));
 		$return['callsign_iota'] 		= $this->nval($callbook['iota'] ?? '', $this->logbook_model->call_iota($callsign));
@@ -898,6 +916,10 @@ class Logbook extends CI_Controller {
 						$data['grid_worked'] = $this->logbook_model->check_if_grid_worked_in_logbook(strtoupper(substr($data['callsign']['gridsquare'],0,4)), null, $this->session->userdata('user_default_band'))->num_rows();
 					}
 					if (isset($data['callsign']['dxcc'])) {
+						//if Callbook lookup does not result in any DXCC, try to resolve it ourselves
+						if($data['callsign']['dxcc'] == ""){
+							$data['callsign']['dxcc'] = $this->dxcheck($data['callsign']['callsign'], "")['adif'];
+						}
 						$entity = $this->logbook_model->get_entity($data['callsign']['dxcc']);
 						$data['callsign']['dxcc_name'] = $entity['name'];
 						$data['dxcc_worked'] = $this->logbook_model->check_if_dxcc_worked_in_logbook($data['callsign']['dxcc'], null, $this->session->userdata('user_default_band'));
@@ -921,7 +943,7 @@ class Logbook extends CI_Controller {
 	}
 
 	function querydb($id) {
-		$this->db->select('dxcc_entities.adif, lotw_users.callsign, COL_BAND, COL_CALL, COL_CLUBLOG_QSO_DOWNLOAD_DATE,
+		$this->db->select('dxcc_entities.adif, lotw_users.callsign, COL_BAND, COL_CALL, COL_CLUBLOG_QSO_DOWNLOAD_DATE, COL_DCL_QSLRDATE, COL_DCL_QSLSDATE, COL_DCL_QSL_SENT, COL_DCL_QSL_RCVD,
 			COL_CLUBLOG_QSO_DOWNLOAD_STATUS, COL_CLUBLOG_QSO_UPLOAD_DATE, COL_CLUBLOG_QSO_UPLOAD_STATUS,
 			COL_CONTEST_ID, COL_DISTANCE, COL_EQSL_QSL_RCVD, COL_EQSL_QSLRDATE, COL_EQSL_QSLSDATE, COL_EQSL_QSL_SENT,
 			COL_FREQ, COL_GRIDSQUARE, COL_IOTA, COL_LOTW_QSL_RCVD, COL_LOTW_QSLRDATE, COL_LOTW_QSLSDATE,
@@ -1030,6 +1052,9 @@ class Logbook extends CI_Controller {
 			$params[] = $clean_station_id;
 		}
 
+		$sql .= " order by thcv.col_time_on desc
+		limit 5000";
+
 		$query = $this->db->query($sql, $params);
 
 		$data['qsos'] = $query;
@@ -1076,7 +1101,7 @@ class Logbook extends CI_Controller {
 		}
 
 		$sql .= " order by thcv.col_time_on desc
-		limit 1000";
+		limit 5000";
 
 		$query = $this->db->query($sql, $params);
 

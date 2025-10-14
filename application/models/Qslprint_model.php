@@ -70,7 +70,7 @@ class Qslprint_model extends CI_Model {
 	function get_qsos_for_print($station_id = 'All') {
 		$binding=[];
 		$binding[]=$this->session->userdata('user_id');
-		$sql="SELECT count(distinct oldlog.col_primary_key) as previous_qsl, log.COL_QSL_SENT, log.COL_PRIMARY_KEY, log.COL_DXCC, log.COL_CALL, log.COL_SAT_NAME, log.COL_SAT_MODE, log.COL_BAND_RX, log.COL_TIME_ON, log.COL_MODE, log.COL_RST_SENT, log.COL_RST_RCVD, log.COL_QSL_VIA, log.COL_QSL_SENT_VIA, log.COL_SUBMODE, log.COL_BAND, sp.station_id, sp.station_callsign, sp.station_profile_name, o.qsoid
+		$sql="SELECT count(distinct oldlog.col_primary_key) as previous_qsl, log.COL_QSL_SENT, log.COL_PRIMARY_KEY, log.COL_DXCC, log.COL_CALL, log.COL_SAT_NAME, log.COL_SAT_MODE, log.COL_BAND_RX, log.COL_FREQ as frequency, log.COL_FREQ_RX as frequency_rx, log.COL_TIME_ON, log.COL_MODE, log.COL_RST_SENT, log.COL_RST_RCVD, log.COL_QSL_VIA, log.COL_QSL_SENT_VIA, log.COL_SUBMODE, log.COL_BAND, sp.station_id, sp.station_callsign, sp.station_profile_name, o.qsoid
 			FROM ".$this->config->item('table_name')." log
 			INNER JOIN station_profile sp ON sp.`station_id` = log.`station_id`
 			LEFT OUTER JOIN oqrs o ON o.`qsoid` = log.`COL_PRIMARY_KEY`
@@ -125,6 +125,10 @@ class Qslprint_model extends CI_Model {
 		$this->db->where("COL_PRIMARY_KEY", $id);
 		$this->db->update($this->config->item('table_name'), $data);
 
+		$this->db->where('qsoid', $id);
+		$this->db->where_not_in('status', [2, 4]);
+		$this->db->update('oqrs', ['status' => '3']);
+
 		return true;
 	}
 
@@ -150,18 +154,18 @@ class Qslprint_model extends CI_Model {
 		if (empty($qso_id)) {
 			return 0;
 		}
-	
+
 		$table_name = $this->config->item('table_name');
-		$sql = "SELECT COUNT(COL_PRIMARY_KEY) AS previous_qsl 
-				FROM $table_name 
+		$sql = "SELECT COUNT(COL_PRIMARY_KEY) AS previous_qsl
+				FROM $table_name
 				WHERE COL_QSL_SENT = 'Y'
 				AND station_id = (SELECT station_id FROM $table_name WHERE COL_PRIMARY_KEY = ?)
-				AND (COL_CALL, COL_MODE, COL_BAND, COALESCE(COL_SAT_NAME, '')) = 
-					(SELECT COL_CALL, COL_MODE, COL_BAND, COALESCE(COL_SAT_NAME, '') 
-					 FROM $table_name 
+				AND (COL_CALL, COL_MODE, COL_BAND, COALESCE(COL_SAT_NAME, '')) =
+					(SELECT COL_CALL, COL_MODE, COL_BAND, COALESCE(COL_SAT_NAME, '')
+					 FROM $table_name
 					 WHERE COL_PRIMARY_KEY = ?)
 				GROUP BY COL_CALL, COL_MODE, COL_BAND, COL_SAT_NAME";
-	
+
 		// we only return the count of previous QSLs as an integer
 		return (int) ($this->db->query($sql, [$qso_id, $qso_id])->row()->previous_qsl ?? 0);
 	}

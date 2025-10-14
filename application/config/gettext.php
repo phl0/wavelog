@@ -221,6 +221,16 @@ $config['languages'] = array(
 		'code'      => 'it',
 		'flag'      => 'it',
 	),
+	'japanese' => array(
+		'name'      => '日本語',
+		'name_en'   => 'Japanese',
+		'folder'    => 'japanese',
+		'locale'    => 'ja',
+		'gettext'   => 'ja',
+		'direction' => 'ltr',
+		'code'      => 'ja',
+		'flag'      => 'jp',
+	),
 	'latvian' => array(
 		'name'      => 'Latviešu',
 		'name_en'   => 'Latvian',
@@ -290,6 +300,16 @@ $config['languages'] = array(
 		'direction' => 'ltr',
 		'code'      => 'sr',
 		'flag'      => 'rs',
+	),
+	'slovak' => array(
+		'name'      => 'Slovák',
+		'name_en'   => 'Slovak',
+		'folder'    => 'slovak',
+		'locale'    => 'sk',
+		'gettext'   => 'sk',
+		'direction' => 'ltr',
+		'code'      => 'sk',
+		'flag'      => 'sk',
 	),
     'slovenian' => array(
         'name'      => 'Slovenščina',

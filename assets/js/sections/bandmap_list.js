@@ -26,7 +26,13 @@ $(function() {
 						$(td).addClass("spotted_call");
 						$(td).attr( "title", lang_click_to_prepare_logging);
 					}
-				}
+				},
+				{
+					'targets': 8,
+					'createdCell':  function (td, cellData, rowData, row, col) {
+						$(td).addClass("mode");
+					}
+				},
 			],
 			"language": {
 				url: getDataTablesLanguageUrl(),
@@ -36,11 +42,11 @@ $(function() {
 		return table;
 	}
 
-	function fill_list(band,de,maxAgeMinutes,cwn) {
+	function fill_list(band, de, maxAgeMinutes, cwn, mode) {
 		// var table = $('.spottable').DataTable();
 		var table = get_dtable();
 		if ((band != '') && (band !== undefined)) {
-			let dxurl = dxcluster_provider + "/spots/" + band + "/" +maxAgeMinutes + "/" + de;
+			let dxurl = dxcluster_provider + "/spots/" + band + "/" +maxAgeMinutes + "/" + de + "/" + mode;
 			$.ajax({
 				url: dxurl,
 				cache: false,
@@ -53,9 +59,10 @@ $(function() {
 				if (dxspots.length>0) {
 					dxspots.sort(SortByQrg);
 					dxspots.forEach((single) => {
+						if ((cwn == 'notwkd') && ((single.worked_dxcc))) { return; }
 						if ((cwn == 'wkd') && (!(single.worked_dxcc))) { return; }
 						if ((cwn == 'cnf') && (!(single.cnfmd_dxcc))) { return; }
-						if ((cwn == 'ucnf') && ((single.cnfmd_dxcc))) { return; }
+						if ((cwn == 'ucnf') && (!(single.worked_dxcc) || single.cnfmd_dxcc)) { return; }
 						spots2render++;
 						var data=[];
 						if (single.cnfmd_dxcc) {
@@ -116,6 +123,7 @@ $(function() {
 						} else {
 							data[0].push('');
 						}
+						data[0].push(single.mode || '');
 						if (oldtable.length > 0) {
 							let update=false;
 							oldtable.each( function (srow) {
@@ -172,22 +180,27 @@ $(function() {
 	var table=get_dtable();
 	table.order([1, 'asc']);
 	table.clear();
-	fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(),dxcluster_maxage,$('#cwnSelect option:selected').val());
-	setInterval(function () { fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(),dxcluster_maxage,$('#cwnSelect option:selected').val()); },60000);
+	fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(), dxcluster_maxage, $('#cwnSelect option:selected').val(), $('#mode option:selected').val());
+	setInterval(function () { fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(), dxcluster_maxage, $('#cwnSelect option:selected').val(), $('#mode option:selected').val()); },60000);
 
 	$("#cwnSelect").on("change",function() {
 		table.clear();
-		fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(),dxcluster_maxage,$('#cwnSelect option:selected').val());
+		fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(), dxcluster_maxage, $('#cwnSelect option:selected').val(), $('#mode option:selected').val());
 	});
 
 	$("#decontSelect").on("change",function() {
 		table.clear();
-		fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(),dxcluster_maxage,$('#cwnSelect option:selected').val());
+		fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(), dxcluster_maxage, $('#cwnSelect option:selected').val(), $('#mode option:selected').val());
 	});
 
 	$("#band").on("change",function() {
 		table.clear();
-		fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(),dxcluster_maxage,$('#cwnSelect option:selected').val());
+		fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(), dxcluster_maxage, $('#cwnSelect option:selected').val(), $('#mode option:selected').val());
+	});
+
+	$("#mode").on("change",function() {
+		table.clear();
+		fill_list($('#band option:selected').val(), $('#decontSelect option:selected').val(), dxcluster_maxage, $('#cwnSelect option:selected').val(), $('#mode option:selected').val());
 	});
 
 	$("#spottertoggle").on("click", function() {
@@ -227,15 +240,18 @@ $(function() {
 		let ready_listener = true;
 		let call=this.innerText;
 		let qrg=''
+		let mode='';
 		if (this.parentNode.parentNode.className.indexOf('spotted_call')>=0) {
 			qrg=this.parentNode.parentNode.parentNode.cells[1].textContent*1000;
+			mode=this.parentNode.parentNode.parentNode.cells[8].textContent;
 		} else {
 			qrg=this.parentNode.parentNode.cells[1].textContent*1000;
+			mode=this.parentNode.parentNode.cells[8].textContent;
 		}
 
 		try {
-			irrelevant=fetch(CatCallbackURL + '/'+qrg).catch(() => {
-				openedWindow = window.open(CatCallbackURL + '/' + qrg);
+			irrelevant=fetch(CatCallbackURL + '/'+qrg+'/'+mode).catch(() => {
+				openedWindow = window.open(CatCallbackURL + '/' + qrg + '/' + mode);
 				openedWindow.close();
 			});
 		} finally {}

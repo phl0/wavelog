@@ -1,9 +1,14 @@
 <script>
     var lang_contestname_warning = "<?= __("You need to start a new session before you can change the contest name!"); ?>";
+	var lang_contest_reset_session = "<?= __("Are you really sure you want to start a new contest session?"); ?>";
+
+	 // Get Date format
+    var user_date_format = "<?php echo $date_format; ?>";
+	var qso_manual  = "<?php echo $manual_mode; ?>";
 </script>
 
 <div class="container qso_panel contesting">
-    <button type="button" class="btn btn-sm btn-warning float-end" onclick="reset_contest_session()"><i class="fas fa-sync-alt"></i> <?= __("Start new Contest Session"); ?></button>
+    <button type="button" class="btn btn-sm btn-warning float-end" onclick="reset_dialog()"><i class="fas fa-sync-alt"></i> <?= __("Start new Contest Session"); ?></button>
     <h2 style="display:inline"><?= __("Contest Logging"); ?> </h2> <?php echo ($manual_mode == 0 ? " <span style='display:inline' class='align-text-top badge text-bg-success'>LIVE</span>" : " <span style='display:inline' class='align-text-top badge text-bg-danger'>POST</span>");  ?>
     <div class="row">
 
@@ -67,8 +72,8 @@
                                                 </div>
                                                 <div class="row mb-3">
                                                     <label class="col-auto control-label me-1"><?= __("Sequence of Exchanges"); ?>
-                                                        <i class="fas fa-question-circle" id="exchangesequence" 
-                                                            data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" 
+                                                        <i class="fas fa-question-circle" id="exchangesequence"
+                                                            data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top"
                                                             title="<?= __("Choose in which order you want to type in the different reports. However, only the elements contained in the selected exchange type are displayed."); ?>">
                                                         </i>
                                                     </label>
@@ -96,7 +101,7 @@
                         <div class="row">
                             <div class="mb-3 col-md-2">
                                 <label for="start_date"><?= __("Date"); ?></label>
-                                <input type="text" class="form-control form-control-sm input_date" name="start_date" id="start_date" value="<?php if (($this->session->userdata('start_date') != NULL && ((time() - $this->session->userdata('time_stamp')) < 24 * 60 * 60))) { echo $this->session->userdata('start_date'); } else { echo date('d-m-Y');}?>" <?php echo ($manual_mode == 0 ? "disabled" : "");  ?> >
+                                <input type="text" class="form-control form-control-sm input_date" name="start_date" id="start_date" value="<?php if (($this->session->userdata('start_date') != NULL && ((time() - $this->session->userdata('time_stamp')) < 24 * 60 * 60))) { echo $this->session->userdata('start_date'); } else { echo date($date_format);}?>" <?php echo ($manual_mode == 0 ? "disabled" : "");  ?> >
                             </div>
 
                             <div class="mb-3 col-md-1">
@@ -106,7 +111,7 @@
 
                             <?php if ( $manual_mode == 0 ) { ?>
                               <input class="input_time" type="hidden" id="start_time"  name="start_time"value="<?php echo date('H:i'); ?>" />
-                              <input class="input_date" type="hidden" id="start_date" name="start_date" value="<?php echo date('d-m-Y'); ?>" />
+                              <input class="input_date" type="hidden" id="start_date" name="start_date" value="<?php echo date($date_format); ?>" />
                             <?php } ?>
 
                             <div class="mb-3 col-md-2">
@@ -199,7 +204,7 @@
                                     <input type="text" class="form-control form-control-sm" name="rst_rcvd" id="rst_rcvd" value="59">
                                 </div>
                             </div>
-                            
+
                             <div id="rcvd_exchange" class="d-flex gap-2">
                                 <div style="display:none" class="serialr">
                                     <label for="exch_serial_r"><?= __("Serial (R)"); ?></label>

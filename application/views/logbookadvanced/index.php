@@ -63,7 +63,11 @@
             \"distance\":{\"show\":\"true\"},
             \"region\":{\"show\":\"true\"},
             \"antennaazimuth\":{\"show\":\"true\"},
-            \"antennaelevation\":{\"show\":\"true\"}
+            \"antennaelevation\":{\"show\":\"true\"},
+            \"county\":{\"show\":\"true\"},
+            \"qth\":{\"show\":\"true\"},
+            \"frequency\":{\"show\":\"true\"},
+            \"dcl\":{\"show\":\"true\"},
         }";
     }
     $current_opts = json_decode($options);
@@ -156,12 +160,31 @@
         echo "\nvar o_template = { antennaelevation: {show: 'true'}};";
         echo "\nuser_options={...user_options, ...o_template};";
     }
+	if (!isset($current_opts->county)) {
+        echo "\nvar o_template = { county: {show: 'true'}};";
+        echo "\nuser_options={...user_options, ...o_template};";
+    }
+	if (!isset($current_opts->qth)) {
+        echo "\nvar o_template = { qth: {show: 'true'}};";
+        echo "\nuser_options={...user_options, ...o_template};";
+    }
+	if (!isset($current_opts->frequency)) {
+        echo "\nvar o_template = { frequency: {show: 'true'}};";
+        echo "\nuser_options={...user_options, ...o_template};";
+    }
+		if (!isset($current_opts->dcl)) {
+        echo "\nvar o_template = { dcl: {show: 'true'}};";
+        echo "\nuser_options={...user_options, ...o_template};";
+    }
 
 
     foreach ($mapoptions as $mo) {
-        if ($mo != null) {
-            echo "var " . $mo->option_name . "=" . $mo->option_value . ";";
-        }
+	    if ($mo != null) {
+		    if (($mo->option_key == 'boolean') && (($mo->option_value ?? '') == '')) {
+			    $mo->option_value='false';
+		    }
+		    echo "var " . $mo->option_name . "=" . $mo->option_value . ";";
+	    }
     }
     ?>
     var tileUrl = "<?php echo $this->optionslib->get_option('option_map_tile_server'); ?>"
@@ -204,7 +227,7 @@ $options = json_decode($options);
                         </div>
                         <div <?php if (($options->dxcc->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
                             <label class="form-label" for="dxcc"><?= __("DXCC"); ?></label>
-                            <select class="form-control form-control-sm" id="dxcc" name="dxcc">
+                            <select class="form-select form-select-sm" id="dxcc" name="dxcc">
                                 <option value="">-</option>
                                 <?php
                                 foreach ($dxccarray as $dxcc) {
@@ -299,7 +322,8 @@ $options = json_decode($options);
                         <div <?php if (($options->cqzone->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
                             <label class="form-label" for="cqzone"><?= __("CQ Zone"); ?></label>
                             <select id="cqzone" name="cqzone" class="form-select form-select-sm">
-                                <option value=""><?= __("All"); ?></option>
+                                <option value="All"><?= __("All"); ?></option>
+                                <option value=""><?= __("Empty"); ?></option>
                                 <?php
                                 for ($i = 1; $i <= 40; $i++) {
                                     echo '<option value="' . $i . '">' . $i . '</option>';
@@ -310,7 +334,8 @@ $options = json_decode($options);
                         <div <?php if (($options->ituzone->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
                             <label class="form-label" for="ituzone"><?= __("ITU Zone"); ?></label>
                             <select id="ituzone" name="ituzone" class="form-select form-select-sm">
-                                <option value=""><?= __("All"); ?></option>
+                                <option value="All"><?= __("All"); ?></option>
+                                <option value=""><?= __("Empty"); ?></option>
                                 <?php
                                 for ($i = 1; $i <= 90; $i++) {
                                     echo '<option value="' . $i . '">' . $i . '</option>';
@@ -320,6 +345,14 @@ $options = json_decode($options);
                         </div>
                     </div>
                     <div class="row">
+						<div <?php if (($options->county->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                            <label class="form-label" for="county"><?= __("County"); ?></label>
+                            <input onclick="this.select()" type="text" name="county" id="county" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
+                        </div>
+						<div <?php if (($options->dok->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                            <label class="form-label" for="dok"><?= __("DOK"); ?></label>
+                            <input onclick="this.select()" type="text" name="dok" id="dok" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
+                        </div>
                         <div <?php if (($options->sota->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
                             <label class="form-label" for="sota"><?= __("SOTA"); ?></label>
                             <input onclick="this.select()" type="text" name="sota" id="sota" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
@@ -487,6 +520,24 @@ $options = json_decode($options);
                         <option value="V"><?= __("Verified"); ?></option>
                     </select>
                 </div>
+                <div <?php if (($options->dcl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                    <label for="dclSent"><?= __("DCL sent"); ?></label>
+                    <select id="dclSent" name="dclSent" class="form-select form-select-sm">
+                        <option value=""><?= __("All"); ?></option>
+                        <option value="Y"><?= __("Yes"); ?></option>
+                        <option value="N"><?= __("No"); ?></option>
+                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                    </select>
+                </div>
+                <div <?php if (($options->dcl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                    <label for="dclReceived"><?= __("DCL received"); ?></label>
+                    <select id="dclReceived" name="dclReceived" class="form-select form-select-sm">
+                        <option value=""><?= __("All"); ?></option>
+                        <option value="Y"><?= __("Yes"); ?></option>
+                        <option value="N"><?= __("No"); ?></option>
+                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                    </select>
+                </div>
                 <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
                     <label for="qslvia"><?= __("QSL via"); ?></label>
                     <input onclick="this.select()" type="search" name="qslvia" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
@@ -505,6 +556,7 @@ $options = json_decode($options);
         <div class="actionbody collapse">
             <script>
                 var lang_filter_actions_delete_warning = '<?= __("Warning! Are you sure you want to delete the marked QSO(s)?"); ?>';
+                var lang_filter_actions_delete_warning_details = '<?= __(" QSO(s) will be deleted"); ?>';
             </script>
             <div class="mb-2 btn-group">
                 <span class="h6 me-1"><?= __("With selected: "); ?></span>
@@ -524,6 +576,8 @@ $options = json_decode($options);
                 <button type="button" class="btn btn-sm btn-info me-1" id="exportAdif"><?= __("Create ADIF"); ?></button>
                 <button type="button" class="btn btn-sm btn-info me-1" id="printLabel"><?= __("Print Label"); ?></button>
                 <button type="button" class="btn btn-sm btn-info me-1" id="qslSlideshow"><?= __("QSL Slideshow"); ?></button>
+				<button type="button" class="btn btn-sm btn-success me-1" id="fixCqZones"><?= __("Fix CQ Zones"); ?></button>
+				<button type="button" class="btn btn-sm btn-success me-1" id="fixItuZones"><?= __("Fix ITU Zones"); ?></button>
             </div>
         </div>
 		<?php } ?>
@@ -586,7 +640,7 @@ $options = json_decode($options);
 					<i class="fas fa-filter"></i> <?= __("Filters"); ?>
 				</button>
 				<?php if(clubaccess_check(9)) { ?>
-				<button type="button" class="btn btn-sm btn-success me-1 lba_buttons flex-grow-0 mb-2" data-bs-toggle="collapse" data-bs-target=".actionbody" style="white-space: nowrap;">
+				<button type="button" class="btn btn-sm btn-success lba_buttons me-1 flex-grow-0 mb-2" data-bs-toggle="collapse" data-bs-target=".actionbody" style="white-space: nowrap;">
 					<i class="fas fa-tasks"></i> <?= __("Actions"); ?>
 				</button>
 				<?php } ?>
@@ -598,7 +652,7 @@ $options = json_decode($options);
 					<option value="5000">5000</option>
 				</select>
 				<label class="me-2" for="de"><?= __("Location"); ?></label>
-				<select class="form-control form-control-sm w-auto me-2" id="de" name="de" multiple="multiple">
+				<select class="form-select form-select-sm w-auto me-2" id="de" name="de" multiple="multiple">
 					<?php foreach ($station_profile->result() as $station) { ?>
 						<option value="<?php echo $station->station_id; ?>" <?php if ($station->station_id == $active_station_id) {
 							echo " selected =\"selected\""; } ?>>
@@ -631,9 +685,9 @@ $options = json_decode($options);
 					</ul>
 				</div>
 				<?php if(clubaccess_check(9)) { ?>
-				<button type="options" class="btn btn-sm btn-primary me-1 flex-grow-0 mb-2" id="optionButton" aria-label="<?= __("Options"); ?>" style="white-space: nowrap;" data-bs-toggle="tooltip" data-bs-placement="top" title="<?= __("Options"); ?>">
-					<i class="fas fa-cog"></i>
-				</button>
+					<button type="options" class="btn btn-sm btn-primary me-1 flex-grow-0 mb-2" id="optionButton" aria-label="<?= __("Options"); ?>" style="white-space: nowrap;" data-bs-toggle="tooltip" data-bs-placement="top" title="<?= __("Options"); ?>">
+						<i class="fas fa-cog"></i>
+					</button>
 					<button type="button" class="btn btn-sm btn-danger me-1 flex-grow-0 mb-2" id="deleteQsos" style="white-space: nowrap;" aria-label="<?= __("Delete"); ?>"  data-bs-toggle="tooltip" data-bs-placement="top" title="<?= __("Delete"); ?>">
 						<i class="fas fa-trash-alt"></i>
 					</button>
@@ -675,11 +729,17 @@ $options = json_decode($options);
                     <?php if (($options->band->show ?? "true") == "true") {
                         echo '<th>' . __("Band") . '</th>';
                     } ?>
+					<?php if (($options->frequency->show ?? "true") == "true") {
+                        echo '<th>' . __("Frequency") . '</th>';
+                    } ?>
                     <?php if (($options->gridsquare->show ?? "true") == "true") {
                         echo '<th>' . __("Gridsquare") . '</th>';
                     } ?>
                     <?php if (($options->name->show ?? "true") == "true") {
                         echo '<th>' . __("Name") . '</th>';
+                    } ?>
+					<?php if (($options->qth->show ?? "true") == "true") {
+                        echo '<th>' . __("QTH") . '</th>';
                     } ?>
                     <?php if (($options->qslvia->show ?? "true") == "true") {
                         echo '<th>' . __("QSL via") . '</th>';
@@ -690,14 +750,17 @@ $options = json_decode($options);
                     <?php if (($options->qsl->show ?? "true") == "true") {
                         echo '<th>' . __("QSL") . '</th>';
                     } ?>
-                    <?php if ($this->session->userdata('user_eqsl_name') != ""  && ($options->eqsl->show ?? "true") == "true") {
-                        echo '<th class="eqslconfirmation">eQSL</th>';
-                    } ?>
-                    <?php if ($this->session->userdata('user_lotw_name') != "" && ($options->lotw->show ?? "true") == "true") {
-                        echo '<th class="lotwconfirmation">LoTW</th>';
-                    } ?>
+					<?php if (($options->eqsl->show ?? "true") == "true") {
+						echo '<th class="eqslconfirmation">eQSL</th>';
+					} ?>
+					<?php if (($options->lotw->show ?? "true") == "true") {
+						echo '<th class="lotwconfirmation">LoTW</th>';
+					} ?>
                     <?php if (($options->qrz->show ?? "true") == "true") {
                         echo '<th class="qrz">' . __("QRZ") . '</th>';
+                    } ?>
+					<?php if (($options->dcl->show ?? "true") == "true") {
+                        echo '<th>' . __("DCL") . '</th>';
                     } ?>
                     <?php if (($options->qslmsgs->show ?? "false") == "true") {
                         echo '<th>' . __("QSL Msg (S)") . '</th>';
@@ -710,6 +773,9 @@ $options = json_decode($options);
                     } ?>
                     <?php if (($options->state->show ?? "true") == "true") {
                         echo '<th>' . __("State") . '</th>';
+                    } ?>
+					<?php if (($options->county->show ?? "true") == "true") {
+                        echo '<th>' . __("County") . '</th>';
                     } ?>
                     <?php if (($options->cqzone->show ?? "true") == "true") {
                         echo '<th>' . __("CQ Zone") . '</th>';

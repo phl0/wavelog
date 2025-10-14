@@ -72,16 +72,31 @@ class Statistics extends CI_Controller {
 		$modestats = array();
 
 		$i = 0;
-		$modestats[$i]['mode'] = 'ssb';
-		$modestats[$i++]['total'] = $this->logbook_model->total_ssb($yr);
-		$modestats[$i]['mode'] = 'cw';
-		$modestats[$i++]['total'] = $this->logbook_model->total_cw($yr);
-		$modestats[$i]['mode'] = 'fm';
-		$modestats[$i++]['total'] = $this->logbook_model->total_fm($yr);
-		$modestats[$i]['mode'] = 'am';
-		$modestats[$i++]['total'] = $this->logbook_model->total_am($yr);
-		$modestats[$i]['mode'] = 'digi';
-		$modestats[$i]['total'] = $this->logbook_model->total_digi($yr);
+		$ssb = $this->logbook_model->total_ssb($yr);
+		$cw = $this->logbook_model->total_cw($yr);
+		$fm = $this->logbook_model->total_fm($yr);
+		$am = $this->logbook_model->total_am($yr);
+		$digi = $this->logbook_model->total_digi($yr);
+		if ($ssb > 0) {
+			$modestats[$i]['mode'] = 'ssb';
+			$modestats[$i++]['total'] = $ssb;
+		}
+		if ($cw > 0) {
+			$modestats[$i]['mode'] = 'cw';
+			$modestats[$i++]['total'] = $cw;
+		}
+		if ($fm > 0) {
+			$modestats[$i]['mode'] = 'fm';
+			$modestats[$i++]['total'] = $fm;
+		}
+		if ($am > 0) {
+			$modestats[$i]['mode'] = 'am';
+			$modestats[$i++]['total'] = $am;
+		}
+		if ($digi > 0) {
+			$modestats[$i]['mode'] = 'digi';
+			$modestats[$i]['total'] = $digi;
+		}
 		usort($modestats, fn($a, $b) => $b['total'] <=> $a['total']);
 
 		header('Content-Type: application/json');
@@ -120,7 +135,7 @@ class Statistics extends CI_Controller {
 
 		//get year if present
 		$yr = xss_clean($this->input->post('yr')) ?? 'All';
-		
+
 		//load stats
 		$total_operators = $this->logbook_model->total_operators($yr);
 
@@ -174,6 +189,23 @@ class Statistics extends CI_Controller {
 		$total_qsos['modes'] = $this->stats->get_sat_modes($yr);
 
 		$this->load->view('statistics/satuniquetable', $total_qsos);
+	}
+
+	public function get_unique_sat_grids() {
+		$this->load->model('stats');
+
+		$total_qsos = array();
+
+		$yr = xss_clean($this->input->post('yr')) ?? 'All';
+		$result = $this->stats->unique_sat_grids($yr);
+		$total_qsos['qsoarray'] = $result['qsoView'];
+		$total_qsos['satunique'] = $result['satunique'];
+		$total_qsos['modeunique'] = $result['modeunique'];
+		$total_qsos['total'] = $result['total'];
+		$total_qsos['sats'] = $this->stats->get_sats($yr);
+		$total_qsos['modes'] = $this->stats->get_sat_modes($yr);
+
+		$this->load->view('statistics/satuniquegridtable', $total_qsos);
 	}
 
 	public function get_unique_callsigns() {
@@ -261,7 +293,8 @@ class Statistics extends CI_Controller {
 		$footerData = [];
 		$footerData['scripts'] = [
 			'assets/js/chart.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/chart.js")),
-			'assets/js/sections/antennastats.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/antennestats.js")),
+			'assets/js/sections/antennastats.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/antennastats.js")),
+			'assets/js/bootstrap-multiselect.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/bootstrap-multiselect.js")),
 		];
 
 		// Load Views
@@ -304,7 +337,65 @@ class Statistics extends CI_Controller {
 
 		$data['page_title'] = __("Log View")." - " . __("Satellite QSOs");
 		$data['filter'] = $sat;
+		$data['ispopup'] = true;
 
 		$this->load->view('statistics/details', $data);
+	}
+
+	public function initials() {
+		$this->load->model('stats');
+		$this->load->model('bands');
+
+		$data['modes'] = $this->stats->get_eme_modes();
+
+		$data['worked_bands'] = $this->bands->get_worked_bands_eme();
+
+		// Set Page Title
+		$data['page_title'] = __("EME Initials");
+
+		$footerData = [];
+		$footerData['scripts'] = [
+			'assets/js/sections/initials.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/initials.js")),
+		];
+
+		// Load Views
+		$this->load->view('interface_assets/header', $data);
+		$this->load->view('statistics/initials');
+		$this->load->view('interface_assets/footer', $footerData);
+	}
+
+	public function getInitials() {
+		$band = xss_clean($this->input->post('band'));
+		$mode = xss_clean($this->input->post('mode'));
+
+		if ($this->session->userdata('user_measurement_base') == NULL) {
+			$measurement_base = $this->config->item('measurement_base');
+		} else {
+			$measurement_base = $this->session->userdata('user_measurement_base');
+		}
+
+		switch ($measurement_base) {
+			case 'M':
+				$unit = "mi";
+				$factor = 0.621371;
+				break;
+			case 'K':
+				$unit = "km";
+				$factor = 1;
+				break;
+			case 'N':
+				$unit = "nmi";
+				$factor = 0.539957;
+				break;
+			default:
+				$unit = "km";
+				$factor = 1;
+				break;
+		}
+		$this->load->model('stats');
+		$data['factor'] = $factor;
+		$data['unit'] = $unit;
+		$data['intials_array'] = $this->stats->getInitialsFromDb($band, $mode);
+		$this->load->view('statistics/initialresult', $data);
 	}
 }

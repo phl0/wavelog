@@ -11,7 +11,7 @@
 				</li>
 				<?php if (!($this->config->item('disable_manual_clublog'))) { ?>
 				<li class="nav-item">
-					<a class="nav-link" id="mark-tab" data-bs-toggle="tab" href="#import" role="tab" aria-controls="import" aria-selected="false"><?= __("Download QSOs"); ?></a>
+					<a class="nav-link" id="mark-tab" data-bs-toggle="tab" href="#import" role="tab" aria-controls="import" aria-selected="false"><?= __("Download QSLs"); ?></a>
 				</li>
 				<?php } ?>
 			</ul>
@@ -21,7 +21,7 @@
         <div class="card-body">
 			<div class="tab-content">
 				<div class="tab-pane active" id="export" role="tabpanel" aria-labelledby="export-tab">
-            <?php if (($next_run_up ?? '') != '') { echo "<p>".__("The next automatic Upload to Clublog will happen at: ").$next_run_up."</p>"; } ?>
+            <?php if (($next_run_up ?? '') != '') { echo "<p>".__("The next automatic Upload to Clublog will happen at: ").$next_run_up." UTC</p>"; } ?>
             <p><?= __("Here you can see all QSOs which have not been previously uploaded to a Clublog logbook."); ?></p>
             <p><?= __("You need to set a username and password in your user account. You will also need to enable upload for each station profile ."); ?></p>
 <?php
@@ -67,7 +67,7 @@
 
 				<form class="form" action="<?php echo site_url('clublog/importlog'); ?>" method="post" enctype="multipart/form-data">
 					<?php if (($next_run_down ?? '') != '') { echo "<p>".__("The next automatic Download from Clublog-QSLs will happen at: ").$next_run_down."</p>"; } ?>
-					<p><span class="badge text-bg-warning"><?= __("Warning"); ?></span> <?= __("If no startdate is given then all QSOs after last confirmation will be downloaded/updated!"); ?></p>
+					<p><span class="badge text-bg-warning"><?= __("Warning"); ?></span> <?= __("If no startdate is given then the QSLs after last confirmation will be downloaded/updated!"); ?></p>
 					<div class="row">
 						<div class="col-md-2">
 							<label for="from"><?= __("From date") . ": " ?></label>
@@ -75,7 +75,7 @@
 						</div>
 					</div>
 					<br>
-					<button type="button" class="btn btn-sm btn-primary ld-ext-right ld-ext-right-import" onclick="importlog();"><i class="fas fa-cloud-download-alt"></i> <?= __("Download from Clublog"); ?><div class="ld ld-ring ld-spin"></div></button>
+					<button type="button" class="btn btn-sm btn-primary ld-ext-right ld-ext-right-import" onclick="importlog();"><i class="fas fa-cloud-download-alt"></i> <?= __("Download QSLs from Clublog"); ?><div class="ld ld-ring ld-spin"></div></button>
 				</form>
 			</div>
 		<?php } ?>

@@ -166,6 +166,16 @@ $gt_conf['languages'] = array(
 		'code'      => 'hu',
 		'flag'      => 'hu',
 	),
+	'japanese' => array(
+		'name'      => '日本語',
+		'name_en'   => 'Japanese',
+		'folder'    => 'japanese',
+		'locale'    => 'ja',
+		'gettext'   => 'ja',
+		'direction' => 'ltr',
+		'code'      => 'ja',
+		'flag'      => 'jp',
+	),
 	'italian' => array(
 		'name'      => 'Italiano',
 		'name_en'   => 'Italian',
@@ -245,6 +255,16 @@ $gt_conf['languages'] = array(
 		'direction' => 'ltr',
 		'code'      => 'sr',
 		'flag'      => 'rs',
+	),
+	'slovak' => array(
+		'name'      => 'Slovák',
+		'name_en'   => 'Slovak',
+		'folder'    => 'slovak',
+		'locale'    => 'sk',
+		'gettext'   => 'sk',
+		'direction' => 'ltr',
+		'code'      => 'sk',
+		'flag'      => 'sk',
 	),
     'slovenian' => array(
         'name'      => 'Slovenščina',

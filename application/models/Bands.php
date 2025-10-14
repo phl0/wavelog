@@ -99,6 +99,46 @@ class Bands extends CI_Model {
 		return $this->db->get()->result();
 	}
 
+	function get_all_bandedges_for_user() {
+		$this->db->from('bandedges');
+		$this->db->where('bandedges.userid', $this->session->userdata('user_id'));
+		$this->db->order_by('frequencyfrom', 'ASC');
+
+		$result = $this->db->get()->result();
+
+		if ($result) {
+			return $result;
+		}
+
+		$this->insert_band_edges_for_user();
+
+		$this->db->from('bandedges');
+		$this->db->where('bandedges.userid', -1);
+		$this->db->order_by('frequencyfrom', 'ASC');
+
+		return $this->db->get()->result();
+	}
+
+	function insert_band_edges_for_user() {
+		// Get band edges from default user
+		$this->db->from('bandedges');
+		$this->db->where('bandedges.userid', -1);
+		$result = $this->db->get()->result();
+
+		if ($result) {
+			foreach($result as $edge) {
+				$data = array(
+					'frequencyfrom' => $edge->frequencyfrom,
+					'frequencyto' => $edge->frequencyto,
+					'mode' => $edge->mode,
+					'userid' => $this->session->userdata('user_id')
+				);
+				$this->db->insert('bandedges', $data);
+			}
+		}
+		return true;
+	}
+
 	function all() {
 		return $this->bandslots;
 	}
@@ -279,6 +319,8 @@ class Bands extends CI_Model {
 			'sig' 		 => $band['sig'] 		== "true" ? '1' : '0',
 			'sota'		 => $band['sota'] 		== "true" ? '1' : '0',
 			'uscounties' => $band['uscounties'] == "true" ? '1' : '0',
+			'wap' 	 	 => $band['wap'] 		== "true" ? '1' : '0',
+			'wapc' 	 	 => $band['wapc'] 		== "true" ? '1' : '0',
 			'waja' 		 => $band['waja'] 		== "true" ? '1' : '0',
 			'was' 		 => $band['was'] 		== "true" ? '1' : '0',
 			'wwff' 		 => $band['wwff'] 		== "true" ? '1' : '0',
@@ -306,7 +348,7 @@ class Bands extends CI_Model {
     }
 
 	function add($band_data) {
-	
+
 		$this->db->where('band', $band_data['band']);
 		$result = $this->db->get('bands');
 
@@ -315,10 +357,10 @@ class Bands extends CI_Model {
 		}
 
 		$binding = [];
-		$sql = "insert into bandxuser (bandid, userid) select bands.id, " 
-			. $this->session->userdata('user_id') 
-			. " from bands where band = ? 
-			and not exists (select 1 from bandxuser where userid = " . $this->session->userdata('user_id') . " 
+		$sql = "insert into bandxuser (bandid, userid) select bands.id, "
+			. $this->session->userdata('user_id')
+			. " from bands where band = ?
+			and not exists (select 1 from bandxuser where userid = " . $this->session->userdata('user_id') . "
 			and bandid = bands.id);";
 		$binding[] = $band_data['band'];
 
@@ -389,6 +431,65 @@ class Bands extends CI_Model {
 		// );
 
 		return $worked_slots;
+	}
+
+	function get_worked_bands_eme() {
+		if (!$this->logbooks_locations_array) {
+			return array();
+		}
+
+		$location_list = "'".implode("','",$this->logbooks_locations_array)."'";
+
+		// get all worked slots from database
+		$data = $this->db->query(
+			"SELECT distinct LOWER(`COL_BAND`) as `COL_BAND` FROM `".$this->config->item('table_name')."` WHERE station_id in (" . $location_list . ") AND COL_PROP_MODE = 'EME'"
+		);
+		$worked_slots = array();
+		foreach($data->result() as $row){
+			array_push($worked_slots, $row->COL_BAND);
+		}
+
+		return $worked_slots;
+	}
+
+	function deletebandedge($id) {
+		// Clean ID
+		$clean_id = $this->security->xss_clean($id);
+
+		// Delete Bandedge
+		$this->db->delete('bandedges', array('id' => $clean_id, 'userid' => $this->session->userdata('user_id')));
+	}
+
+	function check4overlapEdges($id, $frequencyfrom, $frequencyto, $mode) {
+		$edges = $this->bands->get_all_bandedges_for_user();
+		foreach ($edges as $item) {
+			if ($item->id == ($id ?? -1000)) {
+				continue;
+			}
+			$from = (int)$item->frequencyfrom;
+			$to = (int)$item->frequencyto;
+			if (!($frequencyto < $from || $frequencyfrom > $to)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	function saveBandEdge($id, $frequencyfrom, $frequencyto, $mode) {
+		$data = array(
+			'frequencyfrom' => $frequencyfrom,
+			'frequencyto' => $frequencyto,
+			'mode' => $mode,
+			'userid' => $this->session->userdata('user_id')
+		);
+
+		if ($id > 0) {
+			$this->db->where('id', $id);
+			$this->db->where('userid', $this->session->userdata('user_id'));
+			return $this->db->update('bandedges', $data);
+		} else {
+			return $this->db->insert('bandedges', $data);
+		}
 	}
 }
 

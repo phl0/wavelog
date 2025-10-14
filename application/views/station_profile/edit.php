@@ -138,9 +138,9 @@ if ($dxcc_list->result() > 0) {
 
 					<!-- US County -->
 					<div class="mb-3" id="location_us_county">
-						<label for="stationCntyInput"><?= __("Station County"); ?></label>
+						<label for="stationCntyInputEdit"><?= __("Station County"); ?></label>
 						<input type="text" class="form-control" name="station_cnty" id="stationCntyInputEdit" aria-describedby="stationCntyInputHelp" value="<?php if(set_value('station_cnty') != "") { echo set_value('station_cnty'); } else { echo $my_station_profile->station_cnty; } ?>">
-						<small id="stationCntyInputHelp" class="form-text text-muted"><?= __("Station County (Only used for USA/Alaska/Hawaii)."); ?></small>
+						<small id="stationCntyInputHelp" class="form-text text-muted"><?= __("Station County (Only used for specific DXCCs)."); ?></small>
 					</div>
 				</div>
 			</div>
@@ -306,7 +306,7 @@ if ($dxcc_list->result() > 0) {
 	<div class="row">
 		<div class="col-md">
 			<div class="card">
-				<h5 class="card-header"><?= __("eQSL"); ?></h5>
+				<h5 class="card-header"><?= __("eQSL"); ?> <span class="badge text-bg-warning"><?= sprintf(__("Trouble? Check the %swiki%s."), '<a href="https://github.com/wavelog/wavelog/wiki/eQSL#read-common-pitfalls-with-eqsl" target="_blank">', '</a>'); ?></span></h5>
 				<div class="card-body">
 					<div class="mb-3">
 						<label for="eqslNickname"><?php echo _pgettext("Probably no translation needed","eQSL QTH Nickname"); ?></label> <!-- This does not need Multilanguage Support -->
@@ -398,7 +398,7 @@ if ($dxcc_list->result() > 0) {
 						<select class="form-select" id="hrdlogrealtime" name="hrdlogrealtime">
 							<option value="1" <?php if ($my_station_profile->hrdlogrealtime == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
 							<option value="0" <?php if ($my_station_profile->hrdlogrealtime == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-							<option value="0" <?php if ($my_station_profile->hrdlogrealtime == -1) { echo " selected =\"selected\""; } ?>><?= __("Disabled"); ?></option>
+							<option value="-1" <?php if ($my_station_profile->hrdlogrealtime == -1) { echo " selected =\"selected\""; } ?>><?= __("Disabled"); ?></option>
 						</select>
 					</div>
 				</div>
