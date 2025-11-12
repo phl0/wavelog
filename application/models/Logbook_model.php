@@ -37,7 +37,7 @@ class Logbook_model extends CI_Model {
 		$start_time = $this->input->post('start_time'); // e.g., "08:11:36"
 		$end_time   = $this->input->post('end_time');   // e.g., "00:05:00" (optional)
 
-		$callsign = trim(str_replace('Ø', '0', $this->input->post('callsign')));
+		$callsign = trim($this->input->post('callsign'));
 
 		// Parse datetime using createFromFormat
 		$datetime_obj = DateTime::createFromFormat("$date_format $time_format", "$start_date $start_time");
