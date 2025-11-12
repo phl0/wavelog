@@ -300,13 +300,6 @@ function stopImpersonate_modal() {
 <!-- SPECIAL CALLSIGN OPERATOR FEATURE END -->
 
 <script>
-    // Replace all Ø in the searchbar
-    $('#nav-bar-search-input').on('input', function () {
-        $(this).val($(this).val().replace(/0/g, 'Ø'));
-    });
-</script>
-
-<script>
     var current_active_location = "<?php echo $this->stations->find_active(); ?>";
     quickswitcher_show_activebadge(current_active_location);
 </script>
@@ -1049,8 +1042,7 @@ function findincorrectcqzones() {
 		    var target = document.body;
 		    var observer = new MutationObserver(function() {
 			    $('#dt-search-0').on('keyup', function (e) {
-				    tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
-				    $(this).val(tocrappyzero);
+				    $(this).val($(this).val().toUpperCase());
 				    $(this).trigger("input");
 			    });
 		    });
@@ -1096,8 +1088,7 @@ function findincorrectituzones() {
 		    var target = document.body;
 		    var observer = new MutationObserver(function() {
 			    $('#dt-search-0').on('keyup', function (e) {
-				    tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
-				    $(this).val(tocrappyzero);
+				    $(this).val($(this).val().toUpperCase());
 				    $(this).trigger("input");
 			    });
 		    });
@@ -1114,7 +1105,7 @@ function searchButtonPress() {
     if ($('#callsign').val()) {
 		$('#btn-lba').removeAttr('hidden');
         let fixedcall = $('#callsign').val().trim();
-        $('#partial_view').load("logbook/search_result/" + fixedcall.replaceAll('Ø', '0'), function() {
+        $('#partial_view').load("logbook/search_result/" + fixedcall, function() {
             $('[data-bs-toggle="tooltip"]').tooltip();
             $('.table-responsive .dropdown-toggle').off('mouseenter').on('mouseenter', function() {
                 showQsoActionsMenu($(this).closest('.dropdown'));
@@ -2503,8 +2494,7 @@ $('#sats').change(function(){
 		var target = document.body;
 		var observer = new MutationObserver(function() {
 			$('#dt-search-0').on('keyup', function (e) {
-				tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
-				$(this).val(tocrappyzero);
+				$(this).val($(this).val().toUpperCase());
 				$(this).trigger("input");
 			});
 		});
@@ -2678,8 +2668,7 @@ function viewEqsl(picture, callsign) {
                        var target = document.body;
                        var observer = new MutationObserver(function() {
                                $('#dt-search-0').on('keyup', function (e) {
-                                       tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
-                                       $(this).val(tocrappyzero);
+                                       $(this).val($(this).val().toUpperCase());
                                        $(this).trigger("input");
                                });
                        });
@@ -3130,8 +3119,7 @@ function viewEqsl(picture, callsign) {
 		    var target = document.body;
 		    var observer = new MutationObserver(function() {
 			    $('#dt-search-1').on('keyup', function (e) {
-				    tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
-				    $(this).val(tocrappyzero);
+				    $(this).val($(this).val().toUpperCase());
 				    $(this).trigger("input");
 			    });
 		    });
