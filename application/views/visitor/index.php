@@ -190,7 +190,7 @@ if ($public_maps_option == 'true') { ?>
 
 								<?php } ?>
 								<td>
-									<?php echo str_replace("0", "&Oslash;", strtoupper($row->COL_CALL)); ?>
+									<?php echo strtoupper($row->COL_CALL); ?>
 								</td>
 								<?php
 								echo_table_col($row, $this->session->userdata('user_column1') == "" ? 'Mode' : $this->session->userdata('user_column1'));

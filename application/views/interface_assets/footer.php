@@ -892,7 +892,7 @@ function showActivatorsMap(call, count, grids) {
     let re = /,/g;
     grids = grids.replace(re, ', ');
 
-    var result = '<?= __("Callsign: "); ?>'+call.replace('0', '&Oslash;')+"<br />";
+    var result = '<?= __("Callsign: "); ?>'+call+"<br />";
     result +=    '<?= __("Count: "); ?>'+count+"<br/>";
     result +=    '<?= __("Grids: "); ?>'+grids+"<br/><br />";
 
@@ -2527,7 +2527,7 @@ function viewQsl(picture, callsign) {
             if (callsign == null) {
                 title = "<?= __("QSL Card"); ?>";
             } else {
-                title = "<?= __("QSL Card for "); ?>" + callsign.replace('0', '&Oslash;');
+                title = "<?= __("QSL Card for "); ?>" + callsign;
             }
 
             BootstrapDialog.show({
@@ -2589,7 +2589,7 @@ function viewEqsl(picture, callsign) {
             if (callsign == null) {
                 title = "<?= __("eQSL Card"); ?>";
             } else {
-                title = "<?= __("eQSL Card for "); ?>" + callsign.replace('0', '&Oslash;');
+                title = "<?= __("eQSL Card for "); ?>" + callsign;
             }
 
             BootstrapDialog.show({

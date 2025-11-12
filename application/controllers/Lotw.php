@@ -560,7 +560,7 @@ class Lotw extends CI_Controller {
 			if($status[0] == "Found") {
 				$qso_id4lotw=$status[1];
 
-				$call = str_replace("0", "&Oslash;", $record['call']);
+				$call = $record['call'];
 
 				if (isset($record['state'])) {
 					$state = $record['state'];
