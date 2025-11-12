@@ -110,10 +110,10 @@
 					<div class="waterfall-item">
 						<div class="card h-100">
 							<div class="card-img-container">
-								<img src="<?= $image_path ?>" class="card-img-top qsl-card-img" alt="QSL Card from <?= str_replace("0", "&Oslash;", $qsl->COL_CALL) ?>" onclick="viewQsl('<?= $qsl->filename ?>', '<?= str_replace("0", "&Oslash;", $qsl->COL_CALL) ?>')">
+								<img src="<?= $image_path ?>" class="card-img-top qsl-card-img" alt="QSL Card from <?= $qsl->COL_CALL ?>" onclick="viewQsl('<?= $qsl->filename ?>', '<?= $qsl->COL_CALL ?>')">
 							</div>
 							<div class="card-body">
-								<h5 class="card-title"><?= str_replace("0", "&Oslash;", $qsl->COL_CALL) ?></h5>
+								<h5 class="card-title"><?= $qsl->COL_CALL ?></h5>
 								<p class="card-text">
 									<?= $mode ?> | <?= $band ?><br>
 									<?= date($custom_date_format, $timestamp) ?> <?= date('H:i', $timestamp) ?><br>

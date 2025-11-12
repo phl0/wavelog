@@ -404,7 +404,7 @@
 									echo '<i class="fas fa-users"></i> '
 										. '<b>' . strtoupper($this->session->userdata('user_callsign')) . '</b>'
 										. ' <br><small>'
-										. sprintf(_pgettext("Operator: Callsign", "Op: %s"), str_replace("0","&Oslash;", strtoupper($this->session->userdata('operator_callsign'))))
+										. sprintf(_pgettext("Operator: Callsign", "Op: %s"), strtoupper($this->session->userdata('operator_callsign')))
 										. '</small>';
 								} else {
 									echo '<i class="fas fa-user"></i> ' .  strtoupper($this->session->userdata('user_callsign'));
