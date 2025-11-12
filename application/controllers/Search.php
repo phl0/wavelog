@@ -94,13 +94,13 @@ class Search extends CI_Controller {
 	}
 
 	function search_result() {
-		$sstring = str_replace('Ø', "0", $this->input->post("search", TRUE) ?? '');
+		$sstring = $this->input->post("search", TRUE) ?? '';
 		$data['results'] = $this->fetchQueryResult($sstring, FALSE);
 		$this->load->view('search/search_result_ajax', $data);
 	}
 
 	function export_to_adif() {
-		$sstring = str_replace('Ø', "0", $this->input->post("search", TRUE) ?? '');
+		$sstring = $this->input->post("search", TRUE) ?? '';
 		$data['qsos'] = $this->fetchQueryResult($sstring, FALSE);
 		$this->load->view('adif/data/exportall', $data);
 	}
