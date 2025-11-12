@@ -18,14 +18,12 @@ class Note extends CI_Model {
 
 	// Return note ID for given category and title (callsign for Contacts), else false
 	public function get_note_id_by_category($user_id, $category, $title) {
-		$check_title = $title;
 		if ($category === 'Contacts') {
 			$this->load->library('callbook'); // Used for callsign parsing
-			$check_title = strtoupper($this->callbook->get_plaincall($title));
-			$check_title_slashed = str_replace('0', 'Ø', $check_title);
+			$title = strtoupper($this->callbook->get_plaincall($title));
 		}
 		$sql = "SELECT id FROM notes WHERE cat = ? AND user_id = ? AND (title = ? OR title = ?) LIMIT 1";
-		$query = $this->db->query($sql, array($category, $user_id, $check_title, $check_title_slashed));
+		$query = $this->db->query($sql, array($category, $user_id, $title, $title));
 		if ($query->num_rows() > 0) {
 			return $query->row()->id;
 		}
@@ -51,13 +49,11 @@ class Note extends CI_Model {
 	// Add a new note for the logged-in user
 	function add($category, $title, $content, $local_time = null) {
 		$user_id = $this->session->userdata('user_id');
-		$check_title = $title;
 		if ($category === 'Contacts') {
-			$check_title = trim(strtoupper($title));
-			$title = str_replace('0', 'Ø', $check_title);
+			$title = trim(strtoupper($title));
 		}
 		// Check for existing note with same title in Contacts category
-		if ($this->get_note_id_by_category($user_id, $category, $check_title) && $category === 'Contacts') {
+		if ($this->get_note_id_by_category($user_id, $category, $title) && $category === 'Contacts') {
 			show_error(__("In Contacts category, the titles of the notes need to be unique."));
 			return;
 		}
@@ -74,7 +70,6 @@ class Note extends CI_Model {
 	// Edit an existing note for the logged-in user
 	function edit($note_id, $category, $title, $content, $local_time = null) {
 		$user_id = $this->session->userdata('user_id');
-		$check_title = $title;
 
 		if($this->belongs_to_user($note_id, $user_id) === false) {
 			show_404();
@@ -82,11 +77,10 @@ class Note extends CI_Model {
 		}
 
 		if ($category === 'Contacts') {
-			$check_title = trim(strtoupper($title));
-			$title = str_replace('0', 'Ø', $check_title);
+			$title = trim(strtoupper($title));
 		}
 		// Check for existing note with same title in Contacts category
-		$existing_id = $this->get_note_id_by_category($user_id, $category, $check_title);
+		$existing_id = $this->get_note_id_by_category($user_id, $category, $title);
 		if ($existing_id > 0 && $existing_id != $note_id && $category === 'Contacts') {
 			show_error(__("In Contacts category, the titles of the notes need to be unique."));
 			return;

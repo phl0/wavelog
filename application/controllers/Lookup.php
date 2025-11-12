@@ -98,7 +98,7 @@ class Lookup extends CI_Controller {
 		$query = $this->logbook_model->get_callsigns($uppercase_callsign);
 
 		foreach ($query->result() as $row) {
-			$normalized_call = str_replace('0', 'Ø', $row->COL_CALL);
+			$normalized_call = $row->COL_CALL;
 			$arCalls[$normalized_call] = true;
 		}
 
@@ -110,7 +110,7 @@ class Lookup extends CI_Controller {
 			$input = preg_quote($uppercase_callsign, '~');
 			$result = preg_grep('~' . $input . '~', $lines, 0);
 			foreach ($result as $value) {
-				$normalized_call = str_replace('0', 'Ø', $value);
+				$normalized_call = $value;
 				$arCalls[$normalized_call] = true;
 			}
 		} else {
@@ -131,7 +131,7 @@ class Lookup extends CI_Controller {
 			$input = preg_quote($uppercase_callsign, '~');
 			$result = preg_grep('~' . $input . '~', $lines, 0);
 			foreach ($result as $value) {
-				$normalized_call = str_replace('0', 'Ø', $value);
+				$normalized_call = $value;
 				$arCalls[$normalized_call] = true;
 			}
 		} else {

@@ -62,7 +62,6 @@ class Notes extends CI_Controller {
                     $title_input = $prefill_title;
                 }
                 $suggested_title = strtoupper($this->callbook->get_plaincall($title_input));
-				$suggested_title = str_replace('0', 'Ø', $suggested_title);
             }
             // Pass prefill values to view
             $data['suggested_title'] = $suggested_title;
@@ -122,7 +121,6 @@ class Notes extends CI_Controller {
             $category = $this->input->post('category', TRUE);
             if ($category === 'Contacts') {
                 $suggested_title = strtoupper($this->callbook->get_plaincall($this->input->post('title', TRUE)));
-				$suggested_title = str_replace('0', 'Ø', $suggested_title);
             }
             $data['suggested_title'] = $suggested_title;
             $data['page_title'] = __("Edit Note");
@@ -318,7 +316,6 @@ class Notes extends CI_Controller {
         // Clean title for Contacts category
         if ($category === 'Contacts') {
             $title = strtoupper($this->callbook->get_plaincall($title));
-            $title = str_replace('0', 'Ø', $title);
         }
 
         if ($id !== null) {
@@ -372,7 +369,6 @@ class Notes extends CI_Controller {
             $core = strtoupper($this->callbook->get_plaincall($title));
             // Only fail if prefix or suffix is present
             if (strtoupper($title) <> $core) {
-                $core = str_replace('0', 'Ø', $core);
                 $this->form_validation->set_message('contacts_title_unique', sprintf(__("Contacts note title must be a callsign only, without prefix/suffix. Suggested: %s"), $core));
                 return FALSE;
             }
@@ -396,7 +392,6 @@ class Notes extends CI_Controller {
             $core = strtoupper($this->callbook->get_plaincall($title));
 			// Only fail if prefix or suffix is present
             if (strtoupper($title) <> $core) {
-				$core = str_replace('0', 'Ø', $core);
                 $this->form_validation->set_message('contacts_title_unique_edit', sprintf(__("Contacts note title must be a callsign only, without prefix/suffix. Suggested: %s"),$core));
                 return FALSE;
             }
