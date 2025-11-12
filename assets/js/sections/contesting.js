@@ -400,7 +400,7 @@ $("#callsign").keyup(async function (e) {
 	if ((!((e.keyCode == 10 || e.keyCode == 13) && (e.ctrlKey || e.metaKey))) && (call.length >= 3)) {	// prevent checking again when pressing CTRL-Enter
 
 		if ($(this).val().length >= 3) {
-			$callsign = $(this).val().replace('Ø', '0');
+			$callsign = $(this).val();
 			if (scps.filter((call => call.includes($(this).val().toUpperCase()))).length <= 0) {
 				$.ajax({
 					url: 'lookup/scp',

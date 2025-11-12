@@ -71,7 +71,7 @@ function addQsoToPrintQueue(id) {
                         qsoDialogInstance.close();
                     }
                     let callSign = $("#qsolist_"+id).find("td:eq(0)").text();
-                    let formattedCallSign = callSign.replace(/0/g, "Ø").toUpperCase();
+                    let formattedCallSign = callSign.toUpperCase();
                     let line = '<tr id="qslprint_'+id+'">';
 					let freq_or_band = $('#frequency_or_band').val();
 

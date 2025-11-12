@@ -21,7 +21,7 @@ function calculateLocalTime(gmtOffset) {
 function checkProfileInfoVisibility() {
 	if ($('#callsign-image').is(':visible') && $('#callsign-image-info').html().trim() !== '') {
 		// Additional validation: check if profile data matches current callsign
-		let currentCallsign = $('#callsign').val().toUpperCase().replaceAll('Ø', '0');
+		let currentCallsign = $('#callsign').val().toUpperCase();
 		let profileCallsign = $('#callsign-image').attr('data-profile-callsign') || '';
 
 		if (currentCallsign !== profileCallsign) {
@@ -261,7 +261,6 @@ $('#callsign').on('input', function () {
 	if (this.isComposing) return;
 
 	$(this).val($(this).val().replace(/\s/g, ''));
-	$(this).val($(this).val().replace(/0/g, 'Ø'));
 	$(this).val($(this).val().replace(/\./g, '/P'));
 	$(this).val($(this).val().replace(/\ /g, ''));
 });
@@ -1196,7 +1195,7 @@ function get_note_status(callsign){
 $("#callsign").on("focusout", function () {
 	if ($(this).val().length >= 3 && preventLookup == false) {
 
-		var currentCallsign = $(this).val().toUpperCase().replaceAll('Ø', '0');
+		var currentCallsign = $(this).val().toUpperCase();
 
 		// Prevent duplicate lookups for the same callsign if already in progress
 		if (lookupInProgress && lastLookupCallsign === currentCallsign) {
@@ -1245,14 +1244,14 @@ $("#callsign").on("focusout", function () {
 		const stationProfile = $('#stationProfile').val();
 
 		find_callsign = find_callsign.replace(/\//g, "-");
-		find_callsign = find_callsign.replaceAll('Ø', '0');
+		find_callsign = find_callsign;
 		const url = `${base_url}index.php/logbook/json/${find_callsign}/${json_band}/${json_mode}/${stationProfile}/${startDate}/${last_qsos_count}`;
 
 		// Replace / in a callsign with - to stop urls breaking
 		lookupCall = $.getJSON(url, async function (result) {
 
 			// Make sure the typed callsign and json result match
-			if ($('#callsign').val().toUpperCase().replaceAll('Ø', '0') == result.callsign) {
+			if ($('#callsign').val().toUpperCase() == result.callsign) {
 
 				// Reset QSO fields
 				resetDefaultQSOFields();
@@ -1335,7 +1334,7 @@ $("#callsign").on("focusout", function () {
 					} else if (result.lotw_days > 7) {
 						$('#lotw_info').addClass('lotw_info_yellow');
 					}
-					$('#lotw_link').attr('href', "https://lotw.arrl.org/lotwuser/act?act=" + callsign.replace('Ø', '0'));
+					$('#lotw_link').attr('href', "https://lotw.arrl.org/lotwuser/act?act=" + callsign);
 					$('#lotw_link').attr('target', "_blank");
 					$('#lotw_info').attr('data-bs-toggle', "tooltip");
 					if (result.lotw_days == 1) {
@@ -1345,17 +1344,17 @@ $("#callsign").on("focusout", function () {
 					}
 					$('[data-bs-toggle="tooltip"]').tooltip();
 				}
-				$('#qrz_info').html('<a target="_blank" href="https://www.qrz.com/db/' + callsign.replaceAll('Ø', '0') + '"><img width="30" height="30" src="' + base_url + 'images/icons/qrz.com.png"></a>');
+				$('#qrz_info').html('<a target="_blank" href="https://www.qrz.com/db/' + callsign + '"><img width="30" height="30" src="' + base_url + 'images/icons/qrz.com.png"></a>');
 				$('#qrz_info').attr('title', lang_qso_lookup_info.replace('%s', callsign).replace('%s', 'qrz.com')).removeClass('d-none');
 				$('#qrz_info').show();
-				$('#hamqth_info').html('<a target="_blank" href="https://www.hamqth.com/' + callsign.replaceAll('Ø', '0') + '"><img width="30" height="30" src="' + base_url + 'images/icons/hamqth.com.png"></a>');
+				$('#hamqth_info').html('<a target="_blank" href="https://www.hamqth.com/' + callsign + '"><img width="30" height="30" src="' + base_url + 'images/icons/hamqth.com.png"></a>');
 				$('#hamqth_info').attr('title', lang_qso_lookup_info.replace('%s', callsign).replace('%s', 'hamqth.com')).removeClass('d-none');
 				$('#hamqth_info').show();
 
 				var $dok_select = $('#darc_dok').selectize();
 				var dok_selectize = $dok_select[0].selectize;
 				if ((result.dxcc.adif == '230') && (($("#callsign").val().trim().length) > 0)) {
-					$.get(base_url + 'index.php/lookup/dok/' + $('#callsign').val().toUpperCase().replaceAll('Ø', '0').replaceAll('/','-'), function (result) {
+					$.get(base_url + 'index.php/lookup/dok/' + $('#callsign').val().toUpperCase().replaceAll('/','-'), function (result) {
 						if (result) {
 							dok_selectize.addOption({ name: result });
 							dok_selectize.setValue(result, false);
@@ -1365,7 +1364,7 @@ $("#callsign").on("focusout", function () {
 					dok_selectize.clear();
 				}
 
-				$.getJSON(base_url + 'index.php/lookup/ham_of_note/' + $('#callsign').val().toUpperCase().replaceAll('Ø', '0').replaceAll('/','-'), function (result) {
+				$.getJSON(base_url + 'index.php/lookup/ham_of_note/' + $('#callsign').val().toUpperCase().replaceAll('/','-'), function (result) {
 					if (result) {
 						$('#ham_of_note_info').html('<span class="minimize">'+result.description+'</span>');
 						if (result.link != null) {
@@ -1500,7 +1499,7 @@ $("#callsign").on("focusout", function () {
 			/* Find Operators E-mail */
 			if ($('#email').val() == "") {
 				// Validate that we're setting email for the correct callsign
-				let currentCallsign = $('#callsign').val().toUpperCase().replaceAll('Ø', '0');
+				let currentCallsign = $('#callsign').val().toUpperCase();
 				let resultCallsign = result.callsign.toUpperCase();
 
 				if (currentCallsign === resultCallsign) {
@@ -1511,7 +1510,7 @@ $("#callsign").on("focusout", function () {
 			// Show email icon if email is available
 			if (result.callsign_email && result.callsign_email.trim() !== "") {
 				// Validate callsign match before showing email icon
-				let currentCallsign = $('#callsign').val().toUpperCase().replaceAll('Ø', '0');
+				let currentCallsign = $('#callsign').val().toUpperCase();
 				let resultCallsign = result.callsign.toUpperCase();
 
 				if (currentCallsign === resultCallsign) {
@@ -1530,7 +1529,7 @@ $("#callsign").on("focusout", function () {
 			/* Find link to qrz.com picture */
 			if (result.image != "n/a") {
 				// Verify that the result still matches the current callsign to prevent stale data
-				let currentCallsign = $('#callsign').val().toUpperCase().replaceAll('Ø', '0');
+				let currentCallsign = $('#callsign').val().toUpperCase();
 				let resultCallsign = result.callsign.toUpperCase();
 
 				if (currentCallsign !== resultCallsign) {
@@ -2024,7 +2023,7 @@ function getSatResult() {
 		url: base_url + 'index.php/lookup/sat',
 		type: 'post',
 		data: {
-			callsign: $('#callsign').val().replace('Ø', '0'),
+			callsign: $('#callsign').val(),
 		},
 		success: function (html) {
 			$('#sat-summary').append(lang_summary_sat + ' ' + $('#callsign').val().toUpperCase() + '.');
@@ -2636,7 +2635,7 @@ $("#callsign").on("input focus", function () {
 	var ccall = $(this).val();
 	if ($(this).val().length >= 3) {
 		$('.callsign-suggest').show();
-		$callsign = $(this).val().replace('Ø', '0');
+		$callsign = $(this).val();
 		if (scps.filter((call => call.includes($(this).val().toUpperCase()))).length <= 0) {
 			$.ajax({
 				url: 'lookup/scp',

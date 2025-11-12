@@ -301,8 +301,7 @@ $(document).ready(function(){
 	var target = document.body;
 	var observer = new MutationObserver(function() {
 		$('#dt-search-0').on('keyup', function (e) {
-			tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
-			$(this).val(tocrappyzero);
+			$(this).val($(this).val().toUpperCase());
 			$(this).trigger("input");
 		});
 	});

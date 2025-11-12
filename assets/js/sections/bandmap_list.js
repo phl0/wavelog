@@ -1984,18 +1984,6 @@ $(function() {
 	});
 
 	$("#spotSearchInput").on("input", function() {
-		const cursorPos = this.selectionStart;
-		const oldValue = this.value;
-		const newValue = oldValue.replace(/0/g, "Ø");
-
-		if (newValue !== oldValue) {
-			this.value = newValue;
-			// Restore cursor position
-			this.setSelectionRange(cursorPos, cursorPos);
-			// Trigger search with new value
-			table.search(newValue).draw();
-		}
-
 		// Show/hide clear button based on input value
 		if (this.value.length > 0) {
 			$('#clearSearchBtn').show();

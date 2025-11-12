@@ -279,8 +279,7 @@ $(document).ready(function(){
 	var target = document.body;
 	var observer = new MutationObserver(function() {
 		$('input[type="search"]').on('keyup', function (e) {
-			tocrappyzero=$(this).val().toUpperCase().replaceAll(/0/g, 'Ø');
-			$(this).val(tocrappyzero);
+			$(this).val($(this).val().toUpperCase());
 			$(this).trigger("input");
 		});
 	});
