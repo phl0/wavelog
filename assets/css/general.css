@@ -1,5 +1,8 @@
 body {
-	font-family: "YaHei Consolas Hybrid", "Twemoji Country Flags", "Helvetica", "Comic Sans", sans-serif;
+	font-family: "Source Sans Pro";
+	font-variant-numeric: slashed-zero;
+	font-weight: 400;
+	font-size: 18px;
 }
 
 @media (min-width: 992px) {

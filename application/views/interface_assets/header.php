@@ -10,6 +10,8 @@
 	<meta name="apple-mobile-web-app-status-bar-style" content="default">
 	<link rel="manifest" href="<?php echo base_url(); ?>manifest.json" />
 
+	<link href="https://cdn.jsdelivr.net/npm/source-sans-pro@3.6.0/source-sans-pro.min.css" rel="stylesheet">
+
 	<link rel="stylesheet" type="text/css" href="<?php echo base_url(); ?>assets/css/buttons.dataTables.min.css" />
 
 	<link rel="stylesheet" type="text/css" href="<?php echo base_url(); ?>assets/css/datatables.min.css" />
