@@ -1,4 +1,5 @@
 name: Wavelog create Dockerimage and publish it
+run-name: ${{ github.event_name == 'schedule' && 'Nightly Dev Build' || github.event_name == 'release' && format('Release {0}', github.ref_name) || format('Manual Build ({0})', github.ref_name) }}
 
 on:
   release:
