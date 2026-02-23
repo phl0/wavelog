@@ -688,6 +688,14 @@
 							<div class="card">
 								<div class="card-header"><?= __("Show Fields on QSO Tab"); ?></div>
 								<div class="card-body">
+									<div class="mb-3">
+										<label for="qsoShowMap"><?= __("Show map at QSO-Window"); ?></label>
+										<?php if(!isset($user_qso_show_map)) { $user_qso_show_map = 1; } ?>
+										<select class="form-select" id="qsoShowMap" name="user_qso_show_map">
+											<option value="1" <?php if ($user_qso_show_map == 1) { echo 'selected="selected"'; } ?>><?= __("Show"); ?></option>
+											<option value="0" <?php if ($user_qso_show_map == 0) { echo 'selected="selected"'; } ?>><?= __("Don't show"); ?></option>
+										</select>
+									</div>
 									<div class="row">
 										<div class="mb-3">
 											<label for="references_select"><?= __("The enabled items will be shown on the QSO tab rather than the General tab."); ?></label>

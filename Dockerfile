@@ -1,4 +1,4 @@
-FROM php:8.3-apache
+FROM php:8.4-apache
 ENV CI_ENV=docker
 
 COPY --from=ghcr.io/mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/

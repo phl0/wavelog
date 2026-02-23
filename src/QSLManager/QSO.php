@@ -11,6 +11,7 @@ class QSO
 {
 	private string $qsoID;
 	private string $qsoDateTime;
+	private string $duration;
 	private string $de;
 	private string $profilename;
 	private string $dx;
@@ -303,8 +304,19 @@ class QSO
 
 		$this->measurement_base = $measurement_base;
 
+		$this->duration = $this->calculateDuration($data['COL_TIME_ON'], $data['COL_TIME_OFF']);
+
 	}
 
+	function calculateDuration($start, $end) {
+		if ($start == null || $end == null) {
+			return '';
+		}
+		$start = new DateTime($start);
+		$end = new DateTime($end);
+		$interval = $end->diff($start);
+		return $interval->format('%H:%I:%S');
+	}
 	/**
 	 * @return string
 	 */
@@ -1310,6 +1322,7 @@ class QSO
 			'qth' => $this->qth,
 			'frequency' => $this->getFormattedFrequency(),
 			'last_modified' => $this->last_modified,
+			'duration' => $this->duration
 		];
 	}
 

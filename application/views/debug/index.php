@@ -315,6 +315,45 @@
                                         <?php } ?>
                                     </td>
                                 </tr>
+
+                                <?php if ($cache_adapter == 'apcu' || $cache_backup == 'apcu') { ?>
+                                <tr>
+                                    <td>php-apcu</td>
+                                    <td>
+                                        <?php if (in_array('apcu', get_loaded_extensions())) { ?>
+                                            <span class="badge text-bg-success"><?= __("Installed"); ?></span>
+                                        <?php } else { ?>
+                                            <span class="badge text-bg-danger"><?= __("Not Installed"); ?></span>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+                                <?php } ?>
+
+                                <?php if ($cache_adapter == 'redis' || $cache_backup == 'redis') { ?>
+                                <tr>
+                                    <td>php-redis</td>
+                                    <td>
+                                        <?php if (in_array('redis', get_loaded_extensions())) { ?>
+                                            <span class="badge text-bg-success"><?= __("Installed"); ?></span>
+                                        <?php } else { ?>
+                                            <span class="badge text-bg-danger"><?= __("Not Installed"); ?></span>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+                                <?php } ?>
+
+                                <?php if ($cache_adapter == 'memcached' || $cache_backup == 'memcached') { ?>
+                                <tr>
+                                    <td>php-memcached</td>
+                                    <td>
+                                        <?php if (in_array('memcached', get_loaded_extensions())) { ?>
+                                            <span class="badge text-bg-success"><?= __("Installed"); ?></span>
+                                        <?php } else { ?>
+                                            <span class="badge text-bg-danger"><?= __("Not Installed"); ?></span>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+                                <?php } ?>
                             </table>
                         </div>
                         <div class="col">
@@ -433,6 +472,8 @@
                                         <span class="badge text-bg-primary"><?php echo $cache_backup; ?></span>
                                         <?php if ($cache_backup == $active_adapter) { ?>
                                             <span class="badge text-bg-success"><?= __("Active"); ?></span>
+                                        <?php } else if ($active_adapter == 'dummy') { ?>
+                                            <span class="badge text-bg-danger"><?= __("Failed"); ?></span>
                                         <?php } ?>
                                     </td>
                                 </tr>
@@ -445,15 +486,6 @@
                                     <td><code><?php echo $cache_key_prefix; ?></code></td>
                                 </tr>
                             </table>
-                            <?php if ($using_backup) { ?>
-                                <div class="alert alert-danger mt-2 mb-0" role="alert">
-                                    <?= __("Cache is currently using the backup adapter because the primary is unavailable."); ?>
-                                </div>
-                            <?php } else { ?>
-                                <div class="alert alert-success mt-2 mb-0" role="alert">
-                                    <?= __("Cache is working properly. Everything okay!"); ?>
-                                </div>
-                            <?php } ?>
                         </div>
                         <div class="col-md-6">
                             <p><u><?= __("Cache Details"); ?></u></p>
@@ -471,6 +503,21 @@
                                     </td>
                                 </tr>
                             </table>
+                        </div>
+                        <div class="ms-2 me-2">
+                            <?php if (!$using_backup) { ?>
+                                <div class="alert alert-success mt-2 mb-0" role="alert">
+                                    <?= __("Cache is working properly. Everything okay!"); ?>
+                                </div>
+                            <?php } else if ($active_adapter !== 'dummy') { ?>
+                                <div class="alert alert-danger mt-2 mb-0" role="alert">
+                                    <?= __("Cache is currently using the backup adapter because the primary is unavailable. Check your file permissions, PHP extensions, and/or your network connection to the services (if using redis/memcached)."); ?>
+                                </div>
+                            <?php } else { ?>
+                                <div class="alert alert-danger mt-2 mb-0" role="alert">
+                                    <?= __("Cache does not work! Currently the system is using a %s adapter. Check your file permissions, PHP extensions and/or your network connection to the services (if using redis/memcached). You can continue using Wavelog, but no values will be cached (which is bad).", "'dummy'"); ?>
+                                </div>
+                            <?php } ?>
                         </div>
                     </div>
                     <div class="border-top pt-3 mt-3">

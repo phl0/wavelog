@@ -220,7 +220,7 @@ if (typeof window.DX_WATERFALL_FIELD_MAP === 'undefined') {
                   <div style="min-height: 24px;">
                     <small id="callsign_info" class="badge text-bg-secondary"></small> <a id="lotw_link"><small id="lotw_info" class="badge text-bg-success"></small></a>
                   </div>
-                  <p id="ham_of_note_line" style="margin-top: 5px; display: none"><small id="ham_of_note_info"></small><small><a id="ham_of_note_link" target="_blank"></a></small></p>
+                  <div id="ham_of_note_line" style="margin-top: 5px; display: none"></div>
                 </div>
               </div>
 
@@ -820,7 +820,7 @@ if (typeof window.DX_WATERFALL_FIELD_MAP === 'undefined') {
 	<div id="radio_status"></div>
 
     <!-- QSO Map -->
-    <div class="card qso-map">
+    <div class="card qso-map"<?php if (!($user_qso_show_map ?? true)) { echo ' style="display:none;"'; } ?>>
             <div id="qsomap" class="map-leaflet" style="width: 100%; height: 200px;"></div>
     </div>
 

@@ -433,7 +433,7 @@ $config['error_views_path'] = '';
 |
 */
 $config['cache_path'] = '';
-$config['cache_adapter'] = 'file';
+$config['cache_adapter'] = 'apcu';
 $config['cache_backup'] = 'file';
 $config['cache_key_prefix'] = '';
 
@@ -891,6 +891,18 @@ $config['enable_eqsl_massdownload'] = false;
 
 $config['enable_dxcluster_file_cache_band'] = false;
 $config['enable_dxcluster_file_cache_worked'] = false;
+
+/*
+|--------------------------------------------------------------------------
+| DXCluster Refresh Time
+|--------------------------------------------------------------------------
+| This defines the how often the DXCluster spots are refreshed in seconds. Default is 30 seconds.
+| Be careful with this and do not set it too low because depending on how many QSOs a user has it 
+| can cause a lot of load on the server. Also consider enabling a proper caching (file caches are 
+| not recommended for very large installations) to reduce the load on the server.
+|--------------------------------------------------------------------------
+ */
+$config['dxcluster_refresh_time'] = 30;
 
 /*
 |--------------------------------------------------------------------------

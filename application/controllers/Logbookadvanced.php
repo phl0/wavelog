@@ -91,15 +91,15 @@ class Logbookadvanced extends CI_Controller {
 		$footerData['scripts'] = [
 			'assets/js/moment.min.js',
 			'assets/js/datetime-moment.js',
-			'assets/js/sections/logbookadvanced.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/logbookadvanced.js")),
-			'assets/js/sections/logbookadvanced_edit.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/logbookadvanced_edit.js")),
-			'assets/js/sections/logbookadvanced_map.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/logbookadvanced_map.js")),
-			'assets/js/sections/cqmap_geojson.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/cqmap_geojson.js")),
-			'assets/js/sections/itumap_geojson.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/itumap_geojson.js")),
-			'assets/js/leaflet/L.Terminator.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/leaflet/L.Terminator.js")),
+			'assets/js/sections/logbookadvanced.js',
+			'assets/js/sections/logbookadvanced_edit.js',
+			'assets/js/sections/logbookadvanced_map.js',
+			'assets/js/sections/cqmap_geojson.js',
+			'assets/js/sections/itumap_geojson.js',
+			'assets/js/leaflet/L.Terminator.js',
 			'assets/js/leaflet/geocoding.js',
-			'assets/js/globe/globe.gl.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/globe/globe.gl.js")),
-			'assets/js/bootstrap-multiselect.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/bootstrap-multiselect.js")),
+			'assets/js/globe/globe.gl.js',
+			'assets/js/bootstrap-multiselect.js',
 			'assets/js/leaflet/L.MaidenheadColouredGridMap.js',
 		];
 
@@ -161,7 +161,8 @@ class Logbookadvanced extends CI_Controller {
 			'qrzReceived' => xss_clean($this->input->post('qrzReceived')),
 			'distance' => xss_clean($this->input->post('distance')),
 			'sortcolumn' => xss_clean($this->input->post('sortcolumn')),
-			'sortdirection' => xss_clean($this->input->post('sortdirection'))
+			'sortdirection' => xss_clean($this->input->post('sortdirection')),
+			'duration' => xss_clean($this->input->post('duration'))
 		);
 	}
 
@@ -394,7 +395,8 @@ class Logbookadvanced extends CI_Controller {
 			'ids' => json_decode(xss_clean($this->input->post('ids'))),
 			'qsoids' => xss_clean($this->input->post('qsoids')),
 			'sortcolumn' => 'qsotime',
-			'sortdirection' => 'desc'
+			'sortdirection' => 'desc',
+			'duration' => '*'
 		);
 
 		$result = $this->logbookadvanced_model->getSearchResultArray($searchCriteria);
@@ -622,6 +624,7 @@ class Logbookadvanced extends CI_Controller {
 		$json_string['frequency']['show'] = $this->def_boolean($this->input->post('frequency'));
 		$json_string['dcl']['show'] = $this->def_boolean($this->input->post('dcl'));
 		$json_string['last_modification']['show'] = $this->def_boolean($this->input->post('last_modification'));
+		$json_string['duration']['show'] = $this->def_boolean($this->input->post('duration'));
 
 		$obj['column_settings']= json_encode($json_string);
 
@@ -653,7 +656,7 @@ class Logbookadvanced extends CI_Controller {
 
 		$data['stateDxcc'] = $this->logbookadvanced_model->getPrimarySubdivisonsDxccs();
 
-		$data['modes'] = $this->modes->active();
+		$data['modes'] = $this->modes->all();
 		$data['bands'] = $this->bands->get_user_bands_for_qso_entry();
 		$data['contests'] = $this->contesting_model->getActivecontests();
 		$this->load->view('logbookadvanced/edit', $data);
@@ -729,10 +732,6 @@ class Logbookadvanced extends CI_Controller {
 		$this->load->view('logbookadvanced/help');
 	}
 
-	public function continentDialog() {
-		$this->load->view('logbookadvanced/continentdialog');
-	}
-
 	public function stateDialog() {
 		$this->load->library('Geojson');
 
@@ -782,7 +781,9 @@ class Logbookadvanced extends CI_Controller {
 
 	public function fixContinent() {
 		$this->load->model('logbookadvanced_model');
-		$result = $this->logbookadvanced_model->check_missing_continent();
+
+		$stationid = $this->input->post('stationid', true);
+		$result = $this->logbookadvanced_model->check_missing_continent($stationid);
 
 		$data['result'] = $result;
 
@@ -829,8 +830,10 @@ class Logbookadvanced extends CI_Controller {
 	public function updateDistances() {
 		if(!clubaccess_check(9)) return;
 
+		$stationid = $this->input->post('stationid', true);
+
 		$this->load->model('logbookadvanced_model');
-		$result = $this->logbookadvanced_model->update_distances_batch();
+		$result = $this->logbookadvanced_model->update_distances_batch($stationid);
 
 		$data['result'] = $result;
 
@@ -844,16 +847,20 @@ class Logbookadvanced extends CI_Controller {
 	}
 
 	public function dbtoolsDialog() {
-		$this->load->view('logbookadvanced/dbtoolsdialog');
+		$this->load->model('stations');
+		$data['station_profile'] = $this->stations->all_of_user();
+
+		$this->load->view('logbookadvanced/dbtoolsdialog', $data);
 	}
 
 	public function checkDb() {
 		if(!clubaccess_check(9)) return;
 
 		$type = $this->input->post('type', true);
+		$stationid = $this->input->post('stationid', true);
 		$this->load->model('logbookadvanced_model');
 
-		$data['result'] = $this->logbookadvanced_model->runCheckDb($type);
+		$data['result'] = $this->logbookadvanced_model->runCheckDb($type, $stationid);
 		if ($type == 'checkstate') {
 			$this->load->view('logbookadvanced/statecheckresult', $data);
 		} else {
@@ -870,10 +877,11 @@ class Logbookadvanced extends CI_Controller {
 		$this->load->model('logbookadvanced_model');
 
 		$dxcc = $this->input->post('dxcc', true);
+		$stationid = $this->input->post('stationid', true);
 		$data['country'] = $this->input->post('country', true);
 
 		// Process for batch QSO state fix
-		$result = $this->logbookadvanced_model->fixStateBatch($dxcc);
+		$result = $this->logbookadvanced_model->fixStateBatch($dxcc, $stationid);
 
 		$data['result'] = $result;
 
@@ -889,19 +897,21 @@ class Logbookadvanced extends CI_Controller {
 
 		$data['dxcc'] = $this->input->post('dxcc', true);
 		$data['country'] = $this->input->post('country', true);
+		$data['stationid'] = $this->input->post('stationid', true);
 
 		// Process for batch QSO state fix
-		$data['qsos'] = $this->logbookadvanced_model->getStateListQsos($data['dxcc']);
+		$data['qsos'] = $this->logbookadvanced_model->getStateListQsos($data['dxcc'], $data['stationid']);
 
 		$this->load->view('logbookadvanced/showStateQsos', $data);
 	}
 
-	public function batchFix() {
+	public function fixMissingGrids() {
 		if(!clubaccess_check(9)) return;
 
 		$type = $this->input->post('type', true);
+		$stationid = $this->input->post('stationid', true);
 		$this->load->model('logbookadvanced_model');
-		$result = $this->logbookadvanced_model->batchFix($type);
+		$result = $this->logbookadvanced_model->check_missing_grid($stationid);
 
 		$data['result'] = $result;
 		$data['type'] = $type;

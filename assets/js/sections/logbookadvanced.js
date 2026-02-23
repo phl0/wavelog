@@ -63,6 +63,9 @@ function updateRow(qso) {
 	if ((user_options.datetime.show ?? 'true') == "true"){
 		cells.eq(c++).text(qso.qsoDateTime);
 	}
+	if ((user_options.duration.show ?? 'true') == "true"){
+		cells.eq(c++).text(qso.duration);
+	}
 	if ((user_options.last_modification.show ?? 'true') == "true"){
 		cells.eq(c++).text(qso.last_modified);
 	}
@@ -282,6 +285,9 @@ function loadQSOTable(rows) {
 			} else {
 				data.push(qso.qsoDateTime);
 			}
+		}
+		if ((user_options.duration.show ?? 'true') == "true"){
+			data.push(qso.duration);
 		}
 		if ((user_options.last_modification.show ?? 'true') == "true"){
 			data.push(qso.last_modified);
@@ -765,7 +771,8 @@ $(document).ready(function () {
 				qrzReceived: this.qrzReceived.value,
 				distance: this.distance.value,
 				sortcolumn: this.sortcolumn.value,
-				sortdirection: this.sortdirection.value
+				sortdirection: this.sortdirection.value,
+				duration: this.duration.value,
 			},
 			dataType: 'json',
 			success: function (data) {
@@ -831,7 +838,7 @@ $(document).ready(function () {
 					buttons: [
 					{
 						label: lang_admin_close,
-						cssClass: 'btn-sm btn-secondary',
+						cssClass: 'btn btn-sm btn-secondary',
 						id: 'closeButton',
 						action: function (dialogItself) {
 							dialogItself.close();
@@ -839,7 +846,7 @@ $(document).ready(function () {
 					},
 					{
 						label: 'Update',
-						cssClass: 'btn-sm btn-primary',
+						cssClass: 'btn btn-sm btn-primary',
 						id: 'updateButton',
 						action: function (dialogItself) {
 							startProcessingCallbook(nElements, $('[name="gridsquareaccuracycheck"]').is(":checked"));
@@ -1254,72 +1261,6 @@ $(document).ready(function () {
 		});
 	});
 
-	$('#fixContinent').click(function (event) {
-		$.ajax({
-			url: base_url + 'index.php/logbookadvanced/continentDialog',
-			type: 'post',
-			success: function (html) {
-				BootstrapDialog.show({
-					title: lang_gen_advanced_logbook_continent_fix,
-					size: BootstrapDialog.SIZE_NORMAL,
-					cssClass: 'options',
-					nl2br: false,
-					message: html,
-					buttons: [
-					{
-						label: lang_gen_advanced_logbook_update_now + ' <div class="ld ld-ring ld-spin"></div>',
-						cssClass: 'btn btn-sm btn-primary ld-ext-right',
-						id: 'updateContinentButton',
-						action: function (dialogItself) {
-							runContinentFix(dialogItself);
-						}
-					},
-					{
-						label: lang_admin_close,
-						cssClass: 'btn btn-sm btn-secondary',
-						id: 'closeButton',
-						action: function (dialogItself) {
-							dialogItself.close();
-						}
-					}],
-				});
-			}
-		});
-	});
-
-	$('#updateDistances').click(function (event) {
-		$.ajax({
-			url: base_url + 'index.php/logbookadvanced/distanceDialog',
-			type: 'post',
-			success: function (html) {
-				BootstrapDialog.show({
-					title: lang_gen_advanced_logbook_update_distances,
-					size: BootstrapDialog.SIZE_NORMAL,
-					cssClass: 'options',
-					nl2br: false,
-					message: html,
-					buttons: [
-					{
-						label: lang_gen_advanced_logbook_update_now  + ' <div class="ld ld-ring ld-spin"></div>',
-						cssClass: 'btn btn-sm btn-primary ld-ext-right',
-						id: 'updateDistanceButton',
-						action: function (dialogItself) {
-							runUpdateDistancesFix(dialogItself);
-						}
-					},
-					{
-						label: lang_admin_close,
-						cssClass: 'btn btn-sm btn-secondary',
-						id: 'closeButton',
-						action: function (dialogItself) {
-							dialogItself.close();
-						}
-					}],
-				});
-			}
-		});
-	});
-
 	$('#dbtools').click(function (event) {
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/dbtoolsDialog',
@@ -1345,8 +1286,6 @@ $(document).ready(function () {
 			}
 		});
 	});
-
-
 
 	$('#fixItuZones').click(function (event) {
 		const id_list = getSelectedIds();
@@ -1688,7 +1627,7 @@ $(document).ready(function () {
 			type: 'post',
 			success: function (html) {
 				BootstrapDialog.show({
-					title: lang_gen_advanced_logbook_start_printing_at_which_label,
+					title: '<i class="fas fa-print me-2"></i>'+lang_label_print_options,
 					size: BootstrapDialog.SIZE_NORMAL,
 					cssClass: 'qso-dialog',
 					nl2br: false,
@@ -1697,7 +1636,7 @@ $(document).ready(function () {
 					},
 					buttons: [{
 						label: 'Print',
-						cssClass: 'btn-primary btn-sm',
+						cssClass: 'btn btn-primary btn-sm',
 						action: function (dialogItself) {
 							printlabel(id_list);
 							dialogItself.close();
@@ -1705,6 +1644,7 @@ $(document).ready(function () {
 					},
 						{
 						label: lang_admin_close,
+						cssClass: 'btn btn-secondary btn-sm',
 						action: function (dialogItself) {
 							$('#printLabel').prop("disabled", false);
 							dialogItself.close();
@@ -1832,7 +1772,8 @@ function printlabel(id_list) {
 				'via': $('#via')[0].checked,
 				'tnxmsg': $('#tnxmsg')[0].checked,
 				'qslmsg': $('#qslmsg')[0].checked,
-				'reference': $('#reference')[0].checked
+				'reference': $('#reference')[0].checked,
+				'mycall': $('#mycall')[0].checked
 			},
 		xhr:function(){
 			var xhr = new XMLHttpRequest();
@@ -1884,6 +1825,7 @@ function saveOptions() {
 			type: 'post',
 			data: {
 				datetime: $('input[name="datetime"]').is(':checked') ? true : false,
+				duration: $('input[name="duration"]').is(':checked') ? true : false,
 				last_modification: $('input[name="last_modification"]').is(':checked') ? true : false,
 				de: $('input[name="de"]').is(':checked') ? true : false,
 				dx: $('input[name="dx"]').is(':checked') ? true : false,
@@ -2035,7 +1977,8 @@ function saveOptions() {
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/checkDb',
 			data: {
-				type: 'checkdistance'
+				type: 'checkdistance',
+				stationid: $('#dbtools_station_id').val()
 			},
 			type: 'POST',
 			success: function(response) {
@@ -2069,7 +2012,8 @@ function saveOptions() {
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/checkDb',
 			data: {
-				type: 'checkcontinent'
+				type: 'checkcontinent',
+				stationid: $('#dbtools_station_id').val()
 			},
 			type: 'POST',
 			success: function(response) {
@@ -2078,7 +2022,7 @@ function saveOptions() {
 				$('.result').html(response);
 			},
 			error: function(xhr, status, error) {
-				$('#checkFixContinentBtn').prop('disabled', false).text('<?= __("Check") ?>');
+				$('#checkFixContinentBtn').prop('disabled', false).removeClass("running");
 				$('#closeButton').prop('disabled', false);
 
 				let errorMsg = 'Error checking continent information';
@@ -2102,7 +2046,8 @@ function saveOptions() {
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/checkDb',
 			data: {
-				type: 'checkstate'
+				type: 'checkstate',
+				stationid: $('#dbtools_station_id').val()
 			},
 			type: 'POST',
 			success: function(response) {
@@ -2112,76 +2057,10 @@ function saveOptions() {
 				$('.result').html(response);
 			},
 			error: function(xhr, status, error) {
-				$('#checkFixStateBtn').prop('disabled', false).text('<?= __("Check") ?>');
+				$('#checkFixStateBtn').prop('disabled', false).removeClass("running");
 				$('#closeButton').prop('disabled', false);
 
 				let errorMsg = 'Error checking state information';
-				if (xhr.responseJSON && xhr.responseJSON.message) {
-					errorMsg += ': ' + xhr.responseJSON.message;
-				}
-
-				BootstrapDialog.alert({
-					title: 'Error',
-					message: errorMsg,
-					type: BootstrapDialog.TYPE_DANGER
-				});
-			}
-		});
-	}
-
-	function checkFixCqZones() {
-		$('#checkFixCqZonesBtn').prop("disabled", true).addClass("running");
-		$('#closeButton').prop("disabled", true);
-
-		$.ajax({
-			url: base_url + 'index.php/logbookadvanced/checkDb',
-			data: {
-				type: 'checkcqzones'
-			},
-			type: 'POST',
-			success: function(response) {
-				$('#checkFixCqZonesBtn').prop("disabled", false).removeClass("running");
-				$('#closeButton').prop("disabled", false);
-				$('.result').html(response);
-			},
-			error: function(xhr, status, error) {
-				$('#checkFixCqZonesBtn').prop('disabled', false).text('<?= __("Check") ?>');
-				$('#closeButton').prop('disabled', false);
-
-				let errorMsg = '<?= __("Error checking distance information") ?>';
-				if (xhr.responseJSON && xhr.responseJSON.message) {
-					errorMsg += ': ' + xhr.responseJSON.message;
-				}
-
-				BootstrapDialog.alert({
-					title: 'Error',
-					message: errorMsg,
-					type: BootstrapDialog.TYPE_DANGER
-				});
-			}
-		});
-	}
-
-	function checkFixItuZones() {
-		$('#checkFixItuZonesBtn').prop("disabled", true).addClass("running");
-		$('#closeButton').prop("disabled", true);
-
-		$.ajax({
-			url: base_url + 'index.php/logbookadvanced/checkDb',
-			data: {
-				type: 'checkituzones'
-			},
-			type: 'POST',
-			success: function(response) {
-				$('#checkFixItuZonesBtn').prop("disabled", false).removeClass("running");
-				$('#closeButton').prop("disabled", false);
-				$('.result').html(response);
-			},
-			error: function(xhr, status, error) {
-				$('#checkFixItuZonesBtn').prop('disabled', false).text('<?= __("Check") ?>');
-				$('#closeButton').prop('disabled', false);
-
-				let errorMsg = '<?= __("Error checking distance information") ?>';
 				if (xhr.responseJSON && xhr.responseJSON.message) {
 					errorMsg += ': ' + xhr.responseJSON.message;
 				}
@@ -2202,8 +2081,9 @@ function saveOptions() {
 			url: base_url + 'index.php/logbookadvanced/fixStateBatch',
 			type: 'post',
 			data: {
-				'dxcc': dxcc,
-				'country': country
+				dxcc: dxcc,
+				country: country,
+				stationid: $('#dbtools_station_id').val()
 			},
 			success: function (response) {
 				$('#fixStateBtn_' + dxcc).prop("disabled", false).removeClass("running");
@@ -2219,11 +2099,12 @@ function saveOptions() {
 		$('#openStateListBtn_' + dxcc).prop("disabled", true).addClass("running");
 
 		$.ajax({
-			url: base_url + 'index.php/logbookadvanced/OpenStateList',
+			url: base_url + 'index.php/logbookadvanced/openStateList',
 			type: 'post',
 			data: {
-				'dxcc': dxcc,
-				'country': country
+				dxcc: dxcc,
+				country: country,
+				stationid: $('#dbtools_station_id').val()
 			},
 			success: function (response) {
 				$('#openStateListBtn_' + dxcc).prop("disabled", false).removeClass("running");
@@ -2258,6 +2139,9 @@ function saveOptions() {
 		$('#closeButton').prop("disabled", true);
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/updateDistances',
+			data: {
+				stationid: $('#dbtools_station_id').val()
+			},
 			type: 'POST',
 			success: function (response) {
 				$('#updateDistanceButton').prop("disabled", false).removeClass("running");
@@ -2283,6 +2167,9 @@ function saveOptions() {
 		$('#closeButton').prop("disabled", true);
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/fixContinent',
+			data: {
+				stationid: $('#dbtools_station_id').val()
+			},
 			type: 'POST',
 			success: function (response) {
 				$('#updateContinentButton').prop("disabled", false).removeClass("running");
@@ -2307,7 +2194,8 @@ function saveOptions() {
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/checkDb',
 			data: {
-				type: 'checkgrids'
+				type: 'checkgrids',
+				stationid: $('#dbtools_station_id').val()
 			},
 			type: 'POST',
 			success: function(response) {
@@ -2328,9 +2216,10 @@ function saveOptions() {
 		$('#updateGridsBtn').prop("disabled", true).addClass("running");
 		$('#closeButton').prop("disabled", true);
 		$.ajax({
-			url: base_url + 'index.php/logbookadvanced/batchFix',
+			url: base_url + 'index.php/logbookadvanced/fixMissingGrids',
 			data: {
-				type: 'grids'
+				type: 'grids',
+				stationid: $('#dbtools_station_id').val()
 			},
 			type: 'POST',
 			success: function (response) {
@@ -2353,7 +2242,8 @@ function saveOptions() {
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/checkDb',
 			data: {
-				type: 'checkdxcc'
+				type: 'checkdxcc',
+				stationid: $('#dbtools_station_id').val()
 			},
 			type: 'POST',
 			success: function(response) {
@@ -2424,7 +2314,8 @@ function saveOptions() {
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/checkDb',
 			data: {
-				type: 'checkincorrectcqzones'
+				type: 'checkincorrectcqzones',
+				stationid: $('#dbtools_station_id').val()
 			},
 			type: 'POST',
 			success: function(response) {
@@ -2502,7 +2393,8 @@ function saveOptions() {
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/checkDb',
 			data: {
-				type: 'checkincorrectituzones'
+				type: 'checkincorrectituzones',
+				stationid: $('#dbtools_station_id').val()
 			},
 			type: 'POST',
 			success: function(response) {
@@ -2695,7 +2587,8 @@ function saveOptions() {
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/checkDb',
 			data: {
-				type: 'checkincorrectgridsquares'
+				type: 'checkincorrectgridsquares',
+				stationid: $('#dbtools_station_id').val()
 			},
 			type: 'POST',
 			success: function(response) {
@@ -2879,7 +2772,8 @@ function saveOptions() {
 		$.ajax({
 			url: base_url + 'index.php/logbookadvanced/checkDb',
 			data: {
-				type: 'checkiota'
+				type: 'checkiota',
+				stationid: $('#dbtools_station_id').val()
 			},
 			type: 'POST',
 			success: function(response) {
