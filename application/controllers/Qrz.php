@@ -18,16 +18,16 @@ class Qrz extends CI_Controller {
 
 	// Show frontend if there is one
 	public function index() {
-		$this->config->load('config');
+		redirect('dashboard');
 	}
 
 	/* 
 	 * API Key Status Test
 	 */
-
 	public function qrz_apitest() {
-		$apikey = xss_clean($this->input->post('APIKEY'));
-		$url = 'http://logbook.qrz.com/api'; // TODO: Move this to database
+		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
+		$apikey = trim(xss_clean($this->input->post('APIKEY')));
+		$url = 'https://logbook.qrz.com/api'; // TODO: Move this to database
   
 		$post_data['KEY'] = $apikey;
 		$post_data['ACTION'] = 'STATUS';
@@ -42,7 +42,8 @@ class Qrz extends CI_Controller {
 		curl_setopt( $ch, CURLOPT_USERAGENT, 'Wavelog/'.$this->optionslib->get_option('version'));
 		
 		$content = curl_exec($ch);
-		curl_close($ch);
+		
+		$result = [];
 
 		if ($content){
 			if (stristr($content,'RESULT=OK')) {
@@ -68,6 +69,14 @@ class Qrz extends CI_Controller {
 	 * All QSOs not previously uploaded, will then be uploaded, one at a time
 	 */
 	public function upload() {
+
+		$this->load->helper('cronauth');
+		if (!cronauth_allowed(3)) {
+			// return a 403
+			$this->output->set_status_header(403);
+			exit();
+		}
+
 		$this->setOptions();
 
 		// set the last run in cron table for the correct cron id
@@ -97,7 +106,7 @@ class Qrz extends CI_Controller {
 		}
 	}
 
-	function setOptions() {
+	private function setOptions() {
 		$this->config->load('config');
 		ini_set('memory_limit', '-1');
 		ini_set('display_errors', 1);
@@ -188,7 +197,7 @@ class Qrz extends CI_Controller {
 	/*
 	 * Function marks QSO with given primarykey as uploaded to qrz
 	 */
-	function markqso($primarykey,$state = 'Y') {
+	private function markqso($primarykey,$state = 'Y') {
 		$this->logbook_model->mark_qrz_qsos_sent($primarykey, $state);
 	}
 
@@ -196,7 +205,6 @@ class Qrz extends CI_Controller {
 	 * Used for displaying the uid for manually selecting log for upload to qrz
 	 */
 	public function export() {
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$this->load->model('stations');
@@ -220,6 +228,7 @@ class Qrz extends CI_Controller {
 	 * Used for ajax-function when selecting log for upload to qrz
 	 */
 	public function upload_station() {
+		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		if (!($this->config->item('disable_manual_qrz'))) {
 			$this->setOptions();
 			$this->load->model('stations');
@@ -283,7 +292,6 @@ class Qrz extends CI_Controller {
 	}
 
 	public function import_qrz() {
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$data['page_title'] = __("QRZ QSL Import");
@@ -301,7 +309,12 @@ class Qrz extends CI_Controller {
 	} // end function
 
 	function download($user_id_to_load = null, $lastqrz = null, $show_views = false) {
-		$this->load->model('user_model');
+		$this->load->helper('cronauth');
+		if (!cronauth_allowed(3)) {
+			// return a 403
+			$this->output->set_status_header(403);
+			exit();
+		}
 		$this->load->model('logbook_model');
 
 		$this->load->model('cron_model');
@@ -336,7 +349,6 @@ class Qrz extends CI_Controller {
 			log_message('error', "No station profiles with a QRZ API Key found.");
 		}
 
-		$this->load->model('user_model');
 		if ($this->user_model->authorize(2)) {	// Only Output results if authorized User
 			if(isset($data['tableheaders'])) {
 				if ($data['table'] != '') {
@@ -363,7 +375,7 @@ class Qrz extends CI_Controller {
 			$result = "Temporary download file ".$file." is not writable. Aborting!";
 			return false;
 		}
-		$url = 'http://logbook.qrz.com/api'; 
+		$url = 'https://logbook.qrz.com/api'; 
 
 		$post_data['KEY'] = $qrz_api_key;
 		$post_data['ACTION'] = 'FETCH';

@@ -900,7 +900,7 @@ class Migration_pota_migration extends CI_Migration {
 		//'' => 'MQ',
 		// Changes on 2024-03-18
 		'I' => 'IT',
-		'ZL' => 'NZ',
+		// 'ZL' => 'NZ', dupe
 		'SP' => 'PL',
 		'V3' => 'BZ',
 		'ZF' => 'KY',
@@ -924,7 +924,7 @@ class Migration_pota_migration extends CI_Migration {
 		//'PJ2' => 'CW',
 		//'PY' => 'BR',
 		'S5' => 'SI',
-		'SV' => 'GR',
+		// 'SV' => 'GR', dupe
 		//'T3' => 'GD',
 		//'T7' => 'SM',
 		//'TA' => 'TR',
@@ -969,7 +969,6 @@ class Migration_pota_migration extends CI_Migration {
 		'JX' => 'SJ',
 		'KC4' => 'US',
 		'KH6' => 'US',
-		'KH8' => 'AS',
 		'KH8' => 'AS',
 		'KL7' => 'US',
 		'KP5' => 'PR',

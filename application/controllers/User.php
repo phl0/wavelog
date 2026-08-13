@@ -2,9 +2,10 @@
 
 class User extends CI_Controller {
 
+	private $pwd_placeholder = '**********';
+
 	public function index()
 	{
-		$this->load->model('user_model');
 		$this->load->library('form_validation');
 
 		if (!$this->load->is_loaded('encryption')) {
@@ -44,7 +45,7 @@ class User extends CI_Controller {
 
 		$footerData = [];
 		$footerData['scripts'] = [
-			'assets/js/sections/user.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/user.js")),
+			'assets/js/sections/user.js',
 		];
 
 		$data['page_title'] = __("User Accounts");
@@ -56,7 +57,6 @@ class User extends CI_Controller {
 
 	public function actions_modal() {
 
-		$this->load->model('user_model');
 		$this->load->library('encryption');
 		if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
@@ -79,6 +79,11 @@ class User extends CI_Controller {
 			$user = $this->user_model->get_by_id($data['user_id'])->row();
 			$gettext = new Gettext;
 
+			$data['auth_header_enable'] = $this->config->item('auth_header_enable') ?? false;
+			if ($data['auth_header_enable']) {
+				$this->config->load('sso', true, true);
+			}
+
 			$data['user_name'] = $user->user_name;
 			$data['user_callsign'] = $user->user_callsign;
 			$data['user_email'] = $user->user_email;
@@ -90,6 +95,7 @@ class User extends CI_Controller {
 			$data['last_seen'] = $user->last_seen;
 			$data['custom_date_format'] = $custom_date_format;
 			$data['has_flossie'] = ($this->config->item('encryption_key') == 'flossie1234555541') ? true : false;
+			$data['auth_header_allow_direct_login'] = $this->config->item('auth_header_allow_direct_login', 'sso') ?? true;
 
 			$this->load->view('user/modals/'.$modal.'_modal', $data);
 		} else {
@@ -99,7 +105,6 @@ class User extends CI_Controller {
 	}
 
 	public function unlock($uid) {
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		if ($this->user_model->exists_by_id($uid)) {
@@ -117,7 +122,6 @@ class User extends CI_Controller {
 	}
 
 	public function convert() {
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$user_id = $this->input->post('user_id', true) ?? '';
@@ -141,7 +145,6 @@ class User extends CI_Controller {
 	}
 
 	function add() {
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$data['existing_languages'] = $this->config->item('languages');
@@ -153,6 +156,7 @@ class User extends CI_Controller {
 		$this->form_validation->set_rules('user_name', 'Username', 'required');
 		$this->form_validation->set_rules('user_name', 'Username', 'required|callback_check_username');
 		$this->form_validation->set_rules('user_email', 'E-mail', 'required');
+		$this->form_validation->set_rules('user_clublog_name', 'Clublog Username', 'valid_email');
 		$this->form_validation->set_rules('user_password', 'Password', 'required');
 		$this->form_validation->set_rules('user_type', 'Type', 'required');
 		$this->form_validation->set_rules('user_callsign', 'Callsign', 'required');
@@ -168,12 +172,20 @@ class User extends CI_Controller {
 
 		$data['clubstation'] = ($this->input->get('club') ?? '') == '1' ? true : false;
 
+		$data['external_account'] = NULL;
+		$data['auth_header_enable'] = $this->config->item('auth_header_enable') ?? false;
+		$data['auth_header_allow_direct_login']  = true;
+		$data['auth_header_hide_password_field'] = false;
+		$data['auth_header_locked_data_badge'] = "Not Visible In Add UI";
+		$data['auth_header_locked_data_tip'] = "You should not see this message";
+		$data['sso_claim_config'] = [];
+
 		// Get themes list
 		$data['themes'] = $this->user_model->getThemes();
 
 		$footerData = [];
 		$footerData['scripts'] = [
-			'assets/js/sections/user.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/user.js")),
+			'assets/js/sections/user.js',
 		];
 
 		// Get timezones
@@ -191,6 +203,7 @@ class User extends CI_Controller {
 		if ($this->form_validation->run() == FALSE) {
 			$data['page_title'] = __("Add User");
 			$data['measurement_base'] = $this->config->item('measurement_base');
+			$data['csrf_token'] = $this->paths->csrf_generate($this->router->class.'_'.$this->router->method);
 
 			$this->load->view('interface_assets/header', $data);
 			if($this->input->post('user_name')) {
@@ -206,6 +219,8 @@ class User extends CI_Controller {
 				$data['user_measurement_base'] = $this->input->post('user_measurement_base') ?? 'K';
 				$data['user_dashboard_map'] = $this->input->post('user_dashboard_map') ?? 'Y';
 				$data['user_dashboard_banner'] = $this->input->post('user_dashboard_banner') ?? 'Y';
+				$data['user_dashboard_solar'] = $this->input->post('user_dashboard_solar') ?? 'Y';
+				$data['user_dxwaterfall_enable'] = $this->input->post('user_dxwaterfall_enable') ?? 'N';
 				$data['user_stylesheet'] = $this->input->post('user_stylesheet');
 				$data['user_qth_lookup'] = $this->input->post('user_qth_lookup');
 				$data['user_sota_lookup'] = $this->input->post('user_sota_lookup');
@@ -224,6 +239,7 @@ class User extends CI_Controller {
 				$data['user_default_band'] = $this->input->post('user_default_band');
 				$data['user_default_confirmation'] = ($this->input->post('user_default_confirmation_qsl') !== null ? 'Q' : '').($this->input->post('user_default_confirmation_lotw') !== null ? 'L' : '').($this->input->post('user_default_confirmation_eqsl') !== null ? 'E' : '').($this->input->post('user_default_confirmation_qrz') !== null ? 'Z' : '').($this->input->post('user_default_confirmation_clublog') !== null ? 'C' : '').($this->input->post('user_default_confirmation_dcl') !== null ? 'D' : '');
 				$data['user_qso_end_times'] = $this->input->post('user_qso_end_times');
+				$data['user_qso_db_search_priority'] = $this->input->post('user_qso_db_search_priority') ?? 'Y';
 				$data['user_quicklog'] = $this->input->post('user_quicklog');
 				$data['user_quicklog_enter'] = $this->input->post('user_quicklog_enter');
 				$data['user_hamsat_key'] = $this->input->post('user_hamsat_key');
@@ -234,18 +250,27 @@ class User extends CI_Controller {
 				$data['user_pota_to_qso_tab'] = $this->input->post('user_pota_to_qso_tab');
 				$data['user_sig_to_qso_tab'] = $this->input->post('user_sig_to_qso_tab');
 				$data['user_dok_to_qso_tab'] = $this->input->post('user_dok_to_qso_tab');
+				$data['user_station_to_qso_tab'] = $this->input->post('user_station_to_qso_tab');
+				$data['user_qso_show_map'] = $this->input->post('user_qso_show_map') ?? 1;
 				$data['user_language'] = $this->input->post('user_language');
 				$data['global_oqrs_text'] = $this->input->post('global_oqrs_text') ?? '';
 				$data['oqrs_grouped_search'] = $this->input->post('oqrs_grouped_search') ?? 'off';
 				$data['oqrs_grouped_search_show_station_name'] = $this->input->post('oqrs_grouped_search_show_station_name') ?? 'off';
 				$data['oqrs_auto_matching'] = $this->input->post('oqrs_auto_matching') ?? 'on';
 				$data['oqrs_direct_auto_matching'] = $this->input->post('oqrs_direct_auto_matching') ?? 'on';
+				$data['oqrs_delivery_method'] = $this->input->post('oqrs_delivery_method') ?? 'both';
 				$this->load->view('user/edit', $data);
 			} else {
 				$this->load->view('user/edit', $data);
 			}
 			$this->load->view('interface_assets/footer', $footerData);
 		} else {
+			if (!$this->paths->csrf_verify($this->router->class.'_'.$this->router->method)) {
+				$this->session->set_flashdata('error', __("Invalid security token"));
+				redirect('user/add');
+				return;
+			}
+
 			switch($this->user_model->add($this->input->post('user_name'),
 				$this->input->post('user_password'),
 				$this->input->post('user_email'),
@@ -276,6 +301,7 @@ class User extends CI_Controller {
 				$this->input->post('user_default_band'),
 				($this->input->post('user_default_confirmation_qsl') !== null ? 'Q' : '').($this->input->post('user_default_confirmation_lotw') !== null ? 'L' : '').($this->input->post('user_default_confirmation_eqsl') !== null ? 'E' : '').($this->input->post('user_default_confirmation_qrz') !== null ? 'Z' : '').($this->input->post('user_default_confirmation_clublog') !== null ? 'C' : '').($this->input->post('user_default_confirmation_dcl') !== null ? 'D' : ''),
 				$this->input->post('user_qso_end_times'),
+				$this->input->post('user_qso_db_search_priority') ?? 'Y',
 				$this->input->post('user_quicklog'),
 				$this->input->post('user_quicklog_enter'),
 				$this->input->post('user_language'),
@@ -287,6 +313,7 @@ class User extends CI_Controller {
 				$this->input->post('user_pota_to_qso_tab'),
 				$this->input->post('user_sig_to_qso_tab'),
 				$this->input->post('user_dok_to_qso_tab'),
+				$this->input->post('user_station_to_qso_tab'),
 				$this->input->post('user_lotw_name'),
 				$this->input->post('user_lotw_password'),
 				$this->input->post('user_eqsl_name'),
@@ -297,14 +324,18 @@ class User extends CI_Controller {
 				$this->input->post('on_air_widget_enabled'),
 				$this->input->post('on_air_widget_display_last_seen'),
 				$this->input->post('on_air_widget_show_only_most_recent_radio'),
+				$this->input->post('on_air_widget_display_radio_name'),
 				$this->input->post('qso_widget_display_qso_time'),
 				$this->input->post('user_dashboard_banner') ?? 'Y',
-				$this->input->post('clubstation') == '1' ? true : false,
+				$this->input->post('user_dashboard_solar') ?? 'Y',
 				$this->input->post('global_oqrs_text') ?? '',
 				$this->input->post('oqrs_grouped_search') ?? 'off',
 				$this->input->post('oqrs_grouped_search_show_station_name') ?? 'off',
 				$this->input->post('oqrs_auto_matching') ?? 'on',
-				$this->input->post('oqrs_direct_auto_matching') ?? 'on')
+				$this->input->post('oqrs_direct_auto_matching') ?? 'on',
+        			$this->input->post('user_dxwaterfall_enable') ?? 'N',
+				$this->input->post('user_qso_show_map') ?? 1,
+				$this->input->post('clubstation') == '1' ? true : false)
 			) {
 				// Check for errors
 				case EUSERNAMEEXISTS:
@@ -323,6 +354,7 @@ class User extends CI_Controller {
 					return;
 			}
 			$data['page_title'] = __("Users");
+			$data['csrf_token'] = $this->paths->csrf_generate($this->router->class.'_'.$this->router->method);
 
 			$this->load->view('interface_assets/header', $data);
 			$data['user_name'] = $this->input->post('user_name');
@@ -336,6 +368,7 @@ class User extends CI_Controller {
 			$data['user_measurement_base'] = $this->input->post('user_measurement_base');
 			$data['user_dashboard_map'] = $this->input->post('user_dashboard_map') ?? 'Y';
 			$data['user_dashboard_banner'] = $this->input->post('user_dashboard_banner') ?? 'Y';
+			$data['user_dashboard_solar'] = $this->input->post('user_dashboard_solar') ?? 'Y';
 			$data['user_stylesheet'] = $this->input->post('user_stylesheet');
 			$data['user_qth_lookup'] = $this->input->post('user_qth_lookup');
 			$data['user_sota_lookup'] = $this->input->post('user_sota_lookup');
@@ -354,6 +387,7 @@ class User extends CI_Controller {
 			$data['user_default_band'] = $this->input->post('user_default_band');
 			$data['user_default_confirmation'] = ($this->input->post('user_default_confirmation_qsl') !== null ? 'Q' : '').($this->input->post('user_default_confirmation_lotw') !== null ? 'L' : '').($this->input->post('user_default_confirmation_eqsl') !== null ? 'E' : '').($this->input->post('user_default_confirmation_qrz') !== null ? 'Z' : '').($this->input->post('user_default_confirmation_clublog') !== null ? 'C' : '').($this->input->post('user_default_confirmation_dcl') !== null ? 'D' : '');
 			$data['user_qso_end_times'] = $this->input->post('user_qso_end_times');
+			$data['user_qso_db_search_priority'] = $this->input->post('user_qso_db_search_priority') ?? 'Y';
 			$data['user_quicklog'] = $this->input->post('user_quicklog');
 			$data['user_quicklog_enter'] = $this->input->post('user_quicklog_enter');
 			$data['user_language'] = $this->input->post('user_language');
@@ -362,19 +396,19 @@ class User extends CI_Controller {
 			$data['oqrs_grouped_search_show_station_name'] = $this->input->post('oqrs_grouped_search_show_station_name') ?? 'off';
 			$data['oqrs_auto_matching'] = $this->input->post('oqrs_auto_matching') ?? 'on';
 			$data['oqrs_direct_auto_matching'] = $this->input->post('oqrs_direct_auto_matching') ?? 'on';
+			$data['oqrs_delivery_method'] = $this->input->post('oqrs_delivery_method') ?? 'both';
+			$data['user_dxwaterfall_enable'] = $this->input->post('user_dxwaterfall_enable') ?? 'N';
 			$this->load->view('user/edit', $data);
 			$this->load->view('interface_assets/footer', $footerData);
 		}
 	}
 
 	function edit() {
-		$this->load->model('user_model');
 		if ( ($this->session->userdata('user_id') == '') || ((!$this->user_model->authorize(99)) && ($this->session->userdata('user_id') != $this->uri->segment(3))) ) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		if (!clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		$query = $this->user_model->get_by_id($this->uri->segment(3));
 
 		$data['existing_languages'] = $this->config->item('languages');
-		$pwd_placeholder = '**********';
 
 		$this->load->model('bands');
 		$this->load->library('form_validation');
@@ -383,6 +417,7 @@ class User extends CI_Controller {
 		$this->form_validation->set_rules('user_name', 'Username', 'required|xss_clean');
 		$this->form_validation->set_rules('user_name', 'Username', 'required|callback_check_username');
 		$this->form_validation->set_rules('user_email', 'E-mail', 'required|xss_clean');
+		$this->form_validation->set_rules('user_clublog_name', 'Clublog Username', 'valid_email');
 		if($this->session->userdata('user_type') == 99)
 		{
 			$this->form_validation->set_rules('user_type', 'Type', 'required|xss_clean');
@@ -393,6 +428,7 @@ class User extends CI_Controller {
 		$this->form_validation->set_rules('user_locator', 'Locator', 'callback_check_locator');
 		$this->form_validation->set_rules('user_email', 'EMail', 'required|callback_check_email');
 		$this->form_validation->set_rules('user_email', 'EMail', 'required|valid_email');
+		$this->form_validation->set_rules('user_clublog_name', 'Clublog Username', 'valid_email');
 		$this->form_validation->set_rules('user_timezone', 'Timezone', 'required');
 
 		$data['user_form_action'] = site_url('user/edit')."/".$this->uri->segment(3);
@@ -404,7 +440,7 @@ class User extends CI_Controller {
 
 		$footerData = [];
 		$footerData['scripts'] = [
-			'assets/js/sections/user.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/user.js")),
+			'assets/js/sections/user.js',
 		];
 
 		// Get timezones
@@ -416,7 +452,53 @@ class User extends CI_Controller {
 		// Max value to be present in the "QSO page last QSO count" selectbox
 		$data['qso_page_last_qso_count_limit'] = QSO_PAGE_QSOS_COUNT_LIMIT;
 
+		// SSO / OIDC cases
+		$data['external_account'] = !empty($query->row()->external_account);
+		$data['auth_header_enable'] = $this->config->item('auth_header_enable') ?? false;
+		if ($data['auth_header_enable']) {
+			// expecting sso.php in the config folder
+			$this->config->load('sso', true, true);
+		}
+		$data['auth_header_allow_direct_login']  = $this->config->item('auth_header_allow_direct_login', 'sso') ?? true;
+		$data['auth_header_hide_password_field'] = $this->config->item('auth_header_hide_password_field', 'sso') ?? false;
+		$data['auth_header_locked_data_badge'] = $this->config->item('auth_header_locked_data_badge', 'sso') ?: 'IdP';
+		$data['auth_header_locked_data_tip'] = $this->config->item('auth_header_locked_data_tip', 'sso') ?: __("Can't be changed. Manage this through your Identity Provider.");
+		$data['sso_claim_config'] = $this->config->item('auth_headers_claim_config', 'sso') ?: [];
+
 		$data['page_title'] = __("Edit User");
+
+		// [MAP Custom] GET user options //
+		$options_object = $this->user_options_model->get_options('map_custom')->result();
+		if (count($options_object)>0) {
+			foreach ($options_object as $row) {
+				if ($row->option_name=='icon') {
+					$option_value = json_decode($row->option_value,true);
+					foreach ($option_value as $ktype => $vtype) {
+						if($this->input->post('user_map_'.$row->option_key.'_icon')) {
+							$data['user_map_'.$row->option_key.'_'.$ktype] = $this->input->post('user_map_'.$row->option_key.'_'.$ktype, true);
+						} else {
+							$data['user_map_'.$row->option_key.'_'.$ktype] = $vtype;
+						}
+					}
+				} else {
+					$data['user_map_'.$row->option_name.'_'.$row->option_key] = $row->option_value;
+				}
+			}
+		} else {
+			$data['user_map_qso_icon'] = "fas fa-dot-circle";
+			$data['user_map_qso_color'] = "#FF0000";
+			$data['user_map_station_icon'] = "0";
+			$data['user_map_station_color'] = "#0000FF";
+			$data['user_map_qsoconfirm_icon'] = "0";
+			$data['user_map_qsoconfirm_color'] = "#00AA00";
+			$data['user_map_unworked_color'] = "#FF0000";
+			$data['user_map_gridsquare_show'] = "0";
+			$data['user_map_tile_style'] = "map-follow";
+		}
+		$data['map_icon_select'] = array(
+			'station'=>array('0', 'fas fa-home', 'fas fa-broadcast-tower', 'fas fa-user', 'fas fa-dot-circle' ),
+			'qso'=>array('fas fa-broadcast-tower', 'fas fa-user', 'fas fa-dot-circle' ),
+			'qsoconfirm'=>array('0', 'fas fa-broadcast-tower', 'fas fa-user', 'fas fa-dot-circle', 'fas fa-check-circle' ));
 
 		if ($this->form_validation->run() == FALSE)
 		{
@@ -441,7 +523,7 @@ class User extends CI_Controller {
 				$data['user_password'] = $this->input->post('user_password',true);
 			} else {
 				if ($q->user_password !== '' && $q->user_password !== null) {
-					$data['user_password'] = $pwd_placeholder;
+					$data['user_password'] = $this->pwd_placeholder;
 				} else {
 					$data['user_password'] = '';
 				}
@@ -511,7 +593,7 @@ class User extends CI_Controller {
 				$data['user_clublog_password'] = $this->input->post('user_clublog_password', true);
 			} else {
 				if ($q->user_clublog_password !== '' && $q->user_clublog_password !== null) {
-					$data['user_clublog_password'] = $pwd_placeholder;
+					$data['user_clublog_password'] = $this->pwd_placeholder;
 				} else {
 					$data['user_clublog_password'] = '';
 				}
@@ -521,7 +603,7 @@ class User extends CI_Controller {
 				$data['user_lotw_password'] = $this->input->post('user_lotw_password', true);
 			} else {
 				if ($q->user_lotw_password !== '' && $q->user_lotw_password !== null) {
-					$data['user_lotw_password'] = $pwd_placeholder;
+					$data['user_lotw_password'] = $this->pwd_placeholder;
 				} else {
 					$data['user_lotw_password'] = '';
 				}
@@ -537,7 +619,7 @@ class User extends CI_Controller {
 				$data['user_eqsl_password'] = $this->input->post('user_eqsl_password', true);
 			} else {
 				if ($q->user_eqsl_password !== '' && $q->user_eqsl_password !== null) {
-					$data['user_eqsl_password'] = $pwd_placeholder;
+					$data['user_eqsl_password'] = $this->pwd_placeholder;
 				} else {
 					$data['user_eqsl_password'] = '';
 				}
@@ -700,7 +782,7 @@ class User extends CI_Controller {
 			}
 
 			if($this->input->post('user_dashboard_map')) {
-				$data['user_dashboard_map'] = $this->input->post('user_dashboard_map', false);
+				$data['user_dashboard_map'] = $this->input->post('user_dashboard_map', true);
 			} else {
 				$dkey_opt=$this->user_options_model->get_options('dashboard',array('option_name'=>'show_map','option_key'=>'boolean'), $this->uri->segment(3))->result();
 				if (count($dkey_opt)>0) {
@@ -714,6 +796,50 @@ class User extends CI_Controller {
 				$dkey_opt=$this->user_options_model->get_options('dashboard',array('option_name'=>'show_dashboard_banner','option_key'=>'boolean'), $this->uri->segment(3))->result();
 				if (count($dkey_opt)>0) {
 					$data['user_dashboard_banner'] = $dkey_opt[0]->option_value;
+				}
+			}
+
+			// Dashboard solar data information widget
+			if($this->input->post('user_dashboard_solar')) {
+				$data['user_dashboard_solar'] = $this->input->post('user_dashboard_solar', false);
+			} else {
+				$dkey_opt=$this->user_options_model->get_options('dashboard',array('option_name'=>'show_dashboard_solar','option_key'=>'boolean'), $this->uri->segment(3))->result();
+				if (count($dkey_opt)>0) {
+					$data['user_dashboard_solar'] = $dkey_opt[0]->option_value;
+				}
+			}
+
+			// Dashboard show expeditions
+			if($this->input->post('user_dashboard_show_dxpeditions') !== null) {
+				$data['user_dashboard_show_dxpeditions'] = $this->input->post('user_dashboard_show_dxpeditions', false);
+			} else {
+				$dkey_opt=$this->user_options_model->get_options('dashboard',array('option_name'=>'show_dxpeditions','option_key'=>'boolean'), $this->uri->segment(3))->result();
+				$data['user_dashboard_show_dxpeditions'] = (count($dkey_opt)>0) ? $dkey_opt[0]->option_value : false;
+			}
+
+			// Dashboard show contests
+			if($this->input->post('user_dashboard_show_contests') !== null) {
+				$data['user_dashboard_show_contests'] = $this->input->post('user_dashboard_show_contests', false);
+			} else {
+				$dkey_opt=$this->user_options_model->get_options('dashboard',array('option_name'=>'show_contests','option_key'=>'boolean'), $this->uri->segment(3))->result();
+				$data['user_dashboard_show_contests'] = (count($dkey_opt)>0) ? $dkey_opt[0]->option_value : false;
+			}
+
+			// Dashboard show KPI statistics
+			if($this->input->post('user_dashboard_show_kpi_stats') !== null) {
+				$data['user_dashboard_show_kpi_stats'] = $this->input->post('user_dashboard_show_kpi_stats', false);
+			} else {
+				$dkey_opt=$this->user_options_model->get_options('dashboard',array('option_name'=>'show_kpi_stats','option_key'=>'boolean'), $this->uri->segment(3))->result();
+				$data['user_dashboard_show_kpi_stats'] = (count($dkey_opt)>0) ? $dkey_opt[0]->option_value : '1';
+			}
+
+			// DX Waterfall enable option
+			if($this->input->post('user_dxwaterfall_enable')) {
+				$data['user_dxwaterfall_enable'] = $this->input->post('user_dxwaterfall_enable', false);
+			} else {
+				$dkey_opt=$this->user_options_model->get_options('dxwaterfall',array('option_name'=>'enable','option_key'=>'boolean'), $this->uri->segment(3))->result();
+				if (count($dkey_opt)>0) {
+					$data['user_dxwaterfall_enable'] = $dkey_opt[0]->option_value;
 				}
 			}
 
@@ -779,6 +905,25 @@ class User extends CI_Controller {
 					$data['user_dok_to_qso_tab'] = $qkey_opt[0]->option_value;
 				}
 			}
+			if($this->input->post('user_station_to_qso_tab')) {
+				$data['user_station_to_qso_tab'] = $this->input->post('user_station_to_qso_tab', false);
+			} else {
+				$qkey_opt=$this->user_options_model->get_options('qso_tab',array('option_name'=>'station','option_key'=>'show'), $this->uri->segment(3))->result();
+				if (count($qkey_opt)>0) {
+					$data['user_station_to_qso_tab'] = $qkey_opt[0]->option_value;
+				}
+			}
+
+			if ($this->input->post('user_qso_show_map')) {
+				$data['user_qso_show_map'] = $this->input->post('user_qso_show_map', true);
+			} else {
+				$qkey_opt = $this->user_options_model->get_options('qso_tab', array('option_name' => 'map', 'option_key' => 'show'), $this->uri->segment(3))->result();
+				if (count($qkey_opt) > 0) {
+					$data['user_qso_show_map'] = $qkey_opt[0]->option_value;
+				} else {
+					$data['user_qso_show_map'] = 1; // default: show
+				}
+			}
 
 			if($this->input->post('global_oqrs_text')) {
 				$data['global_oqrs_text'] = $this->input->post('global_oqrs_text', false);
@@ -816,6 +961,15 @@ class User extends CI_Controller {
 				}
 			}
 
+			if($this->input->post('user_qso_db_search_priority')) {
+				$data['user_qso_db_search_priority'] = $this->input->post('user_qso_db_search_priority', false);
+			} else {
+				$qkey_opt=$this->user_options_model->get_options('qso_db_search_priority',array('option_name'=>'enable','option_key'=>'boolean'), $this->uri->segment(3))->result();
+				if (count($qkey_opt)>0) {
+					$data['user_qso_db_search_priority'] = $qkey_opt[0]->option_value;
+				}
+			}
+
 			if($this->input->post('oqrs_direct_auto_matching')) {
 				$data['oqrs_direct_auto_matching'] = $this->input->post('oqrs_direct_auto_matching', false);
 			} else {
@@ -825,55 +979,58 @@ class User extends CI_Controller {
 				}
 			}
 
-			// [MAP Custom] GET user options //
-			$options_object = $this->user_options_model->get_options('map_custom')->result();
-			if (count($options_object)>0) {
-				foreach ($options_object as $row) {
-					if ($row->option_name=='icon') {
-						$option_value = json_decode($row->option_value,true);
-						foreach ($option_value as $ktype => $vtype) {
-							if($this->input->post('user_map_'.$row->option_key.'_icon')) {
-								$data['user_map_'.$row->option_key.'_'.$ktype] = $this->input->post('user_map_'.$row->option_key.'_'.$ktype, true);
-							} else {
-								$data['user_map_'.$row->option_key.'_'.$ktype] = $vtype;
-							}
-						}
-					} else {
-						$data['user_map_'.$row->option_name.'_'.$row->option_key] = $row->option_value;
-					}
-				}
+			if($this->input->post('oqrs_delivery_method')) {
+				$data['oqrs_delivery_method'] = $this->input->post('oqrs_delivery_method', false);
 			} else {
-				$data['user_map_qso_icon'] = "fas fa-dot-circle";
-				$data['user_map_qso_color'] = "#FF0000";
-				$data['user_map_station_icon'] = "0";
-				$data['user_map_station_color'] = "#0000FF";
-				$data['user_map_qsoconfirm_icon'] = "0";
-				$data['user_map_qsoconfirm_color'] = "#00AA00";
-				$data['user_map_gridsquare_show'] = "0";
+				$qkey_opt = $this->user_options_model->get_options('oqrs', array('option_name' => 'oqrs_delivery_method', 'option_key' => 'setting'), $this->uri->segment(3))->result();
+				if (count($qkey_opt) > 0) {
+					$data['oqrs_delivery_method'] = $qkey_opt[0]->option_value;
+				}
 			}
-			$data['map_icon_select'] = array(
-				'station'=>array('0', 'fas fa-home', 'fas fa-broadcast-tower', 'fas fa-user', 'fas fa-dot-circle' ),
-				'qso'=>array('fas fa-broadcast-tower', 'fas fa-user', 'fas fa-dot-circle' ),
-				'qsoconfirm'=>array('0', 'fas fa-broadcast-tower', 'fas fa-user', 'fas fa-dot-circle', 'fas fa-check-circle' ));
+
+			// Station locations linked to active logbook
+			if($this->input->post('user_stations_active_log_only') !== null) {
+				$data['user_stations_active_log_only'] = $this->input->post('user_stations_active_log_only', false);
+			} else {
+				$dkey_opt=$this->user_options_model->get_options('stations',array('option_name'=>'active_log_only','option_key'=>'boolean'), $this->uri->segment(3))->result();
+				$data['user_stations_active_log_only'] = (count($dkey_opt)>0) ? $dkey_opt[0]->option_value : false;
+			}
 
 			$data['user_locations_quickswitch'] = ($this->user_options_model->get_options('header_menu', array('option_name'=>'locations_quickswitch'), $this->uri->segment(3))->row()->option_value ?? 'false');
 			$data['user_utc_headermenu'] = ($this->user_options_model->get_options('header_menu', array('option_name'=>'utc_headermenu'), $this->uri->segment(3))->row()->option_value ?? 'false');
+			$data['user_quick_theme_switcher'] = ($this->user_options_model->get_options('header_menu', array('option_name'=>'quick_theme_switcher'), $this->uri->segment(3))->row()->option_value ?? 'true');
 			$data['user_dashboard_last_qso_count'] = ($this->user_options_model->get_options('dashboard', array('option_name'=>'last_qso_count', 'option_key' => 'count'), $this->uri->segment(3))->row()->option_value ?? DASHBOARD_DEFAULT_QSOS_COUNT);
 			$data['user_qso_page_last_qso_count'] = ($this->user_options_model->get_options('qso_tab', array('option_name'=>'last_qso_count', 'option_key' => 'count'), $this->uri->segment(3))->row()->option_value ?? QSO_PAGE_DEFAULT_QSOS_COUNT);
 
 			$data['on_air_widget_enabled'] = ($this->user_options_model->get_options('widget', array('option_name'=>'on_air', 'option_key' => 'enabled'), $this->uri->segment(3))->row()->option_value ?? "false");
 			$data['on_air_widget_display_last_seen'] = ($this->user_options_model->get_options('widget', array('option_name'=>'on_air', 'option_key' => 'display_last_seen'), $this->uri->segment(3))->row()->option_value ?? "false");
 			$data['on_air_widget_show_only_most_recent_radio'] = ($this->user_options_model->get_options('widget', array('option_name'=>'on_air', 'option_key' => 'display_only_most_recent_radio'), $this->uri->segment(3))->row()->option_value ?? "true");
+			$data['on_air_widget_display_radio_name'] = ($this->user_options_model->get_options('widget', array('option_name'=>'on_air', 'option_key' => 'display_radio_name'), $this->uri->segment(3))->row()->option_value ?? "false");
 			$data['on_air_widget_url'] = site_url('widgets/on_air/' . $q->slug);
 			$data['qso_widget_display_qso_time'] = ($this->user_options_model->get_options('widget', array('option_name'=>'qso', 'option_key' => 'display_qso_time'), $this->uri->segment(3))->row()->option_value ?? "false");
+			$data['csrf_token'] = $this->paths->csrf_generate($this->router->class.'_'.$this->router->method);
 
 			$this->load->view('interface_assets/header', $data);
 			$this->load->view('user/edit', $data);
 			$this->load->view('interface_assets/footer', $footerData);
 		} else {
 			// Data was submitted for saving - save updated options in DB
-			unset($data);
-			switch($this->user_model->edit($this->input->post())) {
+			if (!$this->paths->csrf_verify($this->router->class.'_'.$this->router->method)) {
+				$this->session->set_flashdata('error', __("Invalid security token"));
+				redirect('user/edit/'.$this->uri->segment(3));
+				return;
+			}
+
+			// SSO / OIDC: Override submitted values for fields managed by the IdP
+			$post_data = $this->input->post();
+			if (!empty($query->row()->external_account)) {
+				$post_data['user_name']  = $query->row()->user_name;
+				if (!($this->config->item('auth_header_allow_direct_login', 'sso') ?? true)) {
+					$post_data['user_password'] = $this->pwd_placeholder; // placeholder → model skips password update
+				}
+			}
+
+			switch($this->user_model->edit($post_data)) {
 				// Check for errors
 				case EUSERNAMEEXISTS:
 					$data['username_error'] = 'Username <b>'.$this->input->post('user_name', true).'</b> already in use!';
@@ -897,32 +1054,43 @@ class User extends CI_Controller {
 						);
 						$this->input->set_cookie($cookie);
 					}
-					if($this->session->userdata('user_id') == $this->input->post('id', true)) {
-						// [MAP Custom] ADD to user options //
-						$array_icon = array('station','qso','qsoconfirm');
+
+					$user_id = $this->input->post('id', true);
+
+					// [MAP Custom] ADD to user options //
+					$array_icon = array('station','qso','qsoconfirm', 'unworked');
+					foreach ($array_icon as $icon) {
+						$data_options['user_map_'.$icon.'_icon'] = xss_clean($this->input->post('user_map_'.$icon.'_icon', true));
+						$data_options['user_map_'.$icon.'_color'] = xss_clean($this->input->post('user_map_'.$icon.'_color', true));
+					}
+					if (!empty($data_options['user_map_qso_icon'])) {
 						foreach ($array_icon as $icon) {
-							$data_options['user_map_'.$icon.'_icon'] = xss_clean($this->input->post('user_map_'.$icon.'_icon', true));
-							$data_options['user_map_'.$icon.'_color'] = xss_clean($this->input->post('user_map_'.$icon.'_color', true));
+							$json = json_encode(array('icon'=>$data_options['user_map_'.$icon.'_icon'], 'color'=>$data_options['user_map_'.$icon.'_color']));
+							$this->user_options_model->set_option('map_custom','icon',array($icon=>$json), $user_id);
 						}
-						if (!empty($data_options['user_map_qso_icon'])) {
-							foreach ($array_icon as $icon) {
-								$json = json_encode(array('icon'=>$data_options['user_map_'.$icon.'_icon'], 'color'=>$data_options['user_map_'.$icon.'_color']));
-								$this->user_options_model->set_option('map_custom','icon',array($icon=>$json));
-							}
-							$this->user_options_model->set_option('map_custom','gridsquare',array('show'=>xss_clean($this->input->post('user_map_gridsquare_show', true))));
-						} else {
-							$this->user_options_model->del_option('map_custom','icon');
-							$this->user_options_model->del_option('map_custom','gridsquare');
-						}
-						$this->user_options_model->set_option('header_menu', 'locations_quickswitch', array('boolean'=>xss_clean($this->input->post('user_locations_quickswitch', true))));
-						$this->user_options_model->set_option('header_menu', 'utc_headermenu', array('boolean'=>xss_clean($this->input->post('user_utc_headermenu', true))));
+						$this->user_options_model->set_option('map_custom','gridsquare',array('show'=>xss_clean($this->input->post('user_map_gridsquare_show', true))), $user_id);
+						$this->user_options_model->set_option('map_custom','tile',array('style' => xss_clean($this->input->post('user_map_tile_style', true))),$user_id);
+					} else {
+						$this->user_options_model->del_option('map_custom','icon', null, $user_id);
+						$this->user_options_model->del_option('map_custom','gridsquare', null, $user_id);
+						$this->user_options_model->del_option('map_custom','tile', null, $user_id);
+					}
+					$this->user_options_model->set_option('header_menu', 'locations_quickswitch', array('boolean'=>xss_clean($this->input->post('user_locations_quickswitch', true))), $user_id);
+					$this->user_options_model->set_option('header_menu', 'utc_headermenu', array('boolean'=>xss_clean($this->input->post('user_utc_headermenu', true))), $user_id);
+					$this->user_options_model->set_option('header_menu', 'quick_theme_switcher', array('boolean'=>xss_clean($this->input->post('user_quick_theme_switcher', true))), $user_id);
 
-						$this->user_options_model->set_option('oqrs', 'global_oqrs_text', array('text'=>$this->input->post('global_oqrs_text', true)));
-						$this->user_options_model->set_option('oqrs', 'oqrs_grouped_search', array('boolean'=>$this->input->post('oqrs_grouped_search', true)));
-						$this->user_options_model->set_option('oqrs', 'oqrs_grouped_search_show_station_name', array('boolean'=>$this->input->post('oqrs_grouped_search_show_station_name', true)));
-						$this->user_options_model->set_option('oqrs', 'oqrs_auto_matching', array('boolean'=>$this->input->post('oqrs_auto_matching', true)));
-						$this->user_options_model->set_option('oqrs', 'oqrs_direct_auto_matching', array('boolean'=>$this->input->post('oqrs_direct_auto_matching', true)));
+					$this->user_options_model->set_option('oqrs', 'global_oqrs_text', array('text'=>$this->input->post('global_oqrs_text', true)), $user_id);
+					$this->user_options_model->set_option('oqrs', 'oqrs_grouped_search', array('boolean'=>$this->input->post('oqrs_grouped_search', true)), $user_id);
+					$this->user_options_model->set_option('oqrs', 'oqrs_grouped_search_show_station_name', array('boolean'=>$this->input->post('oqrs_grouped_search_show_station_name', true)), $user_id);
+					$this->user_options_model->set_option('oqrs', 'oqrs_auto_matching', array('boolean'=>$this->input->post('oqrs_auto_matching', true)), $user_id);
+					$this->user_options_model->set_option('oqrs', 'oqrs_direct_auto_matching', array('boolean'=>$this->input->post('oqrs_direct_auto_matching', true)), $user_id);
+					$this->user_options_model->set_option('oqrs', 'oqrs_delivery_method', array('setting'=>$this->input->post('oqrs_delivery_method', true) ?? 'both'), $user_id);
+					$this->user_options_model->set_option('dashboard', 'show_dxpeditions', array('boolean'=>($this->input->post('user_dashboard_show_dxpeditions') == '1' ? '1' : '0')), $user_id);
+					$this->user_options_model->set_option('dashboard', 'show_contests', array('boolean'=>($this->input->post('user_dashboard_show_contests') == '1' ? '1' : '0')), $user_id);
+					$this->user_options_model->set_option('dashboard', 'show_kpi_stats', array('boolean'=>($this->input->post('user_dashboard_show_kpi_stats') == '1' ? '1' : '0')), $user_id);
+					$this->user_options_model->set_option('stations', 'active_log_only', array('boolean'=>($this->input->post('user_stations_active_log_only') == '1' ? '1' : '0')), $user_id);
 
+					if($this->session->userdata('user_id') == $user_id) {
 						$this->session->set_flashdata('success', sprintf(__("User %s edited"), $this->input->post('user_name', true)));
 						redirect('user/edit/'.$this->uri->segment(3));
 					} else {
@@ -932,6 +1100,7 @@ class User extends CI_Controller {
 					return;
 			}
 
+			$data['csrf_token'] = $this->paths->csrf_generate($this->router->class.'_'.$this->router->method);
 			$this->load->view('interface_assets/header', $data);
 			$data['user_name'] = $this->input->post('user_name', true);
 			$data['user_email'] = $this->input->post('user_email', true);
@@ -965,6 +1134,7 @@ class User extends CI_Controller {
 			$data['user_quicklog_enter'] = $this->input->post('user_quicklog_enter');
 			$data['user_locations_quickswitch'] = $this->input->post('user_locations_quickswitch', true);
 			$data['user_utc_headermenu'] = $this->input->post('user_utc_headermenu', true);
+			$data['user_quick_theme_switcher'] = $this->input->post('user_quick_theme_switcher', true);
 			$data['user_language'] = $this->input->post('user_language');
 			$data['user_winkey'] = $this->input->post('user_winkey');
 			$data['user_hamsat_key'] = $this->input->post('user_hamsat_key');
@@ -974,20 +1144,22 @@ class User extends CI_Controller {
 			$data['on_air_widget_enabled'] = $this->input->post('on_air_widget_enabled', true);
 			$data['on_air_widget_display_last_seen'] = $this->input->post('on_air_widget_display_last_seen', true);
 			$data['on_air_widget_show_only_most_recent_radio'] = $this->input->post('on_air_widget_show_only_most_recent_radio', true);
+			$data['on_air_widget_display_radio_name'] = $this->input->post('on_air_widget_display_radio_name', true);
 			$data['qso_widget_display_qso_time'] = $this->input->post('qso_widget_display_qso_time', true);
 			$data['global_oqrs_text'] = $this->input->post('global_oqrs_text', true);
 			$data['oqrs_grouped_search'] = $this->input->post('oqrs_grouped_search', true);
 			$data['oqrs_grouped_search_show_station_name'] = $this->input->post('oqrs_grouped_search_show_station_name', true);
 			$data['oqrs_auto_matching'] = $this->input->post('oqrs_auto_matching', true);
 			$data['oqrs_direct_auto_matching'] = $this->input->post('oqrs_direct_auto_matching', true);
+			$data['oqrs_delivery_method'] = $this->input->post('oqrs_delivery_method', true);
+			$data['user_qso_db_search_priority'] = $this->input->post('user_qso_db_search_priority', true);
 
-			$this->load->view('user/edit');
-			$this->load->view('interface_assets/footer');
+			$this->load->view('user/edit', $data);
+			$this->load->view('interface_assets/footer', $footerData);
 		}
 	}
 
 	function profile() {
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		$query = $this->user_model->get_by_id($this->session->userdata('user_id'));
 		$q = $query->row();
@@ -1006,7 +1178,6 @@ class User extends CI_Controller {
 	}
 
 	function delete() {
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		$query = $this->user_model->get_by_id($this->uri->segment(3));
 
@@ -1015,25 +1186,77 @@ class User extends CI_Controller {
 		$this->form_validation->set_rules('id', 'user_id', 'required');
 
 		$data = $query->row();
-		$data->page_title = "Delete User";
+		$data->page_title = __("Delete User");
 
-		if ($this->form_validation->run() == FALSE)
-		{
+		if ($this->form_validation->run() == FALSE) {
+			$data->csrf_token = $this->paths->csrf_generate($this->router->class.'_'.$this->router->method);
 
 			$this->load->view('interface_assets/header', $data);
 			$this->load->view('user/delete');
 			$this->load->view('interface_assets/footer');
-		}
-		else
-		{
-			if($this->user_model->delete($data->user_id))
-			{
-				$this->session->set_flashdata('notice', 'User deleted');
+		} else {
+			if (!$this->paths->csrf_verify($this->router->class.'_'.$this->router->method)) {
+				$this->session->set_flashdata('error', __("Invalid security token"));
+				redirect('user');
+				return;
+			}
+
+			if($this->user_model->delete($data->user_id)) {
+				$this->session->set_flashdata('notice', __("User deleted"));
 				redirect('user');
 			} else {
-				$this->session->set_flashdata('notice', '<b>Database error:</b> Could not delete user!');
+				$this->session->set_flashdata('notice', '<b>' . __("Database error:") . '</b> ' . __("Could not delete user!"));
 				redirect('user');
 			}
+		}
+	}
+
+	/*
+	 * FUNCTION: theme_switch
+	 *
+	 * Lightweight JSON endpoint used by the header theme switcher. Validates the
+	 * requested theme against the themes table, then updates the current user's
+	 * stylesheet in both the DB and the session. Any logged-in user may change
+	 * their own theme — no need to open the profile/settings page.
+	 */
+	public function theme_switch() {
+		header('Content-Type: application/json');
+
+
+		if (!$this->user_model->authorize(2)) {
+			echo json_encode(array('status' => 'error', 'message' => __("You're not allowed to do that!")));
+			return;
+		}
+
+		$foldername = $this->input->post('theme', true);
+
+		if ($foldername === null || $foldername === '') {
+			echo json_encode(array('status' => 'error', 'message' => 'No theme selected.'));
+			return;
+		}
+
+		// Only trust foldernames that actually exist in the themes table
+		$this->load->model('Themes_model');
+		$valid = false;
+		foreach ($this->Themes_model->getThemes() as $t) {
+			if ($t->foldername === $foldername) {
+				$valid = true;
+				break;
+			}
+		}
+
+		if (!$valid) {
+			echo json_encode(array('status' => 'error', 'message' => 'Unknown theme.'));
+			return;
+		}
+
+		$user_id = $this->session->userdata('user_id');
+
+		if ($this->user_model->set_user_stylesheet($user_id, $foldername)) {
+			$this->session->set_userdata('user_stylesheet', $foldername);
+			echo json_encode(array('status' => 'success', 'foldername' => $foldername));
+		} else {
+			echo json_encode(array('status' => 'error', 'message' => 'Could not save theme.'));
 		}
 	}
 
@@ -1059,7 +1282,6 @@ class User extends CI_Controller {
 			$this->session->set_flashdata('success', __("Congrats! Wavelog was successfully installed. You can now login for the first time."));
 		}
 
-		$this->load->model('user_model');
 		$query = $this->user_model->get($this->input->post('user_name', true));
 
 		$this->load->library('form_validation');
@@ -1096,6 +1318,8 @@ class User extends CI_Controller {
 				if ($user->clubstation == 1) {
 					log_message('debug', "User ID: [$uid] Login rejected because of a external clubstation login attempt with a modified cookie. Attack?");
 					$this->session->set_flashdata('error', __("This is not allowed!"));
+					$this->output->set_header('X-Login-Status: failed');
+					$this->output->_display();
 					redirect('user/login');
 				}
 
@@ -1131,17 +1355,20 @@ class User extends CI_Controller {
 					$this->input->set_cookie('keep_login', '', -3600, '');
 					$this->input->set_cookie('re_login', '', -3600, '');
 					$this->session->set_flashdata('error', __("Login failed. Try again."));
+					$this->output->set_header('X-Login-Status: failed');
+					$this->output->_display();
 					redirect('user/login');
 				}
 			} catch (Exception $e) {
 				// Something went wrong with the cookie
-				log_message('error', "User ID: [".$uid."]; 'Keep Login' failed. Cookie deleted. Message: ".$e);
+				log_message('error', "User ID: [".($uid ?? 'unknown')."]; 'Keep Login' failed. Cookie deleted. Message: ".$e);
 
 				// Delete keep_login cookie
 				$this->input->set_cookie('keep_login', '', -3600, '');
 				$this->input->set_cookie('re_login', '', -3600, '');
-
+				$this->output->set_header('X-Login-Status: failed');
 				$this->session->set_flashdata('error', __("Login failed. Try again."));
+				$this->output->_display();
 				redirect('user/login');
 			}
 
@@ -1150,6 +1377,15 @@ class User extends CI_Controller {
 		if ($this->form_validation->run() == FALSE) {
 			$data['page_title'] = __("Login");
 			$data['https_check'] = $this->https_check();
+
+			$data['auth_header_enable'] = $this->config->item('auth_header_enable') ?? false;
+			if ($data['auth_header_enable']) {
+				// expecting sso.php in the config folder
+				$this->config->load('sso', true, true);
+			}
+			$data['auth_header_text'] = $this->config->item('auth_header_text', 'sso') ?: '';
+			$data['hide_login_form'] = ($data['auth_header_enable'] && !($this->config->item('auth_header_allow_direct_login', 'sso') ?? true));
+
 			$this->load->view('interface_assets/mini_header', $data);
 			$this->load->view('user/login');
 			$this->load->view('interface_assets/footer');
@@ -1197,14 +1433,15 @@ class User extends CI_Controller {
 					redirect('user/login');
 				} else {
 					$this->session->set_flashdata('error', __("Incorrect username or password!"));
+					$this->output->set_header('X-Login-Status: failed');
+					$this->output->_display();
 					redirect('user/login');
 				}
 			}
 		}
 	}
 
-	function logout($custom_message = null, $hard_logout = true) {
-		$this->load->model('user_model');
+	function logout($custom_message = null, $hard_logout = true, $enable_idp = true) {
 
 		$user_name = $this->session->userdata('user_name');
 
@@ -1222,6 +1459,14 @@ class User extends CI_Controller {
 			$this->input->set_cookie('tmp_msg', json_encode(['notice', sprintf(__("User %s logged out."), $user_name)]), 10, '');
 		}
 
+		if ($this->config->item('auth_header_enable') && $enable_idp) {
+			$this->config->load('sso', true, true);
+			$logout = $this->config->item('auth_header_url_logout', 'sso') ?: null;
+			if ($logout !== null) {
+				redirect($logout);
+			}
+		}
+
 		redirect('user/login');
 	}
 
@@ -1231,7 +1476,6 @@ class User extends CI_Controller {
 	 * Form Data to create the first station location
 	 */
 	function firstlogin_wizard_form() {
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(3)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$this->load->library('form_validation');
@@ -1245,14 +1489,12 @@ class User extends CI_Controller {
 		$stationdata = [
 			'user_id' => $this->session->userdata('user_id'),
 			'station_name' => $this->input->post('station_name', true),
-			'station_callsign' => trim($this->input->post('station_callsign', true)),
+			'station_callsign' => str_replace('Ø', '0', trim($this->input->post('station_callsign', true))),
 			'station_dxcc' => $this->input->post('station_dxcc', true),
 			'station_cqz' => $this->input->post('station_cqz', true),
 			'station_ituz' => $this->input->post('station_ituz', true),
 			'station_locator' => $this->input->post('station_locator', true),
 		];
-
-		log_message('debug', 'First Login Wizard Form Data: '.print_r($stationdata, true));
 
 		if (!$this->check_locator($stationdata['station_locator'])) {
 			$this->session->set_flashdata('fl_wiz_error', sprintf(__("Please check value for grid locator (%s)"), strtoupper($stationdata['station_locator'])));
@@ -1305,7 +1547,6 @@ class User extends CI_Controller {
 			else
 			{
 				// Check email address exists
-				$this->load->model('user_model');
 				$email = $this->input->post('email', TRUE);
 
 				$check_email = $this->user_model->check_email_address($email);
@@ -1372,7 +1613,6 @@ class User extends CI_Controller {
 		if ($this->input->is_ajax_request()) { // just additional, to make sure request is from ajax
 			if ($this->input->post('submit_allowed')) {
 
-				$this->load->model('user_model');
 
 				if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
@@ -1392,11 +1632,17 @@ class User extends CI_Controller {
 				else
 				{
 					// Check email address exists
-					$this->load->model('user_model');
 
 					$check_email = $this->user_model->check_email_address($data->user_email);
 
-					if($check_email == TRUE) {
+					// Is local login allowed
+					$auth_header_enable = $this->config->item('auth_header_enable') ?? false;
+					if ($auth_header_enable) {
+						$this->config->load('sso', true, true);
+					}
+					$auth_header_allow_direct_login  = $this->config->item('auth_header_allow_direct_login', 'sso') ?? true;
+
+					if($check_email == TRUE && $auth_header_allow_direct_login) {
 						// Generate password reset code 50 characters long
 						$this->load->helper('string');
 						$reset_code = random_string('alnum', 50);
@@ -1466,7 +1712,6 @@ class User extends CI_Controller {
 			else
 			{
 				// Lets reset the password!
-				$this->load->model('user_model');
 
 				$this->user_model->reset_password($this->input->post('password', true), $reset_code);
 				$this->session->set_flashdata('notice', 'Password Reset.');
@@ -1511,13 +1756,13 @@ class User extends CI_Controller {
 	}
 
    	function https_check() {
-		if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+		if (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) === 'on') {
 			return true;
 		}
-		if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+		if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') {
 			return true;
 		}
-		if (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
+		if (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower($_SERVER['HTTP_X_FORWARDED_SSL']) === 'on') {
 			return true;
 		}
 		return false;
@@ -1535,9 +1780,6 @@ class User extends CI_Controller {
 		if (!$this->load->is_loaded('encryption')) {
 			$this->load->library('encryption');
 		}
-
-		// Load the user model
-		$this->load->model('user_model');
 
 		// Precheck: If the encryption key is still default, we can't impersonate another user for security reasons
 		if ($this->config->item('encryption_key') == 'flossie1234555541') {
@@ -1632,16 +1874,12 @@ class User extends CI_Controller {
 	}
 
 	public function stop_impersonate_modal() {
-		// Load the user model
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(3)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$this->load->view('user/modals/stop_impersonate_modal');
 	}
 
 	public function stop_impersonate() {
-		// Load the user model
-		$this->load->model('user_model');
 
 		// there is no source_uid, there is probably something fishy going on. So we clear the session at this point
 		$source_uid = $this->session->userdata('source_uid') ?? false;
@@ -1705,6 +1943,6 @@ class User extends CI_Controller {
 
 		// log out on the regular way
 		$msg = ['notice', sprintf(__("You have been logged out of the account %s. Welcome back, %s, to your personal account!"), $club->user_callsign, $source_user->user_callsign)];
-		$this->logout($msg, false);
+		$this->logout($msg, false, false);
 	}
 }

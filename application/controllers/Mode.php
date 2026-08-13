@@ -11,7 +11,6 @@ class Mode extends CI_Controller {
 		parent::__construct();
 		$this->load->helper(array('form', 'url'));
 
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 

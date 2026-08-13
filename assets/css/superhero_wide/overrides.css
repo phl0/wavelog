@@ -71,21 +71,11 @@ span.grid-text-worked > font {
 	font-weight: 400 !important;
 }
 
-path.grid-confirmed {
-	fill: rgba(20, 109, 20, 0.7) !important;
-	stroke: rgba(20, 255, 144, 0.7) !important;
-}
-
-path.grid-worked {
-	fill: rgba(172, 40, 40, 0.7) !important;
-	stroke: rgba(248, 96, 129, 0.7) !important;
-}
-
 .map-leaflet {
 	background-color: #353c4a!important;
 }
 
-#map {
+#map:not(.window) {
 	height: 500px !important;
 }
 
@@ -219,22 +209,13 @@ div.alert-danger {
 	border-radius: 0;
 }
 
-.qso_call {
-	float: left;
-	width: 140px;
-}
-
-.qso_icons {
-	float: right;
-}
-
 #qsoList_wrapper th {
 	text-align: left !important;
 	white-space: nowrap;
 }
 #qsoList_wrapper td {
 	text-align: left !important;
-	white-space: pre-wrap;
+	white-space: nowrap;
 }
 
 #edit_qso:not(.btn) {
@@ -402,4 +383,16 @@ svg text.month {
 	margin-left: -5px;
 	position: absolute;
 	width: 0;
+}
+
+/* Contest Logger */
+:root {
+	--cl-contest-loading-bg: linear-gradient(135deg, #1a2836 0%, #2b3e50 100%);
+	--cl-contest-workspace-bg: linear-gradient(135deg, #1e2f3c 0%, #253544 100%);
+	--cl-contest-window-bg: var(--cl-bg);
+	--cl-contest-window-header-bg: #253544;
+	--cl-contest-btn-hover-bg: #3d4e5e;
+	--cl-contest-scrollbar: #3d4e5e;
+	--cl-contest-scrollbar-hover: #4e5d6c;
+	--cl-contest-border: rgba(255, 255, 255, 0.12);
 }

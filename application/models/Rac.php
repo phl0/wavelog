@@ -6,14 +6,13 @@ class rac extends CI_Model {
 		$this->load->library('Genfunctions');
 	}
 
-	public $stateString = 'AB,BC,MB,NB,NL,NT,NS,NU,ON,PE,QC,SK,YT';
+	private $stateString = 'AB,BC,MB,NB,NL,NT,NS,NU,ON,PE,QC,SK,YT';
 
 	function get_rac_array($bands, $postdata) {
-		$CI =& get_instance();
-		$CI->load->model('logbooks_model');
-		$logbooks_locations_array = $CI->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+		$this->load->model('logbooks_model');
+		$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
 
-		if (!$logbooks_locations_array) {
+		if ($logbooks_locations_array[0] === -1) {
 			return null;
 		}
 
@@ -38,7 +37,7 @@ class rac extends CI_Model {
 			if ($postdata['worked'] != NULL) {
 				$racBand = $this->getracWorked($location_list, $band, $postdata);
 				foreach ($racBand as $line) {
-					$bandrac[$line->col_state][$band] = '<div class="bg-danger awardsBgDanger"><a href=\'javascript:displayContacts("' . $line->col_state . '","' . $band . '","All","All","'. $postdata['mode'] . '","RAC", "")\'>W</a></div>';
+					$bandrac[$line->col_state][$band] = '<div class="bg-danger awardsBgWarning"><a href=\'javascript:displayContacts("' . $line->col_state . '","' . $band . '","All","All","'. $postdata['mode'] . '","RAC", "")\'>W</a></div>';
 					$states[$line->col_state]['count']++;
 				}
 			}
@@ -90,7 +89,7 @@ class rac extends CI_Model {
 		$this->load->model('logbooks_model');
 		$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
 
-		if (!$logbooks_locations_array) {
+		if ($logbooks_locations_array[0] === -1) {
 			return null;
 		}
 
@@ -129,9 +128,9 @@ class rac extends CI_Model {
 			$bandslots_list = "'".implode("','",$bandslots)."'";
 
 			$sql .= " and thcv.col_band in (" . $bandslots_list . ")" .
-				" and thcv.col_prop_mode !='SAT'";
+				" and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 		} else {
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 			$sql .= " and thcv.col_band = ?";
 			$bindings[]=$band;
 		}
@@ -166,9 +165,9 @@ class rac extends CI_Model {
 			$bandslots_list = "'".implode("','",$bandslots)."'";
 
 			$sql .= " and thcv.col_band in (" . $bandslots_list . ")" .
-				" and thcv.col_prop_mode !='SAT'";
+				" and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 		} else {
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 			$sql .= " and thcv.col_band = ?";
 			$bindings[]=$band;
 		}
@@ -258,7 +257,7 @@ class rac extends CI_Model {
 
 	function addStateToQuery() {
 		$sql = '';
-		$sql .= " and COL_DXCC = 1";
+		$sql .= " and COL_DXCC in ('1')";
 		$sql .= " and COL_STATE in ('AB','BC','MB','NB','NL','NT','NS','NU','ON','PE','QC','SK','YT')";
 		return $sql;
 	}

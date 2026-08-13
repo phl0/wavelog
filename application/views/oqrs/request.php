@@ -1,3 +1,5 @@
+<script> var lang_oqrs_request_failed = "<?= __("Request failed. Please try again."); ?>";
+var lang_oqrs_invalid_date = "<?= __("Please enter a valid date."); ?>"; </script>
 
 <?php if ($qslinfo != '') {
     echo '<br />QSL information <br /><br />';
@@ -24,7 +26,7 @@
             foreach ($result as $qso) {
                 echo '<tr>';
                     echo '<td>'. $i++ .'</td>';
-                    echo '<td><input class="form-control" type="date" name="date" value="" id="date"></td>';
+                    echo '<td><input class="form-control" type="date" name="date" value="" id="date" max="'.date('Y-m-d').'" required></td>';
                     echo '<td><input class="form-control qsotime" type="text" name="time" value="" id="time" maxlength="5" placeholder="hh:mm"></td>';
                     echo '<td id="band">'. $qso->col_band .'</td>';
                     echo '<td id="mode">'; echo $qso->col_submode == null ? strtoupper($qso->col_mode) : strtoupper($qso->col_submode);  echo '</td>';
@@ -40,15 +42,19 @@
         <label class="form-check-label"><?= __("QSL Route"); ?></label>
     </div>
 
+    <?php if (($oqrs_delivery_method ?? 'both') !== 'direct'): ?>
     <div class="form-check form-check-inline">
         <input class="form-check-input" type="radio" name="qslroute" id="bureau" value="B" checked/>
         <label class="form-check-label" for="bureau"><?= __("Bureau"); ?></label>
     </div>
+    <?php endif; ?>
 
+    <?php if (($oqrs_delivery_method ?? 'both') !== 'bureau'): ?>
     <div class="form-check form-check-inline">
-        <input class="form-check-input" type="radio" name="qslroute" id="direct" value="D" />
+        <input class="form-check-input" type="radio" name="qslroute" id="direct" value="D" <?= (($oqrs_delivery_method ?? 'both') === 'direct') ? 'checked' : ''; ?>/>
         <label class="form-check-label" for="direct"><?= __("Direct (write address in message below)"); ?></label>
     </div>
+    <?php endif; ?>
     <br /><br />
     <div class="mb-3">
         <label for="message"><?= __("Message"); ?></label>

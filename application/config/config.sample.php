@@ -9,12 +9,23 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 |	'app_name'		Name of the App 'Wavelog'
 |	'directory'		directory where wavelog is installed eg "logger"
-|	'callbook'		Selects which Callbook lookup to use defaults "hamqth" but supports "qrz"
+|	'callbook'		Selects which Callbook lookup to use defaults "hamqth" but also supports: "qrz", "qrzcq", "qrzru" and "qrzcall"
 */
 
 $config['app_name'] = 'Wavelog';
 $config['directory'] = 'logbook';
-$config['callbook'] = 'hamqth'; // Options are hamqth, qrz or qrzcq
+
+/*
+|--------------------------------------------------------------------------
+| Callbook Settings
+|--------------------------------------------------------------------------
+| Options are hamqth, qrz, qrzcq, qrzru or qrzcall
+| For a single callbook configure just one value as string. Example:
+| $config['callbook'] = 'hamqth';
+| This can also be set to an array of callbooks to search sequentially until a match is found. Example:
+| $config['callbook'] = ['qrz', 'hamqth'];
+ */
+$config['callbook'] = 'hamqth';
 
 $config['datadir'] = null; // default to install directory
 
@@ -24,8 +35,8 @@ $config['datadir'] = null; // default to install directory
 |--------------------------------------------------------------------------
 |
 | 	'table_name'	SQL table where log can be found
-|	'locator'	Default locator used to calculate bearings/distance
-|	'display_freq'	Show or Hide frequnecy info
+|	'locator'	    Default locator used to calculate bearings/distance
+|	'display_freq'	Show or Hide frequency info
 */
 
 $config['table_name'] = 'TABLE_HRD_CONTACTS_V01';
@@ -70,6 +81,31 @@ $config['qrzcq_password'] = '';
 
 /*
 |--------------------------------------------------------------------------
+| QRZ.ru Login Options
+|--------------------------------------------------------------------------
+|
+| 	'qrzru_username'	QRZ.ru user login
+|	'qrzru_password'	QRZ.ru user password
+*/
+$config['qrzru_username'] = '';
+$config['qrzru_password'] = '';
+
+/*
+|--------------------------------------------------------------------------
+| QRZCALL.EU Login Options
+|--------------------------------------------------------------------------
+|
+| 	'qrzcall_token'	QRZCALL.EU Personal Access Token (starts with "pat_")
+|
+| Generate the token at https://qrzcall.eu/ → My Profile → Account →
+| API Tokens. Requires a Data or Extra subscription. Tokens are
+| revocable individually so this Wavelog install can be locked out
+| without changing your QRZCALL.EU password or disturbing other clients.
+*/
+$config['qrzcall_token'] = '';
+
+/*
+|--------------------------------------------------------------------------
 | Authentication
 |--------------------------------------------------------------------------
 |
@@ -86,6 +122,19 @@ $config['auth_mode'] = '3';
 
 $config['auth_level'][3] = 'Operator';
 $config['auth_level'][99] = 'Administrator';
+
+/*
+|--------------------------------------------------------------------------
+| Third-Party Authentication (SSO)
+|--------------------------------------------------------------------------
+|
+| Enable SSO support via a trusted HTTP header containing a JWT access token.
+| When enabled, a sso.php config file is required (see sso.sample.php).
+|
+| Documentation: https://docs.wavelog.org/admin-guide/configuration/thirdparty-authentication/
+*/
+
+$config['auth_header_enable'] = false;
 
 /*
 |--------------------------------------------------------------------------
@@ -164,17 +213,6 @@ $config['url_suffix'] = '';
 |
 */
 $config['charset'] = 'UTF-8';
-
-/*
-|--------------------------------------------------------------------------
-| Enable/Disable System Hooks
-|--------------------------------------------------------------------------
-|
-| If you would like to use the 'hooks' feature you must enable it by
-| setting this variable to TRUE (boolean).  See the user guide for details.
-|
-*/
-$config['enable_hooks'] = TRUE;
 
 /*
 |--------------------------------------------------------------------------
@@ -315,11 +353,11 @@ $config['log_path'] = '';
 | One Logfile (true) or daily logfile?
 |--------------------------------------------------------------------------
 |
-| Leave this setted to false unless you would like to have one big logfile
+| Leave this set to false unless you would like to have one big logfile
 | at application/logs/ directory.
 |
 | true == one big log
-| false (or non-existant): daily logs
+| false (or non-existent): daily logs
 */
 $config['one_log'] = false;
 
@@ -373,14 +411,47 @@ $config['error_views_path'] = '';
 
 /*
 |--------------------------------------------------------------------------
-| Cache Directory Path
+| Cache Configuration
 |--------------------------------------------------------------------------
 |
-| Leave this BLANK unless you would like to set something other than the default
-| application/cache/ directory.  Use a full server path with trailing slash.
+| CodeIgniter supports multiple cache adapters to improve application performance
+| by storing frequently accessed data.
+| 
+| Important Notice:
+| There might some places where Wavelog forces the file adapter instead using the configured one.
+| This happens when caching for large files like images or comparable data is needed. So even
+| when you configure another adapter here, Wavelog might still use file caching in some places and respects 
+| the configured cache path for that.
+|
+| 'cache_path'
+|     Directory path for file-based caching. Leave BLANK to use the default
+|     application/cache/ directory. Use absolute paths with trailing slash.
+|     Must be writable by the web server (typically www-data or apache user).
+|     This is only used for 'file' cache adapter.
+|     Example: /var/cache/wavelog/ or /tmp/wavelog_cache/
+|
+| 'cache_adapter'
+|     The primary cache adapter to use. Options include:
+|     - 'file'      : File-based caching (default, works everywhere)
+|     - 'redis'     : Redis in-memory cache (requires Redis server & extension)
+|     - 'memcached' : Memcached (requires Memcached server & extension)
+|     - 'apcu'      : APCu in-memory cache (requires APCu extension)
+|
+| 'cache_backup'
+|     Fallback adapter if primary adapter fails or is unavailable.
+|     Recommended: 'file' as a safe fallback option
+|
+| 'cache_key_prefix'
+|     Prefix added to all cache keys to avoid collisions between
+|     applications sharing the same cache storage.
+|
+| Note: Redis configuration is stored separately in application/config/redis.php
 |
 */
 $config['cache_path'] = '';
+$config['cache_adapter'] = 'apcu';
+$config['cache_backup'] = 'file';
+$config['cache_key_prefix'] = '';
 
 /*
 |--------------------------------------------------------------------------
@@ -428,7 +499,8 @@ $config['encryption_key'] = 'flossie1234555541';
 | 'sess_expiration'
 |
 |	The number of SECONDS you want the session to last.
-|	Setting to 0 (zero) means expire when the browser is closed.
+|	Default: 43200 seconds (12 hours).
+|   Setting to 0 means use the default value of 43200 seconds (12 hours).
 |
 | 'sess_save_path'
 |
@@ -465,14 +537,14 @@ $config['encryption_key'] = 'flossie1234555541';
 */
 $config['sess_driver'] = 'files';
 $config['sess_cookie_name'] = 'ci_wavelog';
-$config['sess_expiration'] = 0;
+$config['sess_expiration'] = 43200;
 $config['sess_save_path'] = '/tmp';
 $config['sess_match_ip'] = FALSE;
 $config['sess_time_to_update'] = 300;
 $config['sess_regenerate_destroy'] = FALSE;
 
 /*
- * To make sure we do not collect infinite session we set some garbage collection settings
+ * To make sure we do not collect infinite sessions we set some garbage collection settings
  * see https://www.php.net/manual/en/session.configuration.php#ini.session.gc-probability
  * and https://www.php.net/manual/en/session.configuration.php#ini.session.gc-divisor
  * and https://osvaldas.info/enabling-codeigniters-garbage-collector/
@@ -491,7 +563,7 @@ $config['sess_gc_divisor'] = 1000;
 | 'cookie_domain'   = Set to .your-domain.com for site-wide cookies
 | 'cookie_path'     = Typically will be a forward slash
 | 'cookie_secure'   = Cookie will only be set if a secure HTTPS connection exists.
-| 'cookie_httponly' = Cookie will only be accessible via HTTP(S) (no javascript)
+| 'cookie_samesite' = Cookie SameSite attribute (None, Lax, Strict)
 |
 | Note: These settings (with the exception of 'cookie_prefix' and
 |       'cookie_httponly') will also affect sessions.
@@ -501,7 +573,7 @@ $config['cookie_prefix']	= '';
 $config['cookie_domain']	= '';
 $config['cookie_path']		= '/';
 $config['cookie_secure']	= FALSE;
-$config['cookie_httponly'] 	= FALSE;
+$config['cookie_samesite']  = 'Lax';
 
 /*
 |--------------------------------------------------------------------------
@@ -677,10 +749,10 @@ $config['disable_oqrs'] = false;
 | Special Callsign Feature aka. Clubstations Support
 |--------------------------------------------------------------------------
 |
-| This config switch is meant to use for Special Callsign operations or Clubstations.
+| This config switch is meant for Special Callsign operations or Clubstations.
 | If this switch is set to true it enables a whole bunch of features to handle Special Callsigns and Club Callsigns.
 | For more Information please visit the Wiki:
-| https://github.com/wavelog/wavelog/wiki/Clubstations
+| https://docs.wavelog.org/admin-guide/administration/clubstations/
 |
 | !!! Important !!!
 | $config['disable_impersonate'] has to be set to false to use this feature.
@@ -695,7 +767,7 @@ $config['special_callsign'] = false;
 | Impersonate
 |--------------------------------------------------------------------------
 |
-| This config switch disables the impersonate feature. This feauture is used to impersonate another user.
+| This config switch disables the impersonate feature. This feature is used to impersonate another user.
 | Impersonate is enabled by default. To disable it, set the value to false. Also the special_callsign feature needs this to be false.
 |
 */
@@ -729,39 +801,7 @@ $config['disable_version_check'] = false;
 
 /*
 |--------------------------------------------------------------------------
-| trx-control Configuration
-|--------------------------------------------------------------------------
-|
-| ***
-| No Features implemented yet, Nothing is going to happen if you set this.
-| ***
-|
-| This defines server and port of your personal trx-control server.
-| If you don't have a trx-control server, you can ignore this.
-|
-| trxd_server_ip            IP of your trx-control server
-| trxd_server_port          Port of your trx-control server
-| trxd_connection_type      Connection type of your trx-control server (ws, wss or plain)
-|                           ws:     normal websocket
-|                           wss:    secure websocket (requires a valid certificate on trx-control server)
-|                           plain:  plain tcp/ip socket connection
-| trxd_ws_path              Path of your trxd websocket server (only required for ws and wss)
-| trxd_server_timeout       Timeout before the connection to trx-control server is closed
-|
-| More Information about trx-control you can find here:
-| https://github.com/hb9ssb/trx-control
-|
-|*/
-
-// $config['trxd_server_ip'] = '10.0.0.10';
-// $config['trxd_server_port'] = '14290';
-// $config['trxd_connection_type'] = 'ws';
-// $config['trxd_ws_path'] = '/trx-control';
-// $config['trxd_timeout'] = 5;
-
-/*
-|--------------------------------------------------------------------------
-| eqsl.cc Massdownloa
+| eqsl.cc Massdownload
 |--------------------------------------------------------------------------
 |
 | The eqsl.cc mass download function is not threadsafe. So it is disabled by default.
@@ -782,7 +822,7 @@ $config['max_login_attempts'] = 3;
 |--------------------------------------------------------------------------
 | Disable User QSO Count in User List (Admin Menu)
 | Reason for this setting is to prevent performance issues on large installations
-| where the QSO count is not needed. Set to true to disable the QSO count. 
+| where the QSO count is not needed. Set to true to disable the QSO count.
 | This also hides the last Operator for CLubstations. Default is false.
 |--------------------------------------------------------------------------
  */
@@ -791,9 +831,117 @@ $config['max_login_attempts'] = 3;
 
 /*
 |--------------------------------------------------------------------------
-| enable DCL Interface
+| Enable DCL Interface
 | Set this to true if your Users and you want to connect your instance to the German DCL
 |--------------------------------------------------------------------------
  */
 
  $config['enable_dcl_interface'] = true;
+
+/*
+|--------------------------------------------------------------------------
+| DXCluster File Cache
+|--------------------------------------------------------------------------
+|
+| Controls file-based caching for DXCluster features. Two independent settings:
+|
+| 1. enable_dxcluster_file_cache_band
+|    - Caches processed spot lists (WITHOUT worked status) from DXCache API
+|    - Cache is INSTANCE-WIDE (shared by all users)
+|    - Cache duration: 59 seconds
+|    - Cache key format: dxcluster_raw_{maxage}_{continent}_{mode}_{band}
+|    - Example: dxcluster_raw_60_Any_All_20m
+|    - Contains: callsign, frequency, DXCC, mode, age, metadata
+|    - Does NOT contain: worked/confirmed status (always false in cache)
+|    - Set to TRUE to reduce API calls and speed up spot list loading
+|    - Set to FALSE to always fetch fresh data from API
+|
+| 2. enable_dxcluster_file_cache_worked
+|    - Caches worked/confirmed status lookups from database
+|    - Cache is USER-SPECIFIC (separate for each user/logbook)
+|    - Cache duration: 15 minutes (900 seconds)
+|    - Cache includes: All bands/modes combinations per callsign/DXCC/continent
+|    - Set to TRUE to significantly reduce database load
+|    - Set to FALSE to always query database for fresh status
+|
+| Default: false (both caching disabled)
+|
+| Recommendation:
+|   - Enable BAND cache on all installations to reduce API load (instance-wide)
+|   - Enable WORKED cache on high-traffic multi-user installations to reduce DB queries
+| Warning: WORKED cache may cause high disk usage on large multi-user installations.
+|--------------------------------------------------------------------------
+ */
+
+$config['enable_dxcluster_file_cache_band'] = false;
+$config['enable_dxcluster_file_cache_worked'] = false;
+
+/*
+|--------------------------------------------------------------------------
+| DXCluster Refresh Time
+|--------------------------------------------------------------------------
+| This defines the how often the DXCluster spots are refreshed in seconds. Default is 30 seconds.
+| Be careful with this and do not set it too low because depending on how many QSOs a user has it 
+| can cause a lot of load on the server. Also consider enabling a proper caching (file caches are 
+| not recommended for very large installations) to reduce the load on the server.
+|--------------------------------------------------------------------------
+ */
+$config['dxcluster_refresh_time'] = 30;
+
+/*
+|--------------------------------------------------------------------------
+| Internal tools
+| Set this to true if you want to display the admin internal tools in the header menu
+|--------------------------------------------------------------------------
+ */
+$config['internal_tools'] = false;
+
+/*
+|--------------------------------------------------------------------------
+| API Rate Limiting
+|--------------------------------------------------------------------------
+|
+| Rate limiting for API endpoints using sliding window algorithm.
+| Rate limiting is only enabled if api_rate_limits is defined (not null/empty).
+|
+| Format: Array of endpoint-specific limits
+|   - Endpoint name: the API function name (e.g., 'private_lookup', 'lookup')
+|     API v2 looks its endpoints up as 'api_v2_<resource>' (e.g. 'api_v2_qso',
+|     'api_v2_lookup'), plus 'api_v2_auth' for failed authentication attempts.
+|   - requests: maximum number of requests allowed
+|   - window: time window in seconds
+|
+| Example configuration:
+|
+| $config['api_rate_limits'] = [
+|     'private_lookup' => ['requests' => 60, 'window' => 60],  // 60 requests per minute
+|     'lookup'         => ['requests' => 60, 'window' => 60],  // 60 requests per minute
+|     'qso'            => ['requests' => 10, 'window' => 60],  // 10 requests per minute
+|     'default'        => ['requests' => 30, 'window' => 60],  // Default for all other endpoints
+| ];
+|
+| Set to null or leave commented to disable rate limiting entirely:
+| $config['api_rate_limits'] = null;
+|
+| The 'default' key is optional and applies to any API endpoint not explicitly
+| listed. If no default is provided, endpoints without specific limits have no
+| rate limiting applied.
+|
+| Rate limiting tracks requests by:
+|   - API key (if provided)
+|   - Session user ID (if authenticated via session)
+|   - IP address (fallback)
+|
+*/
+
+// Example configuration (uncomment to enable):
+// $config['api_rate_limits'] = [
+//     'private_lookup' => ['requests' => 60, 'window' => 60],
+//     'lookup'         => ['requests' => 60, 'window' => 60],
+//     'qso'            => ['requests' => 10, 'window' => 60],
+//     'radio'          => ['requests' => 60, 'window' => 60],
+//     'statistics'     => ['requests' => 30, 'window' => 60],
+//     'api_v2_auth'    => ['requests' => 10, 'window' => 60],
+//     'api_v2_qso'     => ['requests' => 10, 'window' => 60],
+//     'default'        => ['requests' => 30, 'window' => 60],
+// ];

@@ -2,6 +2,14 @@ daysPerYear();
 weekDays();
 months();
 
+// Activate tab from URL hash (e.g. #streaks)
+if (window.location.hash) {
+	var triggerEl = document.querySelector('.nav-tabs a[href="' + window.location.hash + '"]');
+	if (triggerEl) {
+		bootstrap.Tab.getOrCreateInstance(triggerEl).show();
+	}
+}
+
 function daysPerYear() {
 	$.ajax({
 		url: base_url + 'index.php/dayswithqso/get_days',
@@ -74,7 +82,7 @@ function weekDays() {
 					data: {
 						labels: labels,
 						datasets: [{
-							label: lang_qsos_this_weekday,
+							label: decodeHtml(lang_qsos_this_weekday),
 							data: dataDays,
 							backgroundColor: 'rgba(54, 162, 235, 0.2)',
 							borderColor: 'rgba(54, 162, 235, 1)',
@@ -128,7 +136,7 @@ function months() {
 					data: {
 						labels: labels,
 						datasets: [{
-							label: lang_qsos_this_month,
+							label: decodeHtml(lang_qsos_this_month),
 							data: dataDays,
 							backgroundColor: 'rgba(54, 162, 235, 0.2)',
 							borderColor: 'rgba(54, 162, 235, 1)',

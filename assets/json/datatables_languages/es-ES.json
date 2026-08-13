@@ -20,9 +20,9 @@
     "buttons": {
         "copy": "Copiar",
         "colvis": "Visibilidad",
-        "collection": "Colección",
+        "collection": "Colección<span class=\"ui-button-icon-primary ui-icon ui-icon-triangle-1-s\"></span>",
         "colvisRestore": "Restaurar visibilidad",
-        "copyKeys": "Presione ctrl o u2318 + C para copiar los datos de la tabla al portapapeles del sistema. <br \/> <br \/> Para cancelar, haga clic en este mensaje o presione escape.",
+        "copyKeys": "Presione ctrl o u2318 + C para copiar los datos de la tabla al portapapeles del sistema. <br /><br />Para cancelar, haga clic en este mensaje o presione escape.",
         "copySuccess": {
             "1": "Copiada 1 fila al portapapeles",
             "_": "Copiadas %ds fila al portapapeles"
@@ -32,7 +32,8 @@
         "excel": "Excel",
         "pageLength": {
             "-1": "Mostrar todas las filas",
-            "_": "Mostrar %d filas"
+            "_": "Mostrar %d filas",
+            "1": "Mostrar 1 fila"
         },
         "pdf": "PDF",
         "print": "Imprimir",
@@ -46,9 +47,10 @@
     },
     "autoFill": {
         "cancel": "Cancelar",
-        "fill": "Rellene todas las celdas con <i>%d<\/i>",
+        "fill": "Rellene todas las celdas con <i>%d</i>",
         "fillHorizontal": "Rellenar celdas horizontalmente",
-        "fillVertical": "Rellenar celdas verticalmente"
+        "fillVertical": "Rellenar celdas verticalmente",
+        "info": "Autocompletar ejemplo de información"
     },
     "decimal": ",",
     "searchBuilder": {
@@ -124,7 +126,7 @@
         "count": "{total}",
         "countFiltered": "{shown} ({total})",
         "emptyPanes": "Sin paneles de búsqueda",
-        "loadMessage": "Cargando paneles de búsqueda",
+        "loadMessage": "Cargando paneles de búsqueda...",
         "title": "Filtros Activos - %d",
         "showMessage": "Mostrar Todo",
         "collapseMessage": "Colapsar Todo"
@@ -168,15 +170,15 @@
             "8": "Septiembre",
             "9": "Octubre"
         },
-        "weekdays": {
-            "0": "Dom",
-            "1": "Lun",
-            "2": "Mar",
-            "4": "Jue",
-            "5": "Vie",
-            "3": "Mié",
-            "6": "Sáb"
-        },
+        "weekdays": [
+            "Dom",
+            "Lun",
+            "Mar",
+            "Mié",
+            "Jue",
+            "Vie",
+            "Sáb"
+        ],
         "next": "Próximo"
     },
     "editor": {
@@ -201,7 +203,7 @@
             }
         },
         "error": {
-            "system": "Ha ocurrido un error en el sistema (<a target=\"\\\" rel=\"\\ nofollow\" href=\"\\\">Más información&lt;\\\/a&gt;).<\/a>"
+            "system": "Ha ocurrido un error en el sistema (<a target=\"\\\" rel=\"\\ nofollow\" href=\"\\\">Más información&lt;\\/a&gt;).</a>"
         },
         "multi": {
             "title": "Múltiples Valores",
@@ -237,7 +239,7 @@
         "renameTitle": "Cambiar Nombre Estado",
         "emptyError": "El nombre no puede estar vacío.",
         "removeConfirm": "¿Seguro que quiere eliminar %s?",
-        "removeError": "Error al eliminar el Estado",
+        "removeError": "Error al eliminar el estado.",
         "renameLabel": "Nuevo nombre para %s:"
     },
     "infoThousands": "."

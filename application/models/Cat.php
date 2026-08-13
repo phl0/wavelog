@@ -2,14 +2,36 @@
 
 	class Cat extends CI_Model {
 
+		/**
+		 * Non-standard rig mode strings mapped to their ADIF mode: Yaesu use
+		 * CW-U/CW-L, Icom CW-R, Flex CWU/CWL, and various data submodes
+		 * (USB-D/LSB-D...). Applied to every radio update via normalize_mode().
+		 */
+		const MODE_OVERRIDES = [
+			'CW-U'   => 'CW',   'CW-L'   => 'CW',   'CW-R'   => 'CW', 'CWU' => 'CW', 'CWL' => 'CW',
+			'RTTY-L' => 'RTTY', 'RTTY-U' => 'RTTY', 'RTTY-R' => 'RTTY',
+			'USB-D'  => 'USB',  'USB-D1' => 'USB',
+			'LSB-D'  => 'LSB',  'LSB-D1' => 'LSB',
+		];
+
+		/**
+		 * Map a rig mode string to its ADIF equivalent (see MODE_OVERRIDES);
+		 * unknown and empty/null values pass through unchanged.
+		 */
+		private function normalize_mode($mode) {
+			if ($mode === null || $mode === '') {
+				return $mode;
+			}
+			return self::MODE_OVERRIDES[strtoupper($mode)] ?? $mode;
+		}
+
 		function update($result, $user_id, $operator) {
-			$this->load->model('User_model');
 			$timestamp = gmdate("Y-m-d H:i:s");
 
 			if (isset($result['prop_mode'])) {
 				$prop_mode = $result['prop_mode'];
-			// For backward compatibility, SatPC32 does not set propergation mode
-			} else if (isset($result['sat_name'])) {
+			// For backward compatibility, SatPC32 does not set propagation mode
+			} else if (isset($result['sat_name']) && trim($result['sat_name']) != '') {
 				$prop_mode = "SAT";
 			} else {
 				$prop_mode = NULL;
@@ -34,18 +56,14 @@
 
 			if ( (isset($result['power'])) && ($result['power'] != "NULL") && ($result['power'] != '') && (is_numeric($result['power']))) {
 				$data['power'] = $result['power'];
-			} else {
-				unset($data['power']);	// Do not update power since it isn't provided or not numeric
-			}
+			} // else we do not set power as it is not provided or not numeric
 
 			if ( (isset($result['frequency'])) && ($result['frequency'] != "NULL") && ($result['frequency'] != '') && (is_numeric($result['frequency']))) {
 				$data['frequency'] = $result['frequency'];
 			} else {
 				if ( (isset($result['uplink_freq'])) && ($result['uplink_freq'] != "NULL") && ($result['uplink_freq'] != '') && (is_numeric($result['uplink_freq'])) ) {
 					$data['frequency'] = $result['uplink_freq'];
-				} else {
-					unset($data['frequency']);	// Do not update Frequency since it wasn't provided
-				}
+				} // else we do not set frequency as it is not provided at all
 			}
 
 			if (isset($result['mode']) && $result['mode'] != "NULL") {
@@ -72,18 +90,24 @@
 				$data['mode_rx'] = NULL;
 			}
 
+			// Normalise non-standard rig mode strings to their ADIF mode. Single
+			// source of truth for every caller (v1 Api::radio() and API v2).
+			$data['mode'] = $this->normalize_mode($data['mode']);
+			$data['mode_rx'] = $this->normalize_mode($data['mode_rx']);
+
 			if (($this->config->item('mqtt_server') ?? '') != '') {
-				$h_user=$this->User_model->get_by_id($user_id);
+				$h_user=$this->user_model->get_by_id($user_id);
 				$this->load->library('Mh');
 				$eventdata=$data;
 				$eventdata['user_name']=$h_user->row()->user_name;
 				$eventdata['user_id']=$h_user->row()->user_id ?? '';
 			}
+			$radio_ids = [];
 			if ($query->num_rows() > 0) {
 				// Update the record
 				foreach ($query->result() as $row) {
-					$radio_id = $row->id;
-					$this->db->where('id', $radio_id);
+					$radio_ids[] = $row->id;
+					$this->db->where('id', $row->id);
 					$this->db->where('user_id', $user_id);
 					$this->db->update('cat', $data);
 					if (($this->config->item('mqtt_server') ?? '') != '') {
@@ -96,22 +120,183 @@
 				$data['user_id'] = $user_id;
 				$data['operator'] = $operator;
 				$this->db->insert('cat', $data);
+				$radio_ids[] = $this->db->insert_id();
 				if (($this->config->item('mqtt_server') ?? '') != '') {
                 			$this->mh->wl_event('cat/'.$user_id, json_encode(array_merge($data,$eventdata)));
 				}
 			}
 			unset($eventdata);
 			unset($h_user);
+
+			$this->load->library('worker');
+			if (!empty($radio_ids) && $this->worker->is_enabled()) {
+				foreach ($radio_ids as $id) {
+					$row = $this->db->get_where('cat', ['id' => $id, 'user_id' => $user_id])->row();
+					if (!$row) {
+						log_message('error', "There was a radio update for radio id $id, but the row was not found in the cat table for user_id $user_id. This should not happen.");
+						continue;
+					}
+					// Same shape as radio/json, plus a ms timestamp for client-side staleness
+					$radio_status = $this->format_status($row);
+					$radio_status['timestamp'] = (int) round(microtime(true) * 1000);
+					// Per-radio topic — for single-radio views (QSO entry, bandmap, contesting)
+					$this->worker->publish('radio.' . $id, [
+						'type'         => 'radio_updated',
+						'radio_status' => $radio_status,
+					]);
+					// Per-user topic — carries all of the user's radios for multi-radio
+					// views (dashboard, hardware interfaces); radio_id routes the update.
+					$this->worker->publish('radios_user.' . $user_id, [
+						'type'         => 'radio_updated',
+						'radio_id'     => (int) $id,
+						'radio_status' => $radio_status,
+					]);
+				}
+			}
 		}
 
 		/**
-		 * Get CAT radios statuses for given user ID 
+		 * Shape a cat table row into the canonical radio status array.
+		 * Single source of truth for both the radio/json endpoint and the worker
+		 * push payload, so both always carry the identical structure. Null values
+		 * are omitted (not sent as null), matching the historic radio/json output.
+		 *
+		 * @param object $row  A cat table row (from radio_status()->row()).
+		 * @return array
+		 */
+		function format_status($row) {
+			$a_ret = [];
+
+			// Check Mode
+			if (isset($row->mode) && ($row->mode != null)) {
+				$mode = strtoupper($row->mode);
+				if ($mode == "FMN") {
+					$mode = "FM";
+				}
+			} else {
+				$mode = null;
+			}
+
+			if ($row->prop_mode == "SAT") {
+				// Get Satellite Name
+				if ($row->sat_name == "AO-07") {
+					$sat_name = "AO-7";
+				} elseif ($row->sat_name == "LILACSAT") {
+					$sat_name = "CAS-3H";
+				} else {
+					$sat_name = strtoupper($row->sat_name);
+				}
+
+				// Get Satellite Mode
+				$sat_mode_uplink = $this->get_mode_designator($row->frequency);
+				$sat_mode_downlink = $this->get_mode_designator($row->frequency_rx);
+
+				if (empty($sat_mode_uplink)) {
+					$sat_mode = "";
+				} elseif ($sat_mode_uplink !== $sat_mode_downlink) {
+					$sat_mode = $sat_mode_uplink . "/" . $sat_mode_downlink;
+				} else {
+					$sat_mode = $sat_mode_uplink;
+				}
+			} else {
+				$sat_name = "";
+				$sat_mode = "";
+			}
+
+			// Calculate how old the data is in minutes
+			$datetime1 = new DateTime("now", new DateTimeZone('UTC'));
+			$datetime2 = new DateTime($row->timestamp, new DateTimeZone('UTC'));
+			$interval = $datetime1->diff($datetime2);
+			$minutes = $interval->days * 24 * 60;
+			$minutes += $interval->h * 60;
+			$minutes += $interval->i;
+
+			$a_ret['frequency'] = $row->frequency;
+			$a_ret['frequency_formatted'] = $this->frequency->qrg_conversion($row->frequency);
+			if (!empty($row->frequency_rx)) {
+				$a_ret['frequency_rx'] = $row->frequency_rx;
+				$a_ret['frequency_rx_formatted'] = $this->frequency->qrg_conversion($row->frequency_rx);
+			}
+			if (isset($mode) && ($mode != null)) {
+				$a_ret['mode'] = $mode;
+			}
+			if (isset($row->mode_rx) && ($row->mode_rx != null) && ($row->mode_rx != 'non')) {
+				$a_ret['mode_rx'] = strtoupper($row->mode_rx);
+			}
+			if (isset($sat_mode) && ($sat_mode != null)) {
+				$a_ret['satmode'] = $sat_mode;
+			}
+			if (isset($sat_name) && ($sat_name != null)) {
+				$a_ret['satname'] = $sat_name;
+			}
+			if (isset($row->power) && ($row->power != null)) {
+				$a_ret['power'] = $row->power;
+			}
+			if (isset($row->prop_mode) && ($row->prop_mode != null)) {
+				$a_ret['prop_mode'] = $row->prop_mode;
+			}
+			if (isset($row->cat_url) && ($row->cat_url != null)) {
+				$a_ret['cat_url'] = $row->cat_url;
+			}
+			if (isset($row->radio) && ($row->radio != null)) {
+				$a_ret['radio'] = $row->radio;
+			}
+
+			$a_ret['updated_minutes_ago'] = $minutes;
+
+			return $a_ret;
+		}
+
+		/**
+		 * Map a frequency (Hz) to its satellite band mode designator (H/A/V/U/...).
+		 * Used only for satellite QSOs when building the status shape.
+		 */
+		private function get_mode_designator($frequency) {
+			if ($frequency > 21000000 && $frequency < 22000000)
+				return "H";
+			if ($frequency > 28000000 && $frequency < 30000000)
+				return "A";
+			if ($frequency > 144000000 && $frequency < 147000000)
+				return "V";
+			if ($frequency > 432000000 && $frequency < 438000000)
+				return "U";
+			if ($frequency > 1240000000 && $frequency < 1300000000)
+				return "L";
+			if ($frequency > 2320000000 && $frequency < 2450000000)
+				return "S";
+			if ($frequency > 3400000000 && $frequency < 3475000000)
+				return "S2";
+			if ($frequency > 5650000000 && $frequency < 5850000000)
+				return "C";
+			if ($frequency > 10000000000 && $frequency < 10500000000)
+				return "X";
+			if ($frequency > 24000000000 && $frequency < 24250000000)
+				return "K";
+			if ($frequency > 47000000000 && $frequency < 47200000000)
+				return "R";
+
+			return "";
+		}
+
+		/**
+		 * Get CAT radios statuses for given user ID
 		 *
 		 * @param int|string $user_id
+		 * @param int|null   $operator Optional operator (clubmode) scope.
 		 * @return object
 		 */
-		function status_for_user_id($user_id) {
+		/**
+		 * Radios of an owner, optionally narrowed to a single operator.
+		 *
+		 * $operator is the session-free counterpart to the clubaccess_check(9)
+		 * branch in status(): a clubstation member below officer level only ever
+		 * sees the radios it registered itself.
+		 */
+		function status_for_user_id($user_id, $operator = null) {
 			$this->db->where('user_id', $user_id);
+			if ($operator !== null) {
+				$this->db->where('operator', $operator);
+			}
 			$query = $this->db->get('cat');
 
 			return $query;
@@ -189,6 +374,59 @@
 			$this->db->update('cat',array('cat_url' => $caturl));
 
 			return true;
+		}
+
+		/**
+		 * Fetch a single radio by id, scoped to an explicit owner. Session-free
+		 * counterpart to radio_status() for the REST API.
+		 *
+		 * @param int|string $id      cat row id.
+		 * @param int        $user_id Owner.
+		 * @param int|null   $operator Optional operator (clubmode) scope.
+		 * @return object|null The cat row, or null when not found/owned.
+		 */
+		function radio_for_user($id, $user_id, $operator = null) {
+			$this->db->where('id', $this->security->xss_clean($id));
+			$this->db->where('user_id', $user_id);
+			if ($operator !== null) {
+				$this->db->where('operator', $operator);
+			}
+			return $this->db->get('cat')->row();
+		}
+
+		/**
+		 * Look up a radio by its name within an operator/owner scope. Used by the
+		 * REST API to resolve the row after the name-keyed upsert in update().
+		 *
+		 * @param string $radio    Radio name.
+		 * @param int    $operator Operator id (clubmode) or owner.
+		 * @param int    $user_id  Owner.
+		 * @return object|null
+		 */
+		function radio_by_name($radio, $operator, $user_id) {
+			$this->db->where('radio', $radio);
+			$this->db->where('operator', $operator);
+			$this->db->where('user_id', $user_id);
+			return $this->db->get('cat')->row();
+		}
+
+		/**
+		 * Delete a radio by id, scoped to an explicit owner. Session-free
+		 * counterpart to delete() for the REST API.
+		 *
+		 * @param int|string $id      cat row id.
+		 * @param int        $user_id Owner.
+		 * @param int|null   $operator Optional operator (clubmode) scope.
+		 * @return int Number of affected rows.
+		 */
+		function delete_for_user($id, $user_id, $operator = null) {
+			$this->db->where('id', $this->security->xss_clean($id));
+			$this->db->where('user_id', $user_id);
+			if ($operator !== null) {
+				$this->db->where('operator', $operator);
+			}
+			$this->db->delete('cat');
+			return $this->db->affected_rows();
 		}
 	}
 ?>

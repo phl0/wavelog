@@ -22,7 +22,6 @@ class Labels extends CI_Controller {
 		parent::__construct();
 		$this->load->helper(array('form', 'url', 'psr4_autoloader'));
 
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
@@ -140,16 +139,23 @@ class Labels extends CI_Controller {
 
 	public function printids() {
 		$ids = xss_clean(json_decode($this->input->post('id')));
+		if (empty($ids)) {
+			header('Content-Type: application/json');
+			echo json_encode(array('message' => __('No QSOs were selected')));
+			return;
+		}
 		$offset = xss_clean($this->input->post('startat'));
 		$grid = $this->input->post('grid') === "true" ? 1 : 0;
 		$via = $this->input->post('via') === "true" ? 1 : 0;
 		$qslmsg = $this->input->post('qslmsg') === "true" ? 1 : 0;
 		$tnxmsg = $this->input->post('tnxmsg') === "true" ? 1 : 0;
 		$reference = $this->input->post('reference') == "true" ? 1 : 0;
+		$mycall = $this->input->post('mycall') == "true" ? 1 : 0;
+		$opcall = $this->input->post('opcall') == "true" ? 1 : 0;
 		$this->load->model('labels_model');
 		$result = $this->labels_model->export_printrequestedids($ids);
 
-		$this->prepareLabel($result, true, $offset, $grid, $via, $reference, $qslmsg, $tnxmsg);
+		$this->prepareLabel($result, true, $offset, $grid, $via, $reference, $qslmsg, $tnxmsg, $mycall, $opcall);
 	}
 
 	public function print($station_id) {
@@ -160,21 +166,22 @@ class Labels extends CI_Controller {
 		$qslmsg = xss_clean($this->input->post('qslmsg') ?? 0);
 		$tnxmsg = xss_clean($this->input->post('tnxmsg') ?? 0);
 		$reference = xss_clean($this->input->post('reference') ?? 0);
+		$mycall = $this->input->post('mycall') ?? 0;
+		$opcall = $this->input->post('opcall') ?? 0;
 		$this->load->model('stations');
-		if ($this->stations->check_station_is_accessible($station_id)) {
+		if ($station_id === 'All' || $this->stations->check_station_is_accessible($station_id)) {
 			$this->load->model('labels_model');
 			$result = $this->labels_model->export_printrequested($clean_id);
 
-			$this->prepareLabel($result, false, $offset, $grid, $via, $reference, $qslmsg, $tnxmsg);
+			$this->prepareLabel($result, false, $offset, $grid, $via, $reference, $qslmsg, $tnxmsg, $mycall, $opcall);
 		} else {
 			redirect('labels');
 		}
 	}
 
-	function prepareLabel($qsos, $jscall = false, $offset = 1, $grid = false, $via = false, $reference = false, $qslmsg = false, $tnxmsg = true) {
+	function prepareLabel($qsos, $jscall = false, $offset = 1, $grid = false, $via = false, $reference = false, $qslmsg = false, $tnxmsg = true, $mycall = false, $opcall = false) {
 		$this->load->model('labels_model');
 		$label = $this->labels_model->getDefaultLabel();
-
 
 		try {
 			if ($label) {
@@ -233,6 +240,11 @@ class Labels extends CI_Controller {
 				redirect('labels');
 			}
 		}
+		// Reached only on the success path above; guard so static analysis knows $pdf/$ptype are set
+		if (!isset($pdf, $ptype)) {
+			return;
+		}
+
 		define('FPDF_FONTPATH', './src/Label/font/');
 
 		$pdf->AddPage($ptype->orientation);
@@ -247,9 +259,9 @@ class Labels extends CI_Controller {
 
 		if ($qsos->num_rows() > 0) {
 			if ($label->qsos == 1) {
-				$this->makeMultiQsoLabel($qsos->result(), $pdf, 1, $offset, $ptype->orientation, $grid, $via, $reference, $qslmsg, $tnxmsg);
+				$this->makeMultiQsoLabel($qsos->result(), $pdf, 1, $offset, $ptype->orientation, $grid, $via, $reference, $qslmsg, $tnxmsg, $mycall, $opcall);
 			} else {
-				$this->makeMultiQsoLabel($qsos->result(), $pdf, $label->qsos, $offset, $ptype->orientation, $grid, $via, $reference, $qslmsg, $tnxmsg);
+				$this->makeMultiQsoLabel($qsos->result(), $pdf, $label->qsos, $offset, $ptype->orientation, $grid, $via, $reference, $qslmsg, $tnxmsg, $mycall, $opcall);
 			}
 		} else {
 			$this->session->set_flashdata('message', __('0 QSOs found for print!'));
@@ -258,7 +270,7 @@ class Labels extends CI_Controller {
 		$pdf->Output();
 	}
 
-	function makeMultiQsoLabel($qsos, $pdf, $numberofqsos, $offset, $orientation, $grid, $via, $reference, $qslmsg, $tnxmsg) {
+	function makeMultiQsoLabel($qsos, $pdf, $numberofqsos, $offset, $orientation, $grid, $via, $reference, $qslmsg, $tnxmsg, $mycall, $opcall = false) {
 		$text = '';
 		$current_callsign = '';
 		$current_sat = '';
@@ -275,7 +287,7 @@ class Labels extends CI_Controller {
 			( ($qso->COL_BAND_RX !== $current_sat_bandrx) && ($this->pretty_sat_mode($qso->COL_SAT_MODE) !== '')) ) {
 			   // ((($qso->COL_SAT_NAME ?? '' !== $current_sat) || ($qso->COL_CALL !== $current_callsign)) && ($qso->COL_SAT_NAME ?? '' !== '') && ($col->COL_BAND_RX ?? '' !== $current_sat_bandrx))) {
 				if (!empty($qso_data)) {
-					$this->finalizeData($pdf, $current_callsign, $qso_data, $numberofqsos, $orientation, $grid, $via, $reference, $qslmsg, $tnxmsg);
+					$this->finalizeData($pdf, $current_callsign, $qso_data, $numberofqsos, $orientation, $grid, $via, $reference, $qslmsg, $tnxmsg, $mycall, $opcall);
 					$qso_data = [];
 				}
 				$current_callsign = $qso->COL_CALL;
@@ -296,6 +308,7 @@ class Labels extends CI_Controller {
 				'sat_band_rx' => ($qso->COL_BAND_RX ?? ''),
 				'qsl_recvd' => $qso->COL_QSL_RCVD,
 				'mycall' => $qso->COL_STATION_CALLSIGN,
+				'opcall' => $qso->COL_OPERATOR ?? '',
 				'sig' => $qso->station_sig ?? '',
 				'sig_info' => $qso->station_sig_info ?? '',
 				'sota' => $qso->station_sota ?? '',
@@ -307,7 +320,7 @@ class Labels extends CI_Controller {
 			];
 		}
 		if (!empty($qso_data)) {
-			$this->finalizeData($pdf, $current_callsign, $qso_data, $numberofqsos, $orientation, $grid, $via, $reference, $qslmsg, $tnxmsg);
+			$this->finalizeData($pdf, $current_callsign, $qso_data, $numberofqsos, $orientation, $grid, $via, $reference, $qslmsg, $tnxmsg, $mycall, $opcall);
 		}
 	}
 	// New begin
@@ -315,7 +328,7 @@ class Labels extends CI_Controller {
 		return(strlen($sat_mode ?? '') == 2 ? (strtoupper($sat_mode[0]).'/'.strtoupper($sat_mode[1])) : strtoupper($sat_mode ?? ''));
 	}
 
-	function finalizeData($pdf, $current_callsign, &$preliminaryData, $qso_per_label,$orientation, $grid, $via, $reference, $qslmsg, $tnxmsg) {
+	function finalizeData($pdf, $current_callsign, &$preliminaryData, $qso_per_label,$orientation, $grid, $via, $reference, $qslmsg, $tnxmsg, $mycall, $opcall = false) {
 
 		$tableData = [];
 		$count_qso = 0;
@@ -333,9 +346,8 @@ class Labels extends CI_Controller {
 			$tableData[] = $rowData;
 			$count_qso++;
 
-
 			if($count_qso == $qso_per_label){
-				$this->generateLabel($pdf, $current_callsign, $tableData,$count_qso,$qso,$orientation, $grid, $via, $reference, $qslmsg, $tnxmsg);
+				$this->generateLabel($pdf, $current_callsign, $tableData,$count_qso,$qso,$orientation, $grid, $via, $reference, $qslmsg, $tnxmsg, $mycall, $opcall);
 				$tableData = []; // reset the data
 				$count_qso = 0;  // reset the counter
 			}
@@ -343,12 +355,12 @@ class Labels extends CI_Controller {
 		}
 		// generate label for remaining QSOs
 		if($count_qso > 0){
-			$this->generateLabel($pdf, $current_callsign, $tableData,$count_qso,$qso,$orientation, $grid, $via, $reference, $qslmsg, $tnxmsg);
+			$this->generateLabel($pdf, $current_callsign, $tableData,$count_qso,$qso,$orientation, $grid, $via, $reference, $qslmsg, $tnxmsg, $mycall, $opcall);
 			$preliminaryData = []; // reset the data
 		}
 	}
 
-	function generateLabel($pdf, $current_callsign, $tableData,$numofqsos,$qso,$orientation,$grid=true, $via=false, $reference = false, $qslmsg = false, $tnxmsg = true){
+	function generateLabel($pdf, $current_callsign, $tableData,$numofqsos,$qso,$orientation,$grid=true, $via=false, $reference = false, $qslmsg = false, $tnxmsg = true, $mycall = false, $opcall = false){
 		$builder = new \AsciiTable\Builder();
 		$builder->addRows($tableData);
 			$toradio = "To Radio: ";
@@ -372,7 +384,11 @@ class Labels extends CI_Controller {
 			}
 		}
 		$text.="\n";
-		if ($grid) { $text .= "My call: ".$qso['mycall']." Grid: ".$qso['mygrid']."\n"; }
+		$line = '';
+		if ($mycall) { $line .= "My call: ".$qso['mycall']." "; }
+		if ($opcall && !empty($qso['opcall'])) { $line .= "OP: ".$qso['opcall']." "; }
+		if ($grid) { $line .= "Grid: ".$qso['mygrid']; }
+		if ($line !== '') { $text .= rtrim($line)."\n"; }
 		if ($reference) {
 			$ref_text = "";
 			$ref_avail = false;

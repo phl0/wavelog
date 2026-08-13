@@ -1,7 +1,7 @@
 <script type="text/javascript">
 var custom_date_format = "<?php echo $custom_date_format ?>";
 </script>
-<div class="container">
+<div class="container px-3 px-lg-4 mt-3 mb-3">
     <?php if ($this->session->flashdata('message')) { ?>
         <!-- Display Message -->
         <div class="alert alert-danger" role="alert">
@@ -9,8 +9,13 @@ var custom_date_format = "<?php echo $custom_date_format ?>";
         </div>
     <?php } ?>
 <div class="table-responsive">
-   <br>
     <h2><?= __("Satellite Timers"); ?></h2>
+
+	    <div class="card">
+	      <div class="card-header">
+	        <?= __("Satellite Timers"); ?>
+	      </div>
+	      <div class="card-body">
     <?php if ($gridsquare != 0) { ?>
        <p><?= sprintf(__("This data comes from %s and is calculated for the current stationlocation grid %s."), "<a target='_blank' href='https://www.df2et.de/tevel/'>https://www.df2et.de/tevel/</a>", strtoupper($gridsquare)); ?></p>
     <?php } ?>
@@ -66,7 +71,7 @@ var custom_date_format = "<?php echo $custom_date_format ?>";
                    if (strpos($activation['sat'], 'TEVEL') !== false) {
                       echo "<a href=\"https://mailman.amsat.org/hyperkitty/search?q=TEVEL&page=1&mlist=amsat-bb%40amsat.org&sort=date-desc\" target=\"_blank\">" . __("Info") . "</a>";
                    } else if (strpos($activation['sat'], 'UVSQ') !== false) {
-                      echo "<a href=\"http://uvsq-sat.projet.latmos.ipsl.fr/\" target=\"_blank\">" . __("Info") . "</a>";
+                      echo "<a href=\"https://uvsq-sat.projet.latmos.ipsl.fr/\" target=\"_blank\">" . __("Info") . "</a>";
                    } else if (strpos($activation['sat'], 'PO-101') !== false) {
                       echo "<a href=\"https://x.com/Diwata2PH?s=20\" target=\"_blank\">" . __("Info") . "</a>";
                    } else if (strpos($activation['sat'], 'CAS-3H') !== false) {
@@ -84,4 +89,6 @@ var custom_date_format = "<?php echo $custom_date_format ?>";
         </tbody>
     </table>
 </div>
+	      </div>
+	    </div>
 </div>

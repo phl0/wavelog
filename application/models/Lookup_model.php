@@ -3,6 +3,7 @@
 class Lookup_model extends CI_Model{
 
 	function getSatResult($queryinfo){
+		$resultArray = [];
 		foreach ($queryinfo['sats'] as $sat) {
 			$resultArray[$sat] = '-';
 		}
@@ -25,6 +26,37 @@ class Lookup_model extends CI_Model{
 		$modes = $this->get_worked_modes($queryinfo['location_list']);
 
 		return $this->getResultFromDatabase($queryinfo, $modes);
+	}
+
+	function getDxccForVucc($grid) {
+		$fixedgrid = (strlen($grid) > 4) ? substr($grid, 0, 4) : $grid;
+
+		$sql = "select name from dxcc_entities
+		join vuccgrids on dxcc_entities.adif = vuccgrids.adif
+		where gridsquare = ?";
+		$binds[] = $fixedgrid;
+
+		$query = $this->db->query($sql, $binds);
+		$dxccArray = [];
+
+		foreach ($query->result() as $row) {
+			$dxccArray[] = ucwords(strtolower($row->name), "- (/");
+		}
+
+		return $dxccArray;
+	}
+
+	/* Like getDxccForVucc, but returns adif + name rows (the flag is added by the
+	 * caller via the DxccFlag library). Powers the activation-planner grid flag. */
+	function getDxccForVuccGrid($grid) {
+		$fixedgrid = (strlen($grid) > 4) ? substr($grid, 0, 4) : $grid;
+
+		$sql = "select dxcc_entities.adif, dxcc_entities.name from dxcc_entities
+		join vuccgrids on dxcc_entities.adif = vuccgrids.adif
+		where gridsquare = ?";
+		$query = $this->db->query($sql, array($fixedgrid));
+
+		return $query->result();
 	}
 
 	function getResultFromDatabase($queryinfo, $modes) {

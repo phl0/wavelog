@@ -7,7 +7,6 @@ class Accumulated extends CI_Controller
     function __construct() {
         parent::__construct();
 
-        $this->load->model('user_model');
         if (!$this->user_model->authorize(2)) {
             $this->session->set_flashdata('error', __("You're not allowed to do that!"));
             redirect('dashboard');
@@ -36,6 +35,7 @@ class Accumulated extends CI_Controller
 
 
 	    $data['modes'] = $this->modes->active();
+	    $data['adif_propmodes'] = $this->config->item('adif_propmodes');
 
 	    $this->load->view('interface_assets/header', $data);
 	    $this->load->view('accumulate/index');

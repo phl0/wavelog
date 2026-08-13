@@ -10,17 +10,36 @@ DJ7NT - Docker Readiness - April 2024
 HB9HIL - Big UX and backend upgrade - July 2024
 */
 require_once('includes/install_config/install_lib.php');
+require_once('includes/install_config/install_config.php');
+
+session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+	$_SESSION['form_token'] = bin2hex(random_bytes(32));
+}
+
+function convertToBytes(string $value): int {
+	$value = trim($value);
+	$num = (int) $value;
+	$unit = strtoupper(substr($value, -1));
+	switch ($unit) {
+		case 'G': return $num * 1024 * 1024 * 1024;
+		case 'M': return $num * 1024 * 1024;
+		case 'K': return $num * 1024;
+		default:  return $num;
+	}
+}
 $http_scheme = is_https() ? "https" : "http";
 
 $directory = ltrim(str_replace('/install', '', dirname($_SERVER['SCRIPT_NAME'])), '/');
 $base_url = $http_scheme . '://' . $_SERVER['HTTP_HOST'] . ($directory !== '' ? '/' . $directory : '') . '/';
 
-if (!file_exists('.lock') && !file_exists('../application/config/config.php') && !file_exists('../application/config/docker/config.php')) {
+if (!file_exists('.lock') && !file_exists($db_config_path . 'config.php') && !file_exists($db_config_path . 'database.php')) {
 
 	include 'includes/interface_assets/header.php';
 
 	// php-mbstring has to be installed for the installer to work properly!!
 	// The other prechecks can be run within the installer.
+	/** @var array $required_php_modules */
 	if ($required_php_modules['php-mbstring']['condition'] && $required_php_modules['php-curl']['condition']) { ?>
 
 
@@ -54,6 +73,7 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 
 					<div class="card-body">
 						<form id="install_form" method="post" action="run.php">
+							<input type="hidden" name="form_token" value="<?= $_SESSION['form_token'] ?>">
 							<div class="tab-content" id="myTabContent">
 
 								<!-- Tab 1: Welcome -->
@@ -66,7 +86,7 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 										<div class="col-md-6">
 											<h4 style="margin-top: 50px;"><?= __("Welcome to the Wavelog Installer"); ?></h4>
 											<p style="margin-top: 50px;"><?= __("This installer will guide you through the necessary steps for the installation of Wavelog. <br>Wavelog is a powerful web-based amateur radio logging software. Follow the steps in each tab to configure and install Wavelog on your server."); ?></p>
-											<p><?= sprintf(__("If you encounter any issues or have questions, refer to the documentation (%s) or community forum (%s) on Github for assistance."), "<a href='https://www.github.com/wavelog/wavelog/wiki' target='_blank'>" . __("Wiki") . "</a>", "<a href='https://www.github.com/wavelog/wavelog/discussions' target='_blank'>" . __("Discussions") . "</a>"); ?></p>
+											<p><?= sprintf(__("If you encounter any issues or have questions, refer to the documentation (%s) or community forum (%s) on Github for assistance."), "<a href='https://docs.wavelog.org/' target='_blank'>" . __("Wiki") . "</a>", "<a href='https://www.github.com/wavelog/wavelog/discussions' target='_blank'>" . __("Discussions") . "</a>"); ?></p>
 											<p><?= __("Thank you for installing Wavelog!"); ?></p>
 											<?php if (__("Language") == "Language") {
 												$lang_html = "Language";
@@ -171,7 +191,7 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 													<td>
 														<?php
 														$maxUploadFileSize = ini_get('upload_max_filesize');
-														$maxUploadFileSizeBytes = (int)($maxUploadFileSize) * (1024 * 1024); // convert to bytes
+														$maxUploadFileSizeBytes = convertToBytes($maxUploadFileSize);
 														if ($maxUploadFileSizeBytes >= ($upload_max_filesize * 1024 * 1024)) { // compare with given value in bytes
 														?>
 															<span class="badge text-bg-success"><?php echo $maxUploadFileSize; ?></span>
@@ -190,7 +210,7 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 													<td>
 														<?php
 														$maxUploadFileSize = ini_get('post_max_size');
-														$maxUploadFileSizeBytes = (int)($maxUploadFileSize) * (1024 * 1024); // convert to bytes
+														$maxUploadFileSizeBytes = convertToBytes($maxUploadFileSize);
 														if ($maxUploadFileSizeBytes >= ($post_max_size * 1024 * 1024)) { // compare with given value in bytes
 														?>
 															<span class="badge text-bg-success"><?php echo $maxUploadFileSize; ?></span>
@@ -236,12 +256,52 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 													</td>
 												</tr>
 											</table>
+										</div>
+										<div class="col-md-5 mb-4 mx-auto">
+											<p class="border-bottom mb-2"><b><?= __("Web Server"); ?></b></p>
+											<table width="100%" style="margin-bottom: 25px;">
+												<tr>
+													<td><?= __("Version:"); ?> </td>
+													<td><span class="badge text-bg-info"><?php echo detect_webserver(); ?></span></td>
+												</tr>
+											</table>
+											<?php if (strpos(strtolower(detect_webserver()), 'nginx') !== false) {
+												if (detect_nginx_php_setting($http_scheme) != 200) { ?>
+													<div class="alert alert-warning d-flex flex-column align-items-center" role="alert">
+														<p class="mb-2 border-bottom"><?= __("Important note for nginx users!"); ?></p>
+														<p class="mb-0"><?= __("Since you are using nginx as web server please make sure that you have made the changes described in the Wiki before continuing."); ?></p><br>
+														<p class="mb-0"><a target="_blank" href="https://docs.wavelog.org/getting-started/installation/linux/#nginx-configuration">https://docs.wavelog.org/getting-started/installation/linux/#nginx-configuration</a></p>
+													</div>
+												<?php } ?>
+											<?php } ?>
 											<p class="border-bottom mb-2" style="margin-top: 2rem;"><b><?= __("Folder Write Permissions"); ?></b></p>
 											<table width="100%">
 												<tr>
-													<td>/application</td>
+													<td>/application/cache</td>
 													<td>
-														<?php if (is_really_writable('../application/cache') == true && is_really_writable('../application/config') == true && is_really_writable('../application/logs') == true) { ?>
+														<?php if (is_really_writable('../application/cache') == true) { ?>
+															<span class="badge text-bg-success"><?= __("Success"); ?></span>
+														<?php } else {
+															$prechecks_passed = 'failed'; ?>
+															<span class="badge text-bg-danger"><?= __("Failed"); ?></span>
+														<?php } ?>
+													</td>
+												</tr>
+												<tr>
+													<td>/application/config</td>
+													<td>
+														<?php if (is_really_writable('../application/config') == true) { ?>
+															<span class="badge text-bg-success"><?= __("Success"); ?></span>
+														<?php } else {
+															$prechecks_passed = 'failed'; ?>
+															<span class="badge text-bg-danger"><?= __("Failed"); ?></span>
+														<?php } ?>
+													</td>
+												</tr>
+												<tr>
+													<td>/application/logs</td>
+													<td>
+														<?php if (is_really_writable('../application/logs') == true) { ?>
 															<span class="badge text-bg-success"><?= __("Success"); ?></span>
 														<?php } else {
 															$prechecks_passed = 'failed'; ?>
@@ -294,24 +354,7 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 													</td>
 												</tr>
 											</table>
-										</div>
-										<div class="col-md-5 mb-4 mx-auto">
-											<p class="border-bottom mb-2"><b><?= __("Web Server"); ?></b></p>
-											<table width="100%" style="margin-bottom: 25px;">
-												<tr>
-													<td><?= __("Version:"); ?> </td>
-													<td><span class="badge text-bg-info"><?php echo detect_webserver(); ?></span></td>
-												</tr>
-											</table>
-											<?php if (strpos(strtolower(detect_webserver()), 'nginx') !== false) {
-												if (detect_nginx_php_setting($http_scheme) != 200) { ?>
-													<div class="alert alert-warning d-flex flex-column align-items-center" role="alert">
-														<p class="mb-2 border-bottom"><?= __("Important note for nginx users!"); ?></p>
-														<p class="mb-0"><?= __("Since you are using nginx as web server please make sure that you have made the changes described in the Wiki before continuing."); ?></p><br>
-														<p class="mb-0"><a target="_blank" href="https://github.com/wavelog/Wavelog/wiki/Installation#nginx-configuration">https://github.com/wavelog/Wavelog/wiki/Installation#nginx-configuration</a></p>
-													</div>
-												<?php } ?>
-											<?php } ?>
+											<hr style="border-width: 1px;border-color: #D8DCE0; opacity: 1;">
 											<?php if ($prechecks_passed == 'failed') {
 												$prechecks_icon = "fa-times-circle";
 												$prechecks_color = "red"; ?>
@@ -319,7 +362,7 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 													<p class="mb-2 border-bottom"><?= __("Some Checks have failed!"); ?></p>
 													<p class="mb-2"><?= __("Check your PHP settings and install missing modules if necessary."); ?></p>
 													<p class="mb-2"><?= __("After that, you have to restart your webserver and start the installer again."); ?></p>
-													<p class="mb-2"><?= sprintf(__("In case of failed 'Folder Write Permissions' check out our Wiki <a href='%s' target='_blank'>here</a>."), "https://github.com/wavelog/Wavelog/wiki/Installation#3-set-directory-ownership-and-permissions"); ?></p>
+													<p class="mb-2"><?= sprintf(__("In case of failed 'Folder Write Permissions' check out our Wiki <a href='%s' target='_blank'>here</a>."), "https://docs.wavelog.org/getting-started/installation/linux/#3-set-directory-ownership-and-permissions"); ?></p>
 												</div>
 											<?php } else if ($prechecks_passed == 'warning') {
 												$prechecks_icon = "fa-exclamation-triangle";
@@ -355,15 +398,18 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 												<input type="hidden" id="websiteurl" name="websiteurl" value="<?php echo $base_url; ?>" />
 											</div>
 											<div class="mb-3">
-												<label for="global_call_lookup" class="form-label"><?= __("Optional: Global Callbook Lookup"); ?><i id="callbook_tooltip" data-bs-toggle="tooltip" data-bs-placement="top" class="fas fa-question-circle text-muted ms-2" data-bs-custom-class="custom-tooltip" data-bs-html="true" data-bs-title="<?= __("This configuration is optional. The callsign lookup will be available for all users of this installation. You can choose between QRZ.com and HamQTH. While HamQTH also works without username and password, you will need credentials for QRZ.com. To also get the Call Locator in QRZ.com you'll need an XML subscription. HamQTH does not always provide the locator information."); ?>"></i></label>
+												<label for="global_call_lookup" class="form-label"><?= __("Optional: Global Callbook Lookup"); ?><i id="callbook_tooltip" data-bs-toggle="tooltip" data-bs-placement="top" class="fas fa-question-circle text-muted ms-2" data-bs-custom-class="custom-tooltip" data-bs-html="true" data-bs-title="<?= sprintf(__("This configuration is optional. The callsign lookup will be available for all users of this installation. You can choose between QRZ.com, HamQTH, QRZCQ, QRZ.ru and QRZCALL.EU. While HamQTH also works without username and password, you will need credentials for the other providers. QRZ.com needs an XML subscription for the Call Locator; QRZCALL.EU needs a Data or Extra subscription on %s. HamQTH does not always provide the locator information."), "https://qrzcall.eu/"); ?>"></i></label>
 												<select id="global_call_lookup" class="form-select" name="global_call_lookup">
 													<option value="hamqth" selected>HamQTH</option>
 													<option value="qrz">QRZ.com</option>
 													<option value="qrzcq">QRZCQ.com</option>
 													<option value="qrzru">QRZ.ru</option>
+													<option value="qrzcall">QRZCALL.EU</option>
 												</select>
 											</div>
-											<div class="row">
+
+											<!-- Username/Password row: hidden when QRZCALL.EU is selected -->
+											<div class="row" id="callbook_userpass_row">
 												<div class="col-md-3">
 													<div class="mb-3">
 														<label for="callbook_username" class="form-label mt-2"><?= __("Username"); ?></label>
@@ -386,6 +432,26 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 												<div class="alert alert-info" id="qrz_hint" style="display: none; margin-top: 10px;">
 													<p><i class="fas fa-lightbulb"></i> <?= __("Good to know:"); ?></p>
 													<?= __("Use your callsign as your username for QRZ.com. The XML API does not support email addresses."); ?>
+												</div>
+											</div>
+
+											<!-- QRZCALL.EU token row: shown only when QRZCALL.EU is selected -->
+											<div class="row" id="callbook_token_row" style="display: none;">
+												<div class="col-md-3">
+													<div class="mb-3">
+														<label for="callbook_token" class="form-label mt-2"><?= __("API Token"); ?></label>
+													</div>
+												</div>
+												<div class="col-md-9">
+													<div class="mb-3">
+														<input type="text" id="callbook_token" placeholder="pat_…" class="form-control font-monospace" name="callbook_token" autocomplete="off" />
+													</div>
+												</div>
+												<div class="alert alert-info" id="qrzcall_hint" style="margin-top: 10px;">
+													<p><i class="fas fa-lightbulb"></i> <?= __("Good to know:"); ?></p>
+													<?= __("Generate a Personal Access Token at"); ?>
+													<a href="https://qrzcall.eu/" target="_blank" rel="noopener">qrzcall.eu</a> → My Profile → Account → API Tokens.
+													<?= __("Requires a Data or Extra subscription."); ?>
 												</div>
 											</div>
 											<a class="btn btn-sm btn-secondary" id="advancedSettingsButton"><?= __("Advanced Settings"); ?></a>
@@ -1032,7 +1098,8 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 										<div class="col-md-6 mb-2">
 											<label for="userlanguage" class="form-label"><?= __("Language"); ?></label>
 											<select class="form-select" id="userlanguage" name="userlanguage" tabindex="12">
-												<?php foreach ($languages as $lang) { ?>
+												<?php foreach ($languages as $lang) { 
+													/** @var array $language */ ?>
 													<option value="<?php echo $lang['folder']; ?>" <?php if ($lang['gettext'] == $language) {
 																										echo 'selected';
 																									} ?>><?= __($lang['name_en']); ?></option>
@@ -1053,6 +1120,8 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 														<div class="col">
 															<p class="ms-2">
 																<a href="javascript:void(0);" class="text-decoration-none" onclick="openTab('precheck-tab')" style="color: inherit;">
+																	<?php /** @var string $prechecks_icon */ ?>
+																	<?php /** @var string $prechecks_color */ ?>
 																	<i id="checklist_prechecks" class="me-2 fas <?php echo $prechecks_icon; ?>" style="color: <?php echo $prechecks_color; ?>"></i><?= __("Pre-Checks"); ?>
 																</a>
 															</p>
@@ -1392,20 +1461,33 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 				let callbook_type = $('#global_call_lookup');
 				let callbook_username = $('#callbook_username');
 				let callbook_password = $('#callbook_password');
+				let callbook_token = $('#callbook_token');
 
-				// On Page Load
-				$(document).ready(function() {
-
-					if (callbook_type.val() === 'qrz') {
-						$('#qrz_hint').show();
-					}
-
-					callbook_type.on('change', function() {
+				// Show username+password row for traditional providers; show the
+				// single token row when QRZCALL.EU is selected.
+				function applyCallbookRowVisibility() {
+					if (callbook_type.val() === 'qrzcall') {
+						$('#callbook_userpass_row').hide();
+						$('#callbook_token_row').show();
+						$('#qrz_hint').hide();
+					} else {
+						$('#callbook_userpass_row').show();
+						$('#callbook_token_row').hide();
 						if (callbook_type.val() === 'qrz') {
 							$('#qrz_hint').show();
 						} else {
 							$('#qrz_hint').hide();
 						}
+					}
+				}
+
+				// On Page Load
+				$(document).ready(function() {
+
+					applyCallbookRowVisibility();
+
+					callbook_type.on('change', function() {
+						applyCallbookRowVisibility();
 					});
 
 					$('#advancedSettingsButton').click(function() {
@@ -1434,6 +1516,21 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 
 				function callbook_combination() {
 					let check = true;
+
+					// QRZCALL.EU uses a single token field — username/password are not used.
+					if (callbook_type.val() === 'qrzcall') {
+						let t = callbook_token.val();
+						// Token is optional during install (can be added later), but if
+						// present must look like a PAT.
+						if (t !== '' && t.indexOf('pat_') !== 0) {
+							input_is_valid(callbook_token, 'is-invalid');
+							check = false;
+						} else if (t !== '') {
+							input_is_valid(callbook_token, 'is-valid');
+						}
+						return check;
+					}
+
 					let a = callbook_username.val();
 					let b = callbook_password.val();
 					if ((a == '' && b !== '') || (a !== '' && b == '')) {
@@ -1949,7 +2046,7 @@ if (!file_exists('.lock') && !file_exists('../application/config/config.php') &&
 	<?php } ?>
 
 <?php } else {
-	header('Location: '.$base_url, true, 301);
+	header('Location: '.$base_url.'index.php/dashboard', true, 301);
 	die();
 } ?>
 

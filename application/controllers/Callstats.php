@@ -8,7 +8,6 @@ class Callstats extends CI_Controller
     {
         parent::__construct();
 
-        $this->load->model('user_model');
         if (!$this->user_model->authorize(2)) {
             $this->session->set_flashdata('error', __("You're not allowed to do that!"));
             redirect('dashboard');
@@ -71,10 +70,11 @@ class Callstats extends CI_Controller
 	    $data['satselect'] = $sat;
 	    $data['propagationselect'] = $propagation;
 	    $data['user_default_band'] = $this->session->userdata('user_default_band');
+	    $data['adif_propmodes'] = $this->config->item('adif_propmodes');
 
 	    $footerData = [];
 	    $footerData['scripts'] = [
-		    'assets/js/sections/callstats.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/callstats.js")),
+		    'assets/js/sections/callstats.js',
 	    ];
 
 	    $this->load->view('interface_assets/header', $data);
@@ -95,6 +95,7 @@ class Callstats extends CI_Controller
 		$orbit = str_replace('"', "", $this->security->xss_clean($this->input->post("Orbit")));
 		$propagation = str_replace('"', "", $this->security->xss_clean($this->input->post("Propagation")) ?? '');
 		$data['results'] = $this->callstats_model->qso_details($searchphrase, $band, $mode, $sat, $orbit, $propagation);
+		$data['adif_propmodes'] = $this->config->item('adif_propmodes');
 
 		// Render Page
 		$data['page_title'] = __("Log View");
@@ -112,9 +113,6 @@ class Callstats extends CI_Controller
 		}
 		if ($mode != null && strtolower($mode) != 'all') {
 			$data['filter'] .= __(" and mode ").$mode;
-		}
-		if (!empty($qsltype)) {
-			$data['filter'] .= __(" and ").implode('/', $qsltype);
 		}
 		$this->load->view('awards/details', $data);
 	}

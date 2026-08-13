@@ -73,7 +73,7 @@ function loadActivationsTable(rows, show_workable_only) {
 				"defaultContent": "-",
 				"targets": "_all"
 				},{
-				"targets": [8, 9, 10],
+				"targets": [8, 9, 10, 11],
 				"orderable": false
 				}
 			],	
@@ -152,10 +152,16 @@ function loadActivationsTable(rows, show_workable_only) {
 		grids = [];
 		for (var j=0; j < activation.grids_wkd.length; j++) {
 			if (!grids.some(str => str.includes(activation.grids[j].substring(0, 4)))) {
-				if (activation.grids_wkd[j] == 1) {
-					grids.push("<a href=\"javascript:displayContacts('"+activation.grids[j].substring(0, 4)+"','SAT','All','All','All','VUCC','');\"><span data-bs-toggle=\"tooltip\" title=\"Worked\" class=\"badge bg-success\">"+activation.grids[j].substring(0, 4)+"</span></a>")
-				} else {
-					grids.push("<span data-bs-toggle=\"tooltip\" title=\"Not Worked\" class=\"badge bg-danger\">"+activation.grids[j].substring(0, 4)+"</span>")
+				switch (activation.grids_wkd[j]) {
+					case 1:
+						grids.push("<a href=\"javascript:displayContacts('"+activation.grids[j].substring(0, 4)+"','SAT','All','All','All','VUCC','');\"><span data-bs-toggle=\"tooltip\" title=\"Worked\" class=\"badge bg-warning\">"+activation.grids[j].substring(0, 4)+"</span></a>")
+						break;
+					case 2:
+						grids.push("<a href=\"javascript:displayContacts('"+activation.grids[j].substring(0, 4)+"','SAT','All','All','All','VUCC','');\"><span data-bs-toggle=\"tooltip\" title=\"Confirmed\" class=\"badge bg-success\">"+activation.grids[j].substring(0, 4)+"</span></a>")
+						break;
+					default:
+						grids.push("<span data-bs-toggle=\"tooltip\" title=\"Not Worked\" class=\"badge bg-danger\">"+activation.grids[j].substring(0, 4)+"</span>")
+						break;
 				}
 			}
 		}
@@ -180,6 +186,7 @@ function loadActivationsTable(rows, show_workable_only) {
 		} else {
 			data.push('');
 		}
+		data.push("<a href=\"https://www.satmatch.com/satellite/"+encodeURIComponent(activation.sat_export_name)+"/obs1/"+encodeURIComponent(activation.grids && activation.grids[0] ? activation.grids[0] : '')+"/obs2/"+encodeURIComponent(activation.my_gridsquare)+"\" target=\"_blank\">SatMatch</a>");
 		data.id='activationID-' + activation.id;
 		let createdRow = table.row.add(data).index();
 		table.rows(createdRow).nodes().to$().data('activationID', activation.id);

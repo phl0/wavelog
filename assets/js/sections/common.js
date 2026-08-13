@@ -1,13 +1,80 @@
+// ========================================
+// PLATFORM DETECTION UTILITIES
+// ========================================
+
+/**
+ * Platform detection utilities using modern userAgentData API with fallback
+ */
+var PlatformDetection = {
+    /**
+     * Check if the current platform is macOS
+     * @returns {boolean} True if platform is macOS
+     */
+    isMac: function() {
+        // Use modern userAgentData API if available, fallback to userAgent
+        if (navigator.userAgentData && navigator.userAgentData.platform) {
+            return navigator.userAgentData.platform.toUpperCase().indexOf('MAC') >= 0;
+        }
+        return navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+    },
+
+    /**
+     * Check if the current platform is Windows
+     * @returns {boolean} True if platform is Windows
+     */
+    isWindows: function() {
+        if (navigator.userAgentData && navigator.userAgentData.platform) {
+            return navigator.userAgentData.platform.toUpperCase().indexOf('WIN') >= 0;
+        }
+        return navigator.userAgent.toUpperCase().indexOf('WIN') >= 0;
+    },
+
+    /**
+     * Check if the current platform is Linux
+     * @returns {boolean} True if platform is Linux
+     */
+    isLinux: function() {
+        if (navigator.userAgentData && navigator.userAgentData.platform) {
+            return navigator.userAgentData.platform.toUpperCase().indexOf('LINUX') >= 0;
+        }
+        return navigator.userAgent.toUpperCase().indexOf('LINUX') >= 0;
+    },
+
+    /**
+     * Check if the modifier key is pressed (Cmd on Mac, Ctrl on Windows/Linux)
+     * @param {Event} event - The keyboard or mouse event
+     * @returns {boolean} True if the platform-specific modifier key is pressed
+     */
+    isModifierKey: function(event) {
+        return this.isMac() ? event.metaKey : event.ctrlKey;
+    }
+};
+
+// ========================================
+// QSO FORM UTILITIES
+// ========================================
+
 function setRst(mode) {
 	if(mode == 'JT65' || mode == 'JT65B' || mode == 'JT6C' || mode == 'JTMS' || mode == 'ISCAT' || mode == 'MSK144' || mode == 'JTMSK' || mode == 'QRA64' || mode == 'FT8' || mode == 'FT4' || mode == 'JS8' || mode == 'JT9' || mode == 'JT9-1' || mode == 'ROS'){
-		$('#rst_sent').val('-5');
-		$('#rst_rcvd').val('-5');
+		$('#rst_sent').val('-05');
+		$('#rst_rcvd').val('-05');
 	} else if (mode == 'FSK441' || mode == 'JT6M') {
 		$('#rst_sent').val('26');
 		$('#rst_rcvd').val('26');
-	} else if (mode == 'CW' || mode == 'RTTY' || mode == 'PSK31' || mode == 'PSK63') {
+	} else if (mode == 'CW') {
+		if ($('#selectPropagation :selected').val() == 'AUR') {
+			$('#rst_sent').val('59A');
+			$('#rst_rcvd').val('59A');
+		} else {
+			$('#rst_sent').val('599');
+			$('#rst_rcvd').val('599');
+		}
+	} else if (mode == 'RTTY' || mode == 'PSK31' || mode == 'PSK63') {
 		$('#rst_sent').val('599');
 		$('#rst_rcvd').val('599');
+	} else if (mode == 'SSTV' || mode == 'ATV') {
+		$('#rst_sent').val('595');
+		$('#rst_rcvd').val('595');
 	} else {
 		$('#rst_sent').val('59');
 		$('#rst_rcvd').val('59');
@@ -131,9 +198,14 @@ function displayQso(id) {
                     var qsoid = $("#qsoid").text();
                     $(".editButton").html('<a class="btn btn-primary" id="edit_qso" href="javascript:qso_edit('+qsoid+')"><i class="fas fa-edit"></i>'+lang_general_edit_qso+'</a>');
                     var lat = $("#lat").text();
-                    var long = $("#long").text();
+                    var lng = $("#lng").text();
+                    var dxcc = $("#dxcc").text();
                     var callsign = $("#callsign").text();
-                    var mymap = L.map('mapqso').setView([lat,long], 5);
+                    var zoom = 5;
+                    if (dxcc == 0) {
+                        zoom = 1;
+                    }
+                    var mymap = L.map('mapqso').setView([lat,lng], zoom);
 
                     var tiles = L.tileLayer(option_map_tile_server, {
                         maxZoom: 18,
@@ -149,13 +221,15 @@ function displayQso(id) {
                         hideControlContainer: true
                     }).addTo(mymap);
 
-                    var redIcon = L.icon({
-                        iconUrl: icon_dot_url,
-                        iconSize:     [18, 18], // size of the icon
-                    });
+                    if (dxcc != 0) {
+                        var redIcon = L.icon({
+                            iconUrl: icon_dot_url,
+                            iconSize:     [18, 18], // size of the icon
+                        });
 
-                    L.marker([lat,long], {icon: redIcon}).addTo(mymap)
-                        .bindPopup(callsign);
+                        L.marker([lat,lng], {icon: redIcon}).addTo(mymap)
+                            .bindPopup(callsign);
+                    }
 
                 },
             });
@@ -195,6 +269,11 @@ function single_callbook_update() {
             fill_if_empty('#qsl-via', data.qsl_manager);
             fill_if_empty('select[name="input_state_edit"]', data.callsign_state);
             fill_if_empty('#stationCntyInputEdit', data.callsign_us_county);
+            if (data.callsign_darc_dok && $('#darc_dok_edit').val() == '') {
+                var dok_selectize = $('#darc_dok_edit')[0].selectize;
+                dok_selectize.addOption({ name: data.callsign_darc_dok });
+                dok_selectize.setValue(data.callsign_darc_dok, false);
+            }
 
             $('#update_from_callbook').prop("disabled", false).removeClass("running");
         },
@@ -289,7 +368,7 @@ function qso_edit(id) {
                        case '291':
                           if (state != "") {
                              $("#stationCntyInputEdit").prop('disabled', false);
-                             selectize_usa_county('#stateDropdown', '#stationCntyInputEdit');
+                             selectize_usa_county('#stateDropdownEdit', '#stationCntyInputEdit');
                           }
                           $('#location_us_county_edit').show();
                           break;
@@ -377,30 +456,18 @@ function qso_edit(id) {
                             $.ajax({
                                url: base_url + 'index.php/logbook/searchbearing',
                                type: 'post',
+                               dataType: 'json',
                                data: {
                                   grid: $('#locator_edit').val(),
                                   ant_path: $('#ant_path_edit').val(),
                                   stationProfile: $('#stationProfile').val()
                                },
                                success: function(data) {
-                                  $('#locator_info_edit').html(data).fadeIn("slow");
+                                  $('#locator_info_edit').html(data.text).fadeIn("slow");
+                                  $("#distance").val(data.distance_km ?? '');
                                },
                                error: function() {
                                   $('#locator_info_edit').text("Error loading bearing!").fadeIn("slow");
-                               },
-                            });
-                            $.ajax({
-                               url: base_url + 'index.php/logbook/searchdistance',
-                               type: 'post',
-                               data: {
-                                  grid: $('#locator_edit').val(),
-                                  ant_path: $('#ant_path_edit').val(),
-                                  stationProfile: $('#stationProfile').val()
-                               },
-                               success: function(data) {
-                                  $("#distance").val(parseFloat(data));
-                               },
-                               error: function() {
                                   $('#distance').val('');
                                },
                             });
@@ -415,28 +482,17 @@ function qso_edit(id) {
                             $.ajax({
                                url: base_url + 'index.php/logbook/searchbearing',
                                type: 'post',
+                               dataType: 'json',
                                data: {
                                   grid: $(this).val(),
                                   stationProfile: $('#stationProfile').val()
                                },
                                success: function(data) {
-                                  $('#locator_info_edit').html(data).fadeIn("slow");
+                                  $('#locator_info_edit').html(data.text).fadeIn("slow");
+                                  $("#distance").val(data.distance_km ?? '');
                                },
                                error: function() {
                                   $('#locator_info_edit').text("Error loading bearing!").fadeIn("slow");
-                               },
-                            });
-                            $.ajax({
-                               url: base_url + 'index.php/logbook/searchdistance',
-                               type: 'post',
-                               data: {
-                                  grid: $(this).val(),
-                                  stationProfile: $('#stationProfile').val()
-                               },
-                               success: function(data) {
-                                  $("#distance").val(parseFloat(data));
-                               },
-                               error: function() {
                                   $("#distance").val('');
                                },
                             });
@@ -579,8 +635,8 @@ function qso_edit(id) {
 }
 
 function qso_save() {
-    var myform = $("#qsoform")[0];
-    var fd = new FormData(myform);
+    let myform = $("#qsoform")[0];
+    let fd = new FormData(myform);
     $.ajax({
         url: base_url + 'index.php/qso/qso_save_ajax',
         data: fd,
@@ -595,6 +651,10 @@ function qso_save() {
 			if (reload_after_qso_safe == true) {
 				location.reload();
 			}
+			if (reload_qso_line == true) {
+				let qsoId = document.querySelector('input[name="id"]').value;
+				getQsos(qsoId);
+			}
 		} else {
 			$("#error-messages-qso-edit").html('<div class="alert alert-danger alert-dismissible fade show" role="alert">'+dataofconfirm.detail+'<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
 			$(".modal-body").animate({ scrollTop: 0 }, 'fast');
@@ -607,6 +667,7 @@ function qso_save() {
 }
 
 function selectize_usa_county(state_field, county_field) {
+    $(county_field).selectize()[0].selectize.destroy();
     $(county_field).selectize({
         delimiter: ';',
         maxItems: 1,
@@ -640,7 +701,7 @@ function selectize_usa_county(state_field, county_field) {
     });
 }
 
-async function updateStateDropdown(dxcc_field, state_label, county_div, county_input, dropdown = '#stateDropdown') {
+async function updateStateDropdown(dxcc_field, state_label, county_div, county_input, dropdown = '#stateDropdown', set_state = null) {
     var selectedDxcc = $(dxcc_field);
 	var selectedState = $(dropdown);
 
@@ -712,13 +773,13 @@ function spawnQrbCalculator(locator1, locator2) {
 				nl2br: false,
 				message: html,
 				onshown: function(dialog) {
-                    if (locator1 !== undefined) {
-                        $("#qrbcalc_locator1").val(locator1);
-                    }
-                    if (locator2 !== undefined) {
-                        $("#qrbcalc_locator2").val(locator2);
-                        calculateQrb();
-                    }
+					if (locator1 !== undefined) {
+						$("#qrbcalc_locator1").val(locator1);
+					}
+					if (locator2 !== undefined) {
+						$("#qrbcalc_locator2").val(locator2);
+						calculateQrb();
+					}
 				},
 				buttons: [{
 					label: lang_admin_close,
@@ -743,7 +804,7 @@ function spawnActivatorsMap(call, count, grids) {
 				nl2br: false,
 				message: html,
 				onshown: function(dialog) {
-					showActivatorsMap(call, count, grids);
+					showActivatorsMap(call, count, grids, grid_color);
 				},
 				buttons: [{
 					label: lang_admin_close,
@@ -1127,6 +1188,29 @@ function set_active_loc_quickswitcher(new_active) {
     });
 }
 
+// Quick theme switcher — POST the chosen theme folder to the user controller,
+// then reload the page so the new stylesheet and logos take effect.
+function quick_switch_theme(foldername) {
+    $.ajax({
+        url: base_url + 'index.php/user/theme_switch',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            theme: foldername
+        },
+        success: function(response) {
+            if (response && response.status === 'success') {
+                window.location.reload();
+            } else {
+                console.error('Theme switch failed: ' + ((response && response.message) ? response.message : 'unknown error'));
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error while switching theme: ' + error);
+        }
+    });
+}
+
 $(document).ready(function() {
     if ($('#utc_header').length > 0) {
         function getCurrentUTCTime() {
@@ -1147,7 +1231,7 @@ $(document).ready(function() {
 });
 
 // auto setting of gridmap height
-function set_map_height() {
+function set_map_height(extra_height = 0) {
     //header menu
     var headerNavHeight = $('nav').outerHeight();
     // console.log('nav: ' + headerNavHeight);
@@ -1161,7 +1245,7 @@ function set_map_height() {
     // console.log('.gridsquare_map_form: ' + gridsquareFormHeight);
 
     // calculate correct map height
-    var gridsquareMapHeight = window.innerHeight - headerNavHeight - coordinatesHeight - gridsquareFormHeight;
+    var gridsquareMapHeight = window.innerHeight - headerNavHeight - coordinatesHeight - gridsquareFormHeight - extra_height;
 
     // and set it
     $('#gridsquare_map').css('height', gridsquareMapHeight + 'px');
@@ -1185,55 +1269,76 @@ function newpath(latlng1, latlng2, locator1, locator2) {
         },
       }).setView([30, 0], 1.5);
 
-    // Need to fix so that marker is placed at same place as end of line, but this only needs to be done when longitude is < -170
-    if (latlng2[1] < -170) {
-        latlng2[1] =  parseFloat(latlng2[1])+360;
+    if (locator1.toUpperCase() != locator2.toUpperCase()) {
+
+        // Need to fix so that marker is placed at same place as end of line, but this only needs to be done when longitude is < -170
+        if (latlng2[1] < -170) {
+            latlng2[1] =  parseFloat(latlng2[1])+360;
+        }
+        if (latlng1[1] < -170) {
+            latlng1[1] =  parseFloat(latlng1[1])+360;
+        }
+
+        if ((latlng1[1] - latlng2[1]) < -180) {
+            latlng2[1] = parseFloat(latlng2[1]) -360;
+        } else if ((latlng1[1] - latlng2[1]) > 180) {
+            latlng2[1] = parseFloat(latlng2[1]) +360;
+        }
+
+        map.fitBounds([
+            [latlng1[0], latlng1[1]],
+            [latlng2[0], latlng2[1]]
+        ]);
+
+        var maidenhead = L.maidenheadqrb().addTo(map);
+
+        var osmUrl = option_map_tile_server;
+        var osmAttrib= option_map_tile_server_copyright;
+        var osm = new L.TileLayer(osmUrl, {minZoom: 1, maxZoom: 12, attribution: osmAttrib});
+
+        var redIcon = L.icon({
+            iconUrl: icon_dot_url,
+            iconSize:     [10, 10], // size of the icon
+        });
+
+        map.addLayer(osm);
+
+        var marker = L.marker([latlng1[0], latlng1[1]], {closeOnClick: false, autoClose: false}).addTo(map).bindPopup(locator1);
+
+        var marker2 = L.marker([latlng2[0], latlng2[1]], {closeOnClick: false, autoClose: false}).addTo(map).bindPopup(locator2);
+
+        const multiplelines = [];
+            multiplelines.push(
+                new L.LatLng(latlng1[0], latlng1[1]),
+                new L.LatLng(latlng2[0], latlng2[1])
+            )
+
+        const geodesic = L.geodesic(multiplelines, {
+            weight: 3,
+            opacity: 1,
+            color: 'red',
+            wrap: false,
+            steps: 100
+        }).addTo(map);
+    } else {
+        // Need to fix so that marker is placed at same place as end of line, but this only needs to be done when longitude is < -170
+        if (latlng1[1] < -170) {
+            latlng1[1] =  parseFloat(latlng1[1])+360;
+        }
+        var maidenhead = L.maidenheadqrb().addTo(map);
+        map.setView([latlng1[0], latlng1[1]], 13);
+
+        var osmUrl = option_map_tile_server;
+        var osmAttrib= option_map_tile_server_copyright;
+        var osm = new L.TileLayer(osmUrl, {minZoom: 1, maxZoom: 12, attribution: osmAttrib});
+
+        var redIcon = L.icon({
+            iconUrl: icon_dot_url,
+            iconSize:     [10, 10], // size of the icon
+        });
+        map.addLayer(osm);
+        var marker = L.marker([latlng1[0], latlng1[1]], {closeOnClick: false, autoClose: false}).addTo(map).bindPopup(locator1);
     }
-    if (latlng1[1] < -170) {
-        latlng1[1] =  parseFloat(latlng1[1])+360;
-    }
-
-	if ((latlng1[1] - latlng2[1]) < -180) {
-		latlng2[1] = parseFloat(latlng2[1]) -360;
-	} else if ((latlng1[1] - latlng2[1]) > 180) {
-		latlng2[1] = parseFloat(latlng2[1]) +360;
-	}
-
-    map.fitBounds([
-        [latlng1[0], latlng1[1]],
-        [latlng2[0], latlng2[1]]
-    ]);
-
-    var maidenhead = L.maidenheadqrb().addTo(map);
-
-    var osmUrl = option_map_tile_server;
-    var osmAttrib= option_map_tile_server_copyright;
-    var osm = new L.TileLayer(osmUrl, {minZoom: 1, maxZoom: 12, attribution: osmAttrib});
-
-    var redIcon = L.icon({
-					iconUrl: icon_dot_url,
-					iconSize:     [10, 10], // size of the icon
-				});
-
-    map.addLayer(osm);
-
-    var marker = L.marker([latlng1[0], latlng1[1]], {closeOnClick: false, autoClose: false}).addTo(map).bindPopup(locator1);
-
-    var marker2 = L.marker([latlng2[0], latlng2[1]], {closeOnClick: false, autoClose: false}).addTo(map).bindPopup(locator2);
-
-    const multiplelines = [];
-		multiplelines.push(
-            new L.LatLng(latlng1[0], latlng1[1]),
-            new L.LatLng(latlng2[0], latlng2[1])
-        )
-
-    const geodesic = L.geodesic(multiplelines, {
-        weight: 3,
-        opacity: 1,
-        color: 'red',
-        wrap: false,
-        steps: 100
-    }).addTo(map);
 }
 
 function disableMap() {
@@ -1256,7 +1361,7 @@ function enableMap() {
     map.keyboard.enable();
 }
 
-function shareModal(qso_data) {
+function shareModal(qso_data, title) {
     $.ajax({
         url: base_url + 'index.php/qso/getShareModal',
         type: 'post',
@@ -1265,7 +1370,7 @@ function shareModal(qso_data) {
         },
         success: function (html) {
             BootstrapDialog.show({
-                title: lang_general_share_qso,
+                title: title || lang_general_share_qso,
                 cssClass: 'bg-black bg-opacity-50',
                 nl2br: false,
                 message: html,
@@ -1280,6 +1385,171 @@ function shareModal(qso_data) {
     });
 }
 
+
+// Show Bootstrap Toast
+function showToast(title, text, type = 'bg-success text-white', delay = 3000, autohide = true) {
+	/*
+	Examples:
+	showToast('Saved', 'Your data was saved!', 'bg-success text-white', 3000);
+	showToast('Error', 'Failed to connect to server.', 'bg-danger text-white', 5000);
+	showToast('Warning', 'Please check your input.', 'bg-warning text-dark', 4000);
+	showToast('Info', 'System will restart soon.', 'bg-info text-dark', 4000);
+	// Persistent toast (stays until manually dismissed):
+	showToast('Error', 'Connection lost.', 'bg-danger text-white', 0, false);
+	*/
+
+	const container = document.getElementById('toast-container');
+
+	// Create toast element
+	const toastEl = document.createElement('div');
+	toastEl.className = `toast align-items-center ${type}`;
+	toastEl.setAttribute('role', 'alert');
+	toastEl.setAttribute('aria-live', 'assertive');
+	toastEl.setAttribute('aria-atomic', 'true');
+	toastEl.setAttribute('data-bs-autohide', autohide ? 'true' : 'false');
+	toastEl.setAttribute('data-bs-delay', delay);
+
+	// Toast inner HTML
+	toastEl.innerHTML = `
+		<div class="d-flex">
+		<div class="toast-body">
+			<strong>${title}</strong><br>${text}
+		</div>
+		<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+		</div>
+	`;
+
+	// Append and show
+	container.appendChild(toastEl);
+	const bsToast = new bootstrap.Toast(toastEl);
+	bsToast.show();
+
+	// Remove from DOM when hidden
+	toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+}
+
+function hexToRgba(hex, alpha = 1) {
+	if (!hex) return null;
+	// Remove the leading "#"
+	hex = hex.replace(/^#/, '');
+
+	// Expand short form (#f0a → #ff00aa)
+	if (hex.length === 3) {
+		hex = hex.split('').map(c => c + c).join('');
+	}
+
+	const num = parseInt(hex, 16);
+	const r = (num >> 16) & 255;
+	const g = (num >> 8) & 255;
+	const b = num & 255;
+
+	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/**
+ * Cookie Management Utilities
+ */
+
+/**
+ * Set a cookie
+ * @param {string} name - Cookie name
+ * @param {string} value - Cookie value
+ * @param {number} days - Days until expiration
+ */
+function setCookie(name, value, days) {
+	var expires = "";
+	if (days) {
+		var date = new Date();
+		date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+		expires = "; expires=" + date.toUTCString();
+	}
+	document.cookie = name + "=" + (value || "") + expires + "; path=/";
+}
+
+/**
+ * Get a cookie value
+ * @param {string} name - Cookie name
+ * @returns {string|null} Cookie value or null if not found
+ */
+function getCookie(name) {
+	var nameEQ = name + "=";
+	var ca = document.cookie.split(';');
+	for (var i = 0; i < ca.length; i++) {
+		var c = ca[i];
+		while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+		if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+	}
+	return null;
+}
+
+/**
+ * In some cases gettext-translated strings are still htmlencoded in the frontend. Use this funktion to decode them.
+ * @param {string} text - The text to decode
+ * @returns {string} Decoded text
+ */
+function decodeHtml(html) {
+    const txt = document.createElement('textarea');
+    txt.innerHTML = html;
+    return txt.value;
+}
+
+/**
+ * Convert latitude/longitude coordinates to Maidenhead grid square locator
+ * @param {number} y - Latitude in decimal degrees (-90 to +90)
+ * @param {number} x - Longitude in decimal degrees (-180 to +180)
+ * @param {number} num - Precision level: 2=field, 4=square, 6=subsquare, 8=extended, 10=extended subsquare
+ * @returns {string} Maidenhead locator string (e.g., 'JO01ab' for 6-character precision)
+ *
+ * @example
+ * LatLng2Loc(51.5074, -0.1278, 6)  // → 'IO91wm' (London)
+ * LatLng2Loc(40.7128, -74.0060, 4) // → 'FN20' (New York)
+ */
+function LatLng2Loc(y, x, num) {
+	if (x<-180) {x=x+360;}
+	if (x>180) {x=x-360;}
+	var yi, yk, ydiv, yres, ylp, y;
+	var ycalc = new Array(0,0,0);
+	var yn    = new Array(0,0,0,0,0,0,0);
+
+	var ydiv_arr=new Array(10, 1, 1/24, 1/240, 1/240/24);
+	ycalc[0] = (x + 180)/2;
+	ycalc[1] =  y +  90;
+
+	for (yi = 0; yi < 2; yi++) {
+		for (yk = 0; yk < 5; yk++) {
+			ydiv = ydiv_arr[yk];
+			yres = ycalc[yi] / ydiv;
+			ycalc[yi] = yres;
+			if (ycalc[yi] > 0) ylp = Math.floor(yres); else ylp = Math.ceil(yres);
+			ycalc[yi] = (ycalc[yi] - ylp) * ydiv;
+			yn[2*yk + yi] = ylp;
+		}
+	}
+
+	var qthloc="";
+	if (num >= 2) qthloc+=String.fromCharCode(yn[0] + 0x41) + String.fromCharCode(yn[1] + 0x41);
+	if (num >= 4) qthloc+=String.fromCharCode(yn[2] + 0x30) + String.fromCharCode(yn[3] + 0x30);
+	if (num >= 6) qthloc+=String.fromCharCode(yn[4] + 0x41) + String.fromCharCode(yn[5] + 0x41);
+	if (num >= 8) qthloc+=' ' + String.fromCharCode(yn[6] + 0x30) + String.fromCharCode(yn[7] + 0x30);
+	if (num >= 10) qthloc+=String.fromCharCode(yn[8] + 0x61) + String.fromCharCode(yn[9] + 0x61);
+	return qthloc;
+}
+
+// Fetch an HTML fragment and swap it into a target element, then reinit tooltips.
+// Replaces the former htmx hx-get / hx-target mechanism.
+window.wlLoadInto = function (url, target) {
+    const el = (typeof target === 'string') ? document.querySelector(target) : target;
+    if (!el) return Promise.resolve();
+    return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.text())
+        .then(html => {
+            el.innerHTML = html;
+            // reinit Bootstrap tooltips on freshly swapped content (was htmx:afterSwap)
+            $('[data-bs-toggle="tooltip"]', el).tooltip();
+        });
+};
+
+// DO NOT DELETE: This message is intentional and serves as developer recruitment/engagement
 console.log("Ready to unleash your coding prowess and join the fun?\n\n" +
     "Check out our GitHub Repository and dive into the coding adventure:\n\n" +
     "🚀 https://www.github.com/wavelog/wavelog");

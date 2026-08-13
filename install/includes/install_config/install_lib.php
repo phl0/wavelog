@@ -130,7 +130,6 @@ function detect_nginx_php_setting($http_scheme) {
    curl_setopt($ch, CURLOPT_HEADER, 0);
    $data = curl_exec($ch);
    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-   curl_close($ch);
    return $code;
 }
 

@@ -1,3 +1,23 @@
+<?php
+require_once('includes/install_config/install_lib.php');
+require_once('includes/install_config/install_config.php');
+
+session_start();
+
+if (file_exists('.lock') || file_exists($db_config_path . 'config.php') || file_exists($db_config_path . 'database.php')) {
+	http_response_code(403);
+	exit('forbidden');
+}
+
+$form_token = $_POST['form_token'] ?? '';
+if (empty($form_token) || !isset($_SESSION['form_token']) || !hash_equals($_SESSION['form_token'], $form_token)) {
+	header('Location: index.php', true, 303);
+	exit;
+}
+unset($_SESSION['form_token']);
+
+$_SESSION['installer_token'] = bin2hex(random_bytes(32));
+?>
 <!DOCTYPE html>
 <html>
 
@@ -39,7 +59,7 @@
                     <p><?= sprintf(__("All install steps went through. Redirect to user login in %s seconds..."), "<span id='countdown'>4</span>"); ?></p>
                 </div>
                 <div class="mb-3" id="success_button" style="display: none;">
-                    <a class="btn btn-primary" href="<?php echo $_POST['websiteurl']; ?>index.php/user/login/1"><?= __("Done. Go to the user login ->"); ?></a>
+                    <a class="btn btn-primary" href="<?= htmlspecialchars($_POST['websiteurl'] ?? '', ENT_QUOTES, 'UTF-8') ?>index.php/user/login/1"><?= __("Done. Go to the user login ->"); ?></a>
                 </div>
                 <div id="error_message"></div>
                 <div class="container mt-5">
@@ -58,21 +78,28 @@
 </body>
 
 <script>
-    let _POST = <?php echo json_encode($_POST); ?>;
+    let _POST = <?php echo json_encode($_POST, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    let _installer_token = '<?= $_SESSION['installer_token'] ?>';
+    let _cron_token = '';
+    let _log_polling = true;
+
+    $.ajaxSetup({
+        headers: { 'X-Installer-Token': _installer_token }
+    });
 
     $(document).ready(async function() {
         init_read_log();
         try {
-            await check_lockfile();
-
             await config_file();
             await database_file();
             await database_tables();
             await database_migrations();
             await update_dxcc();
+            await log_message('info', 'Finish. Installer went through successfully.');
             await installer_lock();
 
-            await log_message('info', 'Finish. Installer went through successfully.');
+            // close the ajax gateway for the log polling, since we are done with the install steps
+            _log_polling = false;
 
             if ($('#logContainer').css('display') == 'none') {
                 // after all install steps went through we can show a success message and redirect to the user/login
@@ -103,19 +130,35 @@
         }
     });
 
+    // Poll the debug logfile with a self-scheduling timeout instead of a fixed
+    // interval: only one request is ever in flight, so a slow answer can never
+    // pile up further requests on top of the running install step.
     function init_read_log() {
-        setInterval(function() {
-            $.ajax({
-                type: 'POST',
-                url: 'ajax.php',
-                data: {
-                    read_logfile: 1
-                },
-                success: function(response) {
-                    $("#debuglog").text(response);
+        if (!_log_polling) {
+            return;
+        }
+        $.ajax({
+            type: 'POST',
+            url: 'ajax.php',
+            timeout: 10000,
+            data: {
+                read_logfile: 1
+            },
+            success: function(response) {
+                $("#debuglog").text(response);
+            },
+            error: function(xhr) {
+                // 403 means the installer got locked -- stop polling
+                if (xhr.status === 403) {
+                    _log_polling = false;
                 }
-            });
-        }, 500);
+            },
+            complete: function() {
+                if (_log_polling) {
+                    setTimeout(init_read_log, 500);
+                }
+            }
+        });
     }
 
     $('#toggleLogButton').on('click', function() {
@@ -128,33 +171,6 @@
         }
     });
 
-    // if a user goes back to the installer we need to redirect him
-    async function check_lockfile() {
-
-        return new Promise((resolve, reject) => {
-            $.ajax({
-                type: 'POST',
-                url: 'ajax.php',
-                data: {
-                    check_lockfile: 1
-                },
-                success: async function(response) {
-                    if (response != 'installer_locked') {
-                        resolve();
-                    } else {
-                        await log_message('error', 'Attention: Installer is locked. Redirect to user/login.');
-                        reject(response);
-                        window.location.href = "<?php echo str_replace('run.php', '', $websiteurl); ?>" + "index.php/user/login";
-                    }
-                },
-                error: async function(error) {
-                    await log_message('error', "Install Lock Check went wrong... Ajax failed. Error: " + error.status);
-                    reject(error);
-                    window.location.href = "<?php echo str_replace('run.php', '', $websiteurl); ?>" + "index.php/user/login";
-                }
-            });
-        });
-    }
 
     async function config_file() {
 
@@ -268,7 +284,7 @@
 
         return new Promise((resolve, reject) => {
             $.ajax({
-                url: "<?php echo $_POST['websiteurl']; ?>" + "index.php/migrate",
+                url: <?= json_encode(($_POST['websiteurl'] ?? '') . 'index.php/migrate', JSON_HEX_TAG | JSON_HEX_AMP) ?>,
                 dataType: 'json',
                 success: async function(response) {
                     if (response.status == 'success') {
@@ -290,14 +306,39 @@
         });
     }
 
+    async function fetch_cron_token() {
+        return new Promise((resolve) => {
+            $.ajax({
+                type: 'POST',
+                url: 'ajax.php',
+                data: {
+                    run_cron_token: 1
+                },
+                success: function(response) {
+                    _cron_token = response;
+                    resolve();
+                },
+                error: async function(error) {
+                    await log_message('error', 'Could not fetch the cron auth token. Ajax crashed. Status: ' + error.status + ' Status Text: ' + error.statusText);
+                    resolve();
+                }
+            });
+        });
+    }
+
     async function update_dxcc() {
         var field = '#update_dxcc';
         await log_message('debug', 'Start updating DXCC database. This can take a moment or two... Please wait');
         running(field, true);
 
+        await fetch_cron_token();
+
         return new Promise((resolve, reject) => {
             $.ajax({
-                url: "<?php echo $_POST['websiteurl']; ?>" + "index.php/update/dxcc",
+                url: <?= json_encode(($_POST['websiteurl'] ?? '') . 'index.php/update/dxcc', JSON_HEX_TAG | JSON_HEX_AMP) ?>,
+                headers: {
+                    'X-Wavelog-Auth': _cron_token
+                },
                 success: async function(response) {
                     if (response == 'success') {
                         running(field, false);
@@ -334,7 +375,6 @@
                     if (response == 'success') {
                         localStorage.clear();
                         running(field, false);
-                        await log_message('debug', 'Successfully created .lock file in folder /install');
                         resolve();
                     } else {
                         running(field, false, true);

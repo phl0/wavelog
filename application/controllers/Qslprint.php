@@ -7,7 +7,6 @@ class QSLPrint extends CI_Controller {
 		parent::__construct();
 		$this->load->helper(array('form', 'url'));
 
-		$this->load->model('user_model');
 
 		// Check if users logged in
 
@@ -20,7 +19,6 @@ class QSLPrint extends CI_Controller {
 	public function index($station_id = 'All')
 	{
 		// Check if users logged in
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$this->load->model('stations');
@@ -92,30 +90,39 @@ class QSLPrint extends CI_Controller {
 		$file = fopen('php://output', 'w');
 
 		$header = array("STATION_CALLSIGN",
-						"COL_CALL",
-						"COL_QSL_VIA",
-						"COL_TIME_ON",
-						"COL_MODE",
-						"COL_SUBMODE",
-						"COL_FREQ",
-						"COL_BAND",
-						"COL_RST_SENT",
-						"COL_SAT_NAME",
-						"COL_SAT_MODE",
-						"COL_QSL_RCVD",
-						"COL_COMMENT",
-						"COL_ROUTING",
+						"CALL",
+						"QSL_VIA",
+						"DATE_ON",
+						"TIME_ON",
+						"MODE",
+						"SUBMODE",
+						"FREQ",
+						"BAND",
+						"RST_SENT",
+						"SAT_NAME",
+						"SAT_MODE",
+						"PROP_MODE",
+						"QSL_RCVD",
+						"COMMENT",
+						"ROUTING",
 						"ADIF",
-						"ENTITY");
+						"ENTITY",
+						"GRIDSQUARE",
+						"STATION_GRIDSQUARE");
 
-		fputcsv($file, $header);
+		fputcsv($file, $header, separator: ",", enclosure: "\"", escape: "\\");
 
 		foreach ($myData->result() as $qso) {
+				$datetimeObj = new DateTime($qso->COL_TIME_ON);
+				$date = $datetimeObj->format('Y-m-d');
+				$time = $datetimeObj->format('H:i:s');
+
 			fputcsv($file,
 				array($qso->STATION_CALLSIGN,
 				$qso->COL_CALL,
 				$qso->COL_QSL_VIA!=""?"via ".$qso->COL_QSL_VIA:"",
-				$qso->COL_TIME_ON,
+				$date,
+				$time,
 				$qso->COL_MODE,
 				$qso->COL_SUBMODE,
 				$qso->COL_FREQ,
@@ -123,11 +130,14 @@ class QSLPrint extends CI_Controller {
 				$qso->COL_RST_SENT,
 				$qso->COL_SAT_NAME,
 				$qso->COL_SAT_MODE,
+				$qso->COL_PROP_MODE,
 				$qso->COL_QSL_RCVD =='Y'?'TNX QSL':'PSE QSL',
 				$qso->COL_COMMENT,
 				$qso->COL_ROUTING,
 				$qso->ADIF,
-				$qso->ENTITY));
+				$qso->ENTITY,
+				$qso->COL_GRIDSQUARE,
+				$qso->COL_MY_GRIDSQUARE), separator: ",", enclosure: "\"", escape: "\\");
 		}
 
 		fclose($file);
@@ -143,7 +153,6 @@ class QSLPrint extends CI_Controller {
 		}
 
 		$this->load->model('qslprint_model');
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 			// Update Logbook to Mark Paper Card Sent
@@ -156,38 +165,38 @@ class QSLPrint extends CI_Controller {
 	}
 
 	public function delete_from_qsl_queue() {
-		$id = $this->input->post('id');
+		$id = $this->input->post('id', true);
 		$this->load->model('qslprint_model');
 
-		$this->qslprint_model->delete_from_qsl_queue($this->security->xss_clean($id));
+		$this->qslprint_model->delete_from_qsl_queue($id);
 	}
 
 	public function get_qsos_for_print_ajax() {
-		$station_id = $this->input->post('station_id');
+		$station_id = $this->input->post('station_id', true);
 		$this->load->model('qslprint_model');
 
-		$data['qsos'] = $this->qslprint_model->get_qsos_for_print_ajax($this->security->xss_clean($station_id));
+		$data['qsos'] = $this->qslprint_model->get_qsos_for_print_ajax($station_id);
 		$data['station_id'] = $station_id;
 		$this->load->view('qslprint/qslprint', $data);
 	}
 
 	public function open_qso_list() {
-		$callsign = $this->input->post('callsign');
+		$callsign = $this->input->post('callsign', true);
 		$this->load->model('qslprint_model');
 
-		$data['qsos'] = $this->qslprint_model->open_qso_list($this->security->xss_clean($callsign));
+		$data['qsos'] = $this->qslprint_model->open_qso_list($callsign);
 		$this->load->view('qslprint/qsolist', $data);
 	}
 
 	public function add_qso_to_print_queue() {
-		$id = $this->input->post('id');
+		$id = $this->input->post('id', true);
 		$this->load->model('qslprint_model');
 
-		$this->qslprint_model->add_qso_to_print_queue($this->security->xss_clean($id));
+		$this->qslprint_model->add_qso_to_print_queue($id);
 	}
 
 	public function show_oqrs() {
-		$id = $this->security->xss_clean($this->input->post('id'));
+		$id = $this->input->post('id', true);
 
 		$this->load->model('qslprint_model');
 
@@ -195,17 +204,18 @@ class QSLPrint extends CI_Controller {
 		$this->load->view('oqrs/showoqrs', $data);
 	}
 
-	public function get_previous_qsl() {
-		$id = $this->security->xss_clean($this->input->post('id'));
+	public function printdialog() {
+		$data['type'] = $this->input->post('printType', true);
+		$data['id_list'] = $this->input->post('id_list', true);
+		$data['printAll'] = $this->input->post('printAll', true);
 
-		$this->load->model('qslprint_model');
-
-		$number_qsls = $this->qslprint_model->get_previous_qsls($id);
-		header('Content-Type: application/json');
-		echo json_encode($number_qsls);
+		if ($data['type'] === 'label') {
+			$this->load->view('qslprint/printlabel', $data);
+		} else {
+			$this->load->model('Qslpostcard_model');
+			$data['templates'] = $this->Qslpostcard_model->list_templates();
+			$this->load->view('qslprint/printqsl', $data);
+		}
 	}
 
 }
-
-/* End of file Qslprint.php */
-/* Location: ./application/controllers/Qslprint.php */

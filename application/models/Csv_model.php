@@ -58,19 +58,23 @@ class Csv_model extends CI_Model
 			$binds[]=$cqz;
 		}
 
-		if ($propagation != 'All') {
+		if ($propagation == 'NoRPT') { // All but RPT
+			$sql .= " and COL_PROP_MODE != 'RPT'";
+		} else if ($propagation == 'All') {
+			; // No Prop-Filter
+		} else { // Propmode set, add SQL
 			$sql .= " and COL_PROP_MODE = ?";
-			$binds[]=$propagation;
+			$binds[] = $propagation;
 		}
 
 		// If date is set, we format the date and add it to the where-statement
 		if ($fromdate != "") {
-			$sql .= " and date(COL_TIME_ON) >= ?";
-			$binds[]=$fromdate;
+			$sql .= " and COL_TIME_ON >= ?";
+			$binds[]=$fromdate . ' 00:00:00';
 		}
 		if ($todate != "") {
-			$sql .= " and date(COL_TIME_ON) <= ?"; 
-			$binds[]=$todate;
+			$sql .= " and COL_TIME_ON <= ?";
+			$binds[]=$todate . ' 23:59:59';
 		}
 
 		$sql .= ' and station_profile.user_id = ?';

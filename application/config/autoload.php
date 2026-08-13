@@ -64,7 +64,7 @@ $autoload['libraries'] = array('database', 'session', 'curl', 'OptionsLib', 'Pat
 |	$autoload['helper'] = array('url', 'file');
 */
 
-$autoload['helper'] = array('url', 'security', 'language', 'club');
+$autoload['helper'] = array('url', 'security', 'language', 'club', 'custom_map_style');
 
 
 /*
@@ -80,7 +80,7 @@ $autoload['helper'] = array('url', 'security', 'language', 'club');
 |
 */
 
-$autoload['config'] = array('wavelog', 'bands', 'lotw', 'gettext');
+$autoload['config'] = array('wavelog', 'bands', 'lotw', 'gettext', 'adif_propmodes');
 
 /*
 | -------------------------------------------------------------------
@@ -92,7 +92,7 @@ $autoload['config'] = array('wavelog', 'bands', 'lotw', 'gettext');
 |
 */
 
-$autoload['model'] = array('user_options_model', 'logbooks_model', 'stations', 'oqrs_model');
+$autoload['model'] = array('user_model', 'user_options_model', 'logbooks_model', 'stations', 'oqrs_model');
 
 
 /* End of file autoload.php */

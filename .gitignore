@@ -1,7 +1,15 @@
-/application/config/database.php
 /application/config/config.php
-/application/config/*/config.php
-/application/config/*/database.php
+/application/config/database.php
+/application/config/sso.php
+/application/config/redis.php
+/application/config/memcached.php
+/application/config/worker.php
+/application/config/**/config.php
+/application/config/**/database.php
+/application/config/**/sso.php
+/application/config/**/redis.php
+/application/config/**/memcached.php
+/application/config/**/worker.php
 /application/logs/*
 /application/cache/*
 /backup/*.adi
@@ -17,6 +25,7 @@
 /assets/qslcard/*
 /assets/js/sections/custom.js
 /userdata/*
+/tmp/*
 .idea/*
 .DS_Store
 sync.sh
@@ -28,3 +37,4 @@ docker-compose.yml
 .demo
 .htaccess
 .user.ini
+.env

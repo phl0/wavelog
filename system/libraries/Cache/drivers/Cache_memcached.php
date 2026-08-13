@@ -6,7 +6,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014 - 2019, British Columbia Institute of Technology
+ * Copyright (c) 2019 - 2022, CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@
  * @author	EllisLab Dev Team
  * @copyright	Copyright (c) 2008 - 2014, EllisLab, Inc. (https://ellislab.com/)
  * @copyright	Copyright (c) 2014 - 2019, British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright	Copyright (c) 2019 - 2022, CodeIgniter Foundation (https://codeigniter.com/)
  * @license	https://opensource.org/licenses/MIT	MIT License
  * @link	https://codeigniter.com
  * @since	Version 2.0
@@ -299,7 +300,27 @@ class CI_Cache_memcached extends CI_Driver {
 	 */
 	public function is_supported()
 	{
-		return (extension_loaded('memcached') OR extension_loaded('memcache'));
+		if ( ! (extension_loaded('memcached') OR extension_loaded('memcache')))
+		{
+			return FALSE;
+		}
+
+		if ( ! isset($this->_memcached))
+		{
+			return FALSE;
+		}
+
+		try
+		{
+			// Test connection by getting server stats
+			$stats = $this->_memcached->getStats();
+			return ($stats !== FALSE && !empty($stats));
+		}
+		catch (Exception $e)
+		{
+			log_message('debug', 'Cache: Memcached connection test failed - '.$e->getMessage());
+			return FALSE;
+		}
 	}
 
 	// ------------------------------------------------------------------------

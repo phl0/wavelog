@@ -6,6 +6,7 @@ class IOTA extends CI_Model {
 	}
 
 	function get_iota_array($iotaArray, $bands, $postdata, $location_list) {
+		$iotaMatrix = [];
 		foreach ($bands as $band) {             	// Looping through bands and iota to generate the array needed for display
 			if (($postdata['band'] != 'SAT') && ($band == 'SAT')) {
 				continue;
@@ -22,7 +23,7 @@ class IOTA extends CI_Model {
 			if ($postdata['worked'] != NULL) {
 				$workedIota = $this->getIotaBandWorked($location_list, $band, $postdata);
 				foreach ($workedIota as $wiota) {
-					$iotaMatrix[$wiota->tag][$band] = '<div class="bg-danger awardsBgDanger"><a href=\'javascript:displayContacts("'.$wiota->tag.'","'. $band . '","All","All","'. $postdata['mode'] . '","IOTA")\'>W</a></div>';
+					$iotaMatrix[$wiota->tag][$band] = '<div class="bg-danger awardsBgWarning"><a href=\'javascript:displayContacts("'.$wiota->tag.'","'. $band . '","All","All","'. $postdata['mode'] . '","IOTA")\'>W</a></div>';
 				}
 			}
 
@@ -151,7 +152,7 @@ class IOTA extends CI_Model {
 					$sql .= " and col_prop_mode = ?";
 					$binding[] = $postdata['band'];
 				} else {
-					$sql .= " and col_prop_mode !='SAT'";
+					$sql .= " and (col_prop_mode !='SAT' or col_prop_mode is NULL)";
 					$sql .= " and col_band = ?";
 					$binding[] = $postdata['band'];
 				}
@@ -305,9 +306,9 @@ class IOTA extends CI_Model {
 			$bandslots = $this->bands->get_worked_bands('iota');
 			$bandslots_list = "'".implode("','",$bandslots)."'";
 			$sql .= " and thcv.col_band in (" . $bandslots_list . ")";
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 		} else {
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 			$sql .= " and thcv.col_band = ?";
 			$binding[] = $band;
 		}
@@ -338,9 +339,9 @@ class IOTA extends CI_Model {
 			$bandslots = $this->bands->get_worked_bands('iota');
 			$bandslots_list = "'".implode("','",$bandslots)."'";
 			$sql .= " and thcv.col_band in (" . $bandslots_list . ")";
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 		} else {
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 			$sql .= " and thcv.col_band = ?";
 			$binding[] = $band;
 		}

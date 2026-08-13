@@ -107,6 +107,7 @@ class Hrdlog_model extends CI_Model {
 		$qsos = $this->adif_data->export_custom($from, $till, $station_id);
 
 		if (isset($qsos)) {
+			$mark_them = [];
 			foreach ($qsos->result() as $qso) {
 				$mark_them[]=$qso->COL_PRIMARY_KEY;
 			}

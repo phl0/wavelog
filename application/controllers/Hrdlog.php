@@ -22,7 +22,12 @@ class Hrdlog extends CI_Controller {
 	}
 
     public function upload() {
-
+		$this->load->helper('cronauth');
+		if (!cronauth_allowed(3)) {
+			// return a 403
+			$this->output->set_status_header(403);
+			exit();
+		}
 		$this->load->model('Hrdlog_model');
 		$this->Hrdlog_model->upload();
         
@@ -32,7 +37,6 @@ class Hrdlog extends CI_Controller {
      * Used for displaying the uid for manually selecting log for upload to hrdlog
      */
     public function export() {
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
         $this->load->model('stations');

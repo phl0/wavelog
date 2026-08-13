@@ -81,7 +81,7 @@ class WAJA extends CI_Model {
 			if ($postdata['worked'] != NULL) {
 				$wajaBand = $this->getWajaWorked($this->location_list, $band, $postdata);
 				foreach ($wajaBand as $line) {
-					$bandWaja[$line->col_state][$band] = '<div class="bg-danger awardsBgDanger"><a href=\'javascript:displayContacts("' . $line->col_state . '","' . $band . '","All","All","'. $postdata['mode'] . '","WAJA", "")\'>W</a></div>';
+					$bandWaja[$line->col_state][$band] = '<div class="bg-danger awardsBgWarning"><a href=\'javascript:displayContacts("' . $line->col_state . '","' . $band . '","All","All","'. $postdata['mode'] . '","WAJA", "")\'>W</a></div>';
 					$prefectures[$line->col_state]['count']++;
 				}
 			}
@@ -123,64 +123,6 @@ class WAJA extends CI_Model {
 		} else {
 			return 0;
 		}
-	}
-
-	function getWajaBandConfirmed($location_list, $band, $postdata) {
-		$bindings=[];
-		$sql = "select adif as waja, name from dxcc_entities
-			join (
-				select col_dxcc from ".$this->config->item('table_name')." thcv
-				where station_id in (" . $location_list .
-				") and col_dxcc > 0";
-
-		$sql .= $this->genfunctions->addBandToQuery($band,$bindings);
-
-		if ($postdata['mode'] != 'All') {
-			$sql .= " and (col_mode = ? or col_submode = ?)";
-			$bindings[]=$postdata['mode'];
-			$bindings[]=$postdata['mode'];
-		}
-
-		$sql .= $this->genfunctions->addQslToQuery($postdata);
-
-		$sql .= " group by col_dxcc
-				) x on dxcc_entities.adif = x.col_dxcc";
-
-		if ($postdata['includedeleted'] == NULL) {
-			$sql .= " and dxcc_entities.end is null";
-		}
-
-		$query = $this->db->query($sql,$bindings);
-
-		return $query->result();
-	}
-
-	function getWajaBandWorked($location_list, $band, $postdata) {
-		$bindings=[];
-		$sql = "select adif as waja, name from dxcc_entities
-			join (
-				select col_dxcc from ".$this->config->item('table_name')." thcv
-				where station_id in (" . $location_list .
-				") and col_dxcc > 0";
-
-		$sql .= $this->genfunctions->addBandToQuery($band,$bindings);
-
-		if ($postdata['mode'] != 'All') {
-			$sql .= " and (col_mode = ? or col_submode = ?)";
-			$bindings[]=$postdata['mode'];
-			$bindings[]=$postdata['mode'];
-		}
-
-		$sql .= " group by col_dxcc
-				) x on dxcc_entities.adif = x.col_dxcc";;
-
-		if ($postdata['includedeleted'] == NULL) {
-			$sql .= " and dxcc_entities.end is null";
-		}
-
-		$query = $this->db->query($sql,$bindings);
-
-		return $query->result();
 	}
 
 	/*

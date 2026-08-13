@@ -20,4 +20,54 @@ $(document).ready(function () {
             'position': 'sticky', 'top': '0px', 'z-index': 1, 'background-color': 'inherit', 'width': '100%', 'height': '37px'
         });
     }
+
+    const loadRadio = () => wlLoadInto(base_url + 'index.php/dashboard/radio_display_component', '#radio_display');
+	loadRadio();
+
+    var pending = null;
+	var missed = false;
+	function throttleLoadRadio() {
+		// Load at most once every 1 seconds. If more pushes arrive during the
+		// lockout, refresh once afterwards so no update is lost.
+		if (pending) {
+			missed = true;
+			return;
+		}
+		loadRadio();
+		pending = setTimeout(function () {
+			pending = null;
+			if (missed) {
+				missed = false;
+				throttleLoadRadio();
+			}
+		}, 1000);
+	}
+
+	var rw = window.radiosUserWorker;
+	if (rw && window.WavelogWorker && WavelogWorker.isAvailable()) {
+		setInterval(loadRadio, 60000);
+		WavelogWorker.subscribe({
+			topic: rw.topic,
+			token: rw.token,
+			onMessage: function (frame) {
+				if (frame.type !== 'push' || !frame.payload || frame.payload.type !== 'radio_updated' || !frame.payload.radio_status) {
+					return;
+				}
+				var cell = $('#radio_display tr[data-radio-id="' + frame.payload.radio_id + '"] .radio-qrg');
+				if (!cell.length) {
+					throttleLoadRadio();
+					return;
+				}
+				var s = frame.payload.radio_status;
+				if (s.prop_mode === 'SAT') {
+					cell.text(s.satname || '');
+				} else {
+					cell.text((s.frequency_formatted || '') + ' (' + (s.mode || '') + ')');
+				}
+			},
+			onReconnect: function () { throttleLoadRadio(); }
+		});
+	} else {
+		setInterval(loadRadio, 5000);
+	}
 });

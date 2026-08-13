@@ -7,15 +7,14 @@
 class Station extends CI_Controller
 {
 
-	function __construct()
-	{
+	function __construct() {
 		parent::__construct();
 		$this->load->helper(array('form', 'url'));
 
-		$this->load->model('user_model');
-		if (!$this->user_model->authorize(2)) {
-			$this->session->set_flashdata('error', __("You're not allowed to do that!"));
-			redirect('dashboard');
+		if (($this->router->method == 'stationProfileCoords') && $this->user_model->authorize(2) && ((clubaccess_check(3) || clubaccess_check(6)))) { return; }	// Allow Clubmembers and Clubmembers ADIF to access list_locations
+		if (!$this->user_model->authorize(2) || !clubaccess_check(9)) { 
+			$this->session->set_flashdata('error', __("You're not allowed to do that!")); 
+			redirect('dashboard'); 
 		}
 	}
 
@@ -37,19 +36,19 @@ class Station extends CI_Controller
 		if ($this->form_validation->run() == FALSE) {
 			$data['page_title'] = __("Create Station Location");
 			$data['station_profile_name'] = $this->input->post('station_profile_name');
-			$data['station_callsign'] = $this->input->post('station_callsign');
+			$data['station_callsign'] = str_replace('Ø', '0', ($this->input->post('station_callsign') ?? ''));
 			$data['station_power'] = $this->input->post('station_power');
-			$data['dxcc'] = $this->input->post('dxcc');
+			$data['dxcc'] = $this->input->post('dxcc') ?? $this->input->get('dxcc');
 			$data['city'] = $this->input->post('city');
-			$data['station_state'] = $this->input->post('station_state');
+			$data['station_state'] = $this->input->post('station_state') ?? $this->input->get('station_state');
 			$data['station_cnty'] = $this->input->post('station_cnty');
-			$data['station_cq'] = $this->input->post('station_cq');
-			$data['station_itu'] = $this->input->post('station_itu');
-			$data['gridsquare'] = $this->input->post('gridsquare');
+			$data['station_cq'] = $this->input->post('station_cq') ?? $this->input->get('station_cq');
+			$data['station_itu'] = $this->input->post('station_itu') ?? $this->input->get('station_itu');
+			$data['gridsquare'] = $this->input->post('gridsquare') ?? $this->input->get('gridsquare');
 			$data['iota'] = $this->input->post('iota');
-			$data['sota'] = $this->input->post('sota');
-			$data['wwff'] = $this->input->post('wwff');
-			$data['pota'] = $this->input->post('pota');
+			$data['sota'] = $this->input->post('sota') ?? $this->input->get('sota');
+			$data['wwff'] = $this->input->post('wwff') ?? $this->input->get('wwff');
+			$data['pota'] = $this->input->post('pota') ?? $this->input->get('pota');
 			$data['sig'] = $this->input->post('sig');
 			$data['sig_info'] = $this->input->post('sig_info');
 			$data['eqslnickname'] = $this->input->post('eqslnickname');
@@ -66,10 +65,16 @@ class Station extends CI_Controller
 			$data['oqrs'] = $this->input->post('oqrs');
 			$data['oqrsemail'] = $this->input->post('oqrsemail');
 			$data['oqrstext'] = $this->input->post('oqrstext');
+			$data['csrf_token'] = $this->paths->csrf_generate($this->router->class.'_'.$this->router->method);
 			$this->load->view('interface_assets/header', $data);
-			$this->load->view('station_profile/create', $data);
+			$this->load->view('station_profile/create');
 			$this->load->view('interface_assets/footer');
 		} else {
+			if (!$this->paths->csrf_verify($this->router->class.'_'.$this->router->method)) {
+				$this->session->set_flashdata('error', __("Invalid security token"));
+				redirect('station/create');
+				return;
+			}
 			$this->stations->add();
 			redirect('stationsetup');
 		}
@@ -85,10 +90,17 @@ class Station extends CI_Controller
 			$this->form_validation->set_rules('dxcc', 'DXCC', 'required');
 			$this->form_validation->set_rules('gridsquare', 'Locator', 'callback_check_locator');
 			if ($this->form_validation->run() == FALSE) {
+				$data['csrf_token'] = $this->paths->csrf_generate($this->router->class.'_'.$this->router->method);
 				$this->load->view('interface_assets/header', $data);
 				$this->load->view('station_profile/edit');
 				$this->load->view('interface_assets/footer');
 			} else {
+				if (!$this->paths->csrf_verify($this->router->class.'_'.$this->router->method)) {
+					$this->session->set_flashdata('error', __("Invalid security token"));
+					redirect('station/edit/' . $id);
+					return;
+				}
+
 				if ($this->stations->edit()) {
 					$data['notice'] = __("Station Location") . $this->security->xss_clean($this->input->post('station_profile_name', true)) . " Updated";
 				}

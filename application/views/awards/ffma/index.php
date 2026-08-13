@@ -1,3 +1,6 @@
+<script>
+	let user_map_custom = JSON.parse('<?php echo $user_map_custom; ?>');
+</script>
 
 <div class="container gridsquare_map_form">
         <!-- Award Info Box -->
@@ -50,5 +53,6 @@ var type = "worked";
     echo 'var gridsquares_gridsquares_worked = "' . $gridsquares_gridsquares_worked . '";';
     echo 'var gridsquares_gridsquares_lotw = "' . $gridsquares_gridsquares_lotw . '";';
     echo 'var gridsquares_gridsquares_paper = "' . $gridsquares_gridsquares_paper . '";';
+    echo 'var gridsquares_total_gridsquares_worked = "' . $gridsquares_total_gridsquares_worked . '";';
 ?>
 </script>

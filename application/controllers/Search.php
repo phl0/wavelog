@@ -2,19 +2,17 @@
 
 class Search extends CI_Controller {
 
-
 	function __construct() {
 		parent::__construct();
 
 		$this->load->helper(array('form', 'url'));
-		if($this->optionslib->get_option('global_search') != "true") {
-			$this->load->model('user_model');
-			if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
-		}
+		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
 	public function index() {
 		$data['page_title'] = __("Search");
+
+		$data['stations_active_log_only'] = !empty($this->session->userdata('user_stations_active_log_only'));
 
 		$this->load->view('interface_assets/header', $data);
 		$this->load->view('search/main');
@@ -32,6 +30,8 @@ class Search extends CI_Controller {
 		$data['get_table_names'] = $this->Search_filter->get_table_columns();
 		$data['stored_queries'] = $this->Search_filter->get_stored_queries();
 
+		$data['stations_active_log_only'] = !empty($this->session->userdata('user_stations_active_log_only'));
+
 		//print_r($this->Search_filter->get_table_columns());
 
 		if ($this->form_validation->run() == FALSE)
@@ -46,35 +46,17 @@ class Search extends CI_Controller {
 		}
 	}
 
-	// Searches for incorrect CQ Zones
-	public function incorrect_cq_zones() {
-		$this->load->model('stations');
-
-		$data['station_profile'] = $this->stations->all_of_user();
-		$data['page_title'] = __("Incorrectly logged CQ zones");
-
-		$this->load->view('interface_assets/header', $data);
-		$this->load->view('search/cqzones');
-		$this->load->view('interface_assets/footer');
-	}
-
-	// Searches for incorrect ITU Zones
-	public function incorrect_itu_zones() {
-		$this->load->model('stations');
-
-		$data['station_profile'] = $this->stations->all_of_user();
-		$data['page_title'] = __("Incorrectly logged ITU zones");
-
-		$this->load->view('interface_assets/header', $data);
-		$this->load->view('search/ituzones');
-		$this->load->view('interface_assets/footer');
-	}
-
 	// Searches for unconfirmed Lotw QSOs where QSO partner has uploaded to LoTW after the QSO date
 	public function lotw_unconfirmed() {
 		$this->load->model('stations');
 
-		$data['station_profile'] = $this->stations->all_of_user();
+		if (!empty($this->session->userdata('user_stations_active_log_only'))) {
+			$data['station_profile'] = $this->logbooks_model->list_logbooks_linked($this->session->userdata('active_station_logbook'));
+			$data['stations_active_log_only'] = true;
+		} else {
+			$data['station_profile'] = $this->stations->all_of_user();
+			$data['stations_active_log_only'] = false;
+		}
 		$data['page_title'] = __("QSOs unconfirmed on LoTW, but the callsign has uploaded to LoTW after QSO date");
 
 		$this->load->view('interface_assets/header', $data);
@@ -107,18 +89,55 @@ class Search extends CI_Controller {
 
 	function export_stored_query_to_adif() {
 		$this->db->where('id', xss_clean($this->input->post('id')));
+		$this->db->where('userid', $this->session->userdata['user_id']);
 		$sql = $this->db->get('queries')->result();
 
-		$data['qsos'] = $this->db->query($sql[0]->query);
+		$query = $sql[0]->query;
+
+		// Security: Validate query only accesses allowed tables
+		if (!$this->_validate_query_tables($query)) {
+			show_error("Invalid query: unauthorized table access detected", 403);
+			return;
+		}
+
+		// Security: Block dangerous SQL keywords to prevent SQL injection
+		// Note: 'join' is NOT blocked because legitimate queries use JOINs
+		$blocked = ['insert', 'drop', 'alter', 'create', 'exec', 'script', 'into outfile', 'load_file', 'update', 'delete', 'truncate', 'replace', 'rename', 'grant', 'revoke'];
+		foreach ($blocked as $word) {
+			if (stristr($query, $word)) {
+				show_error("Invalid query: contains blocked keyword", 403);
+				return;
+			}
+		}
+
+		$data['qsos'] = $this->db->query($query);
 		$this->load->view('adif/data/exportall', $data);
 	}
 
 	function run_query() {
 		$this->db->where('id', xss_clean($this->input->post('id')));
+		$this->db->where('userid', $this->session->userdata['user_id']);
 		$sql = $this->db->get('queries')->result();
 		$sql = $sql[0]->query;
 
+		// Security: Only allow SELECT queries
 		if (stristr($sql, 'select') && !stristr($sql, 'delete') && !stristr($sql, 'update')) {
+			// Security: Validate query only accesses allowed tables
+			if (!$this->_validate_query_tables($sql)) {
+				show_error("Invalid query: unauthorized table access detected", 403);
+				return;
+			}
+
+			// Security: Block dangerous SQL keywords to prevent SQL injection
+			// Note: 'join' is NOT blocked because legitimate queries use JOINs
+			$blocked = ['insert', 'drop', 'alter', 'create', 'exec', 'script', 'into outfile', 'load_file', 'update', 'delete', 'truncate', 'replace', 'rename', 'grant', 'revoke'];
+			foreach ($blocked as $word) {
+				if (stristr($sql, $word)) {
+					show_error("Invalid query: contains blocked keyword", 403);
+					return;
+				}
+			}
+
 			if (!(strpos(strtolower($sql),'limit'))) {
 				$sql.=' limit 5000';
 			}
@@ -162,7 +181,24 @@ class Search extends CI_Controller {
 		$this->db->update('queries', $data);
 	}
 
-	function buildWhere(array $object, string $condition = null): void {
+	/**
+	 * Returns the list of valid searchable column names from the main logbook table.
+	 * Cached statically so the DESCRIBE query runs only once per request.
+	 *
+	 * @return array<string> Column names (e.g. ['COL_CALL', 'COL_BAND', ...])
+	 */
+	private function _get_valid_search_fields(): array {
+		static $valid_fields = null;
+		if ($valid_fields === null) {
+			$columns = $this->db->query('DESCRIBE ' . $this->config->item('table_name'))->result();
+			$valid_fields = array_map(function($col) {
+				return $col->Field;
+			}, $columns);
+		}
+		return $valid_fields;
+	}
+
+	function buildWhere(array $object, ?string $condition = null): void {
 		/*
 		 * The $object is one of the following:
 		 * - a group, with 'condition' and 'rules' keys
@@ -183,6 +219,15 @@ class Search extends CI_Controller {
 			}
 			$this->db->group_end();
 		} else {
+			// Validate field name: must be alphanumeric/underscore AND exist in the table schema
+			if (!is_string($object['field'] ?? null) || !preg_match('/^[A-Za-z0-9_]+$/', $object['field'])) {
+				log_message('error', 'Search filter rejected: invalid field identifier');
+				show_error('Invalid search field', 400);
+			}
+			if (!in_array($object['field'], $this->_get_valid_search_fields(), true)) {
+				log_message('error', 'Search filter rejected: unknown field "' . $object['field'] . '"');
+				show_error('Invalid search field', 400);
+			}
 			$object['field'] = $this->config->item('table_name') . '.' . $object['field'];
 
 			if ($object['operator'] == "equal") {
@@ -295,6 +340,11 @@ class Search extends CI_Controller {
 	function fetchQueryResult($json, $returnquery) {
 		$search_items = json_decode($json, true);
 
+		if (!empty($this->session->userdata('user_stations_active_log_only'))) {
+			$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+			$this->db->where_in($this->config->item('table_name').'.station_id', $logbooks_locations_array);
+		}
+
 		$this->db->select($this->config->item('table_name').'.*, station_profile.station_profile_name, station_profile.station_gridsquare, station_profile.station_city, station_profile.station_iota, station_profile.station_callsign, station_profile.station_sota, station_profile.station_wwff, station_profile.station_dxcc, station_profile.station_pota, station_profile.station_cq, station_profile.station_itu, station_profile.station_sig, station_profile.station_sig_info, station_profile.station_cnty, station_profile.county, station_profile.state, dxcc_entities.name as station_country');
 
 		$this->db->group_start();
@@ -313,5 +363,84 @@ class Search extends CI_Controller {
 			$query = $this->db->get($this->config->item('table_name'));
 		}
 		return $query;
+	}
+
+	/**
+	 * Validates that query only accesses allowed tables
+	 * Prevents SQL injection via UNION-based attacks on other tables
+	 *
+	 * @param string $sql The SQL query to validate
+	 * @return bool TRUE if query only uses allowed tables, FALSE otherwise
+	 */
+	private function _validate_query_tables($sql) {
+		// Whitelist of allowed tables - users can only query these
+		$allowed_tables = [
+			$this->config->item('table_name'),	// Main logbook table (e.g., TABLE_HRD_CONTACTS_V01)
+			'station_profile',
+			'dxcc_entities',
+			'lotw_users',
+			'queries'
+		];
+
+		// Convert to lowercase for case-insensitive comparison
+		$allowed_tables_lower = array_map('strtolower', $allowed_tables);
+		$main_table_lower = strtolower($this->config->item('table_name'));
+
+		// Normalize the SQL: remove newlines and extra spaces for easier parsing
+		$normalized_sql = preg_replace('/\s+/', ' ', trim($sql));
+
+		// Pattern 1: Check for UNION/INTO OUTFILE/LOAD FILE - these are always blocked
+		if (preg_match('/\bunion\b.*?\bselect.*?\bfrom\s+(\w+)/i', $normalized_sql, $matches)) {
+			$union_table = strtolower($matches[1]);
+			if (!in_array($union_table, $allowed_tables_lower)) {
+				log_message('error', "Search query blocked: UNION with unauthorized table - '$union_table'");
+				return FALSE;
+			}
+		}
+
+		// Pattern 2: Extract all table names after FROM and JOIN keywords
+		// This handles: FROM `table`, JOIN `table`, FROM table, JOIN table
+		preg_match_all('/\b(?:FROM|JOIN)\s+`?(\w+)`?/i', $normalized_sql, $from_join_matches);
+		$found_tables = $from_join_matches[1];
+
+		// Pattern 3: Extract table.column references that are NOT in the whitelist
+		// This catches things like "users.password" or "admin.secret"
+		preg_match_all('/(\w+)\.\w+/i', $normalized_sql, $column_refs);
+		foreach ($column_refs[1] as $potential_table) {
+			$potential_table_lower = strtolower($potential_table);
+			// Only add if it's not a SQL keyword and not the main table
+			$sql_keywords = ['select', 'where', 'order', 'group', 'having', 'limit', 'offset',
+							'and', 'or', 'not', 'null', 'like', 'in', 'between', 'exists', 'case',
+							'when', 'then', 'else', 'end', 'as', 'on', 'desc', 'asc', 'left', 'right', 'inner', 'outer'];
+			if (!in_array($potential_table_lower, $sql_keywords) && $potential_table_lower !== $main_table_lower) {
+				$found_tables[] = $potential_table;
+			}
+		}
+
+		// Check all found tables are in whitelist
+		$found_tables = array_unique($found_tables);
+		foreach ($found_tables as $table) {
+			if (empty($table)) {
+				continue;
+			}
+
+			$table_lower = strtolower($table);
+
+			// Skip common SQL keywords that might match
+			$sql_keywords = ['select', 'where', 'order', 'group', 'having', 'limit', 'offset',
+							'and', 'or', 'not', 'null', 'like', 'in', 'between', 'exists', 'case',
+							'when', 'then', 'else', 'end', 'as', 'on', 'desc', 'asc', 'left', 'right', 'inner', 'outer'];
+			if (in_array($table_lower, $sql_keywords)) {
+				continue;
+			}
+
+			if (!in_array($table_lower, $allowed_tables_lower)) {
+				log_message('error', "Search query blocked: unauthorized table access detected - '$table'");
+				log_message('error', "Full query: $sql");
+				return FALSE;
+			}
+		}
+
+		return TRUE;
 	}
 }

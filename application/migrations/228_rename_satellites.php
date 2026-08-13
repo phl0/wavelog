@@ -182,9 +182,8 @@ class Migration_rename_satellites extends CI_Migration {
 						'constraint' => 255,
 					),
 				);
+				$this->dbforge->modify_column('satellite', $fields);
 			}
-
-			$this->dbforge->modify_column('satellite', $fields);
 
 			foreach ($this->satellites as $exportname => $name) {
 				$this->update_sat_table($name, $exportname);

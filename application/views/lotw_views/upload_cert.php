@@ -25,13 +25,14 @@
 					<li><?= __("Click 'Save Callsign Certificate File'"); ?></li>
 					<li><b><?= __("Do not add a password"); ?></b></li>
 					<li><?= __("Upload File below"); ?></li>
+					<li><?= sprintf(__("For further information please visit the %sLoTW FAQ page%s in the Wavelog Wiki"), '<a target="_blank" href="https://docs.wavelog.org/user-guide/qsl/lotw/">', '</a>'); ?></li>
 				</ul>
 			</div>
 
 			<?php echo form_open_multipart('lotw/do_cert_upload');?>
 				<div class="mb-3">
 					<label for="exampleFormControlFile1"><?= __("Upload Logbook of the World .p12 Certificate"); ?></label>
-					<input type="file" name="userfile" class="form-control" id="exampleFormControlFile1">
+					<input type="file" name="userfile" class="form-control" id="exampleFormControlFile1" accept=".p12,.P12">
 				 </div>
 
 				<button type="submit" value="upload" class="btn btn-primary"><?= __("Upload File"); ?></button>

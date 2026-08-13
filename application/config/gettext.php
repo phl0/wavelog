@@ -281,6 +281,16 @@ $config['languages'] = array(
 		'code'      => 'pt',
 		'flag'      => 'pt',
 	),
+	'romanian' => array(
+		'name'      => 'Română',
+		'name_en'   => 'Romanian',
+		'folder'    => 'romanian',
+		'locale'    => 'ro',
+		'gettext'   => 'ro',
+		'direction' => 'ltr',
+		'code'      => 'ro',
+		'flag'      => 'ro',
+	),
 	'russian' => array(
 		'name'      => 'Русский',
 		'name_en'   => 'Russian',
@@ -350,7 +360,17 @@ $config['languages'] = array(
 		'direction' => 'ltr',
 		'code'      => 'tr',
 		'flag'      => 'tr',
-	)
+    ),
+    'ukrainian' => array(
+        'name'      => 'Українська',
+        'name_en'   => 'Ukrainian',
+        'folder'    => 'ukrainian',
+        'locale'    => 'uk',
+        'gettext'   => 'uk',
+        'direction' => 'ltr',
+        'code'      => 'uk',
+        'flag'      => 'ua',
+    )
 );
 
 /*

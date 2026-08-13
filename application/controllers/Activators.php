@@ -8,7 +8,6 @@ class Activators extends CI_Controller
     {
         parent::__construct();
 
-        $this->load->model('user_model');
         if (!$this->user_model->authorize(2)) {
             $this->session->set_flashdata('error', __("You're not allowed to do that!"));
             redirect('dashboard');
@@ -18,6 +17,13 @@ class Activators extends CI_Controller
     public function index()
     {
         $data['page_title'] = __("Gridsquare Activators");
+        $validHex = function($color, $default) {
+            return preg_match('/^#[0-9a-fA-F]{6}$/', $color ?? '') ? $color : $default;
+        };
+        $map_custom_colors = json_decode($this->optionslib->get_map_custom());
+        $color_confirmed = $map_custom_colors->qsoconfirm->color;
+        list($r, $g, $b) = sscanf($validHex($color_confirmed ?? '', '#90EE90'), "#%02x%02x%02x");
+        $data['grid_color'] = "rgba(".$r.", ".$g.", ".$b.", 0.6)";
 
         $this->load->model('Activators_model');
 
@@ -50,7 +56,7 @@ class Activators extends CI_Controller
 
         $footerData = [];
 		$footerData['scripts'] = [
-			'assets/js/sections/activators.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/activators.js")),
+			'assets/js/sections/activators.js',
 		];
 
         $this->load->view('interface_assets/header', $data);

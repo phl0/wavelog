@@ -1,3 +1,60 @@
+let confirmedColor = 'rgba(144,238,144)';
+if (typeof(user_map_custom.qsoconfirm) !== 'undefined') {
+      confirmedColor = user_map_custom.qsoconfirm.color;
+}
+let workedColor = 'rgba(229, 165, 10)';
+if (typeof(user_map_custom.qso) !== 'undefined') {
+      workedColor = user_map_custom.qso.color;
+}
+let unworkedColor = 'rgba(204, 55, 45)';
+if (typeof(user_map_custom.unworked) !== 'undefined') {
+	unworkedColor = user_map_custom.unworked.color;
+}
+
+function getDxccFilterData() {
+    return {
+        band: $('#band2').val(),
+        mode: $('#mode').val(),
+        worked: +$('#worked').prop('checked'),
+        confirmed: +$('#confirmed').prop('checked'),
+        notworked: +$('#notworked').prop('checked'),
+        qsl: +$('#qsl').prop('checked'),
+        lotw: +$('#lotw').prop('checked'),
+        qrz: +$('#qrz').prop('checked'),
+        eqsl: +$('#eqsl').prop('checked'),
+        clublog: +$('#clublog').prop('checked'),
+        includedeleted: +$('#includedeleted').prop('checked'),
+        Africa: +$('#Africa').prop('checked'),
+        Asia: +$('#Asia').prop('checked'),
+        Europe: +$('#Europe').prop('checked'),
+        NorthAmerica: +$('#NorthAmerica').prop('checked'),
+        SouthAmerica: +$('#SouthAmerica').prop('checked'),
+        Oceania: +$('#Oceania').prop('checked'),
+        Antarctica: +$('#Antarctica').prop('checked'),
+        sat: $("#sats").val(),
+        orbit: $("#orbits").val(),
+        dateFrom: $('#dateFrom').val(),
+        dateTo: $('#dateTo').val(),
+        prop_mode: $('#prop_mode').val(),
+    };
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll('.dropdown').forEach(dd => {
+		dd.addEventListener('hide.bs.dropdown', function (e) {
+			if (e.clickEvent && e.clickEvent.target.closest('.dropdown-menu')) {
+				e.preventDefault(); // stop Bootstrap from closing
+			}
+		});
+	});
+});
+
+$(document).on('submit', 'form', function(e) {
+    if ($(e.target).find('.bootstrap-dialog').length) {
+        e.preventDefault();
+    }
+});
+
 var osmUrl = $('#dxccmapjs').attr("tileUrl");
 
 
@@ -8,9 +65,13 @@ $('#band2').change(function(){
       $("#orbits").val('All');
       $("#satrow").hide();
       $("#orbitrow").hide();
+      if ($("#prop_mode").val() == "SAT") {
+         $("#prop_mode").val('All');
+      }
    } else {
       $("#satrow").show();
       $("#orbitrow").show();
+      $("#prop_mode").val('SAT');
    }
 });
 
@@ -19,6 +80,7 @@ $('#band2').change();	// trigger the change on fresh-load to hide/show SAT-Param
 $('#sats').change(function(){
    var sat = $("#sats option:selected").text();
       $("#band2").val('SAT');
+      $("#prop_mode").val('SAT');
    if (sat != "All") {
    }
 });
@@ -28,32 +90,16 @@ function load_dxcc_map() {
     $.ajax({
         url: base_url + 'index.php/awards/dxcc_map',
         type: 'post',
-        data: {
-            band: $('#band2').val(),
-            mode: $('#mode').val(),
-            worked: +$('#worked').prop('checked'),
-            confirmed: +$('#confirmed').prop('checked'),
-            notworked: +$('#notworked').prop('checked'),
-            qsl: +$('#qsl').prop('checked'),
-            lotw: +$('#lotw').prop('checked'),
-            qrz: +$('#qrz').prop('checked'),
-            eqsl: +$('#eqsl').prop('checked'),
-            includedeleted: +$('#includedeleted').prop('checked'),
-            Africa: +$('#Africa').prop('checked'),
-            Asia: +$('#Asia').prop('checked'),
-            Europe: +$('#Europe').prop('checked'),
-            NorthAmerica: +$('#NorthAmerica').prop('checked'),
-            SouthAmerica: +$('#SouthAmerica').prop('checked'),
-            Oceania: +$('#Oceania').prop('checked'),
-            Antarctica: +$('#Antarctica').prop('checked'),
-            sat: $("#sats").val(),
-            orbit: $("#orbits").val(),
-        },
+        data: getDxccFilterData(),
         success: function(data) {
             load_dxcc_map2(data, worked, confirmed, notworked);
         },
         error: function() {
-
+            BootstrapDialog.alert({
+                title: lang_general_word_error,
+                message: 'Error loading DXCC map data',
+                type: BootstrapDialog.TYPE_DANGER,
+            });
         },
     });
 }
@@ -94,21 +140,21 @@ function load_dxcc_map2(data, worked, confirmed, notworked) {
             var mapColor = 'red';
 
             if (D['status'] == 'C') {
-                mapColor = 'green';
+                mapColor = confirmedColor;
                 if (confirmed != '0') {
                     addMarker(L, D, mapColor, map);
                     confirmedcount++;
                 }
             }
             if (D['status'] == 'W') {
-                mapColor = 'orange';
+                mapColor = workedColor;
                 if (worked != '0') {
                     addMarker(L, D, mapColor, map);
                     workednotconfirmedcount++;
                 }
             }
             if (D['status'] == '-') {
-                mapColor = 'red';
+                mapColor = unworkedColor;
                 if (notworked != '0') {
                     addMarker(L, D, mapColor, map);
                     notworkedcount++;
@@ -126,10 +172,15 @@ function load_dxcc_map2(data, worked, confirmed, notworked) {
 
     legend.onAdd = function(map) {
         var div = L.DomUtil.create("div", "legend");
-        div.innerHTML += "<h4>Colors</h4>";
-        div.innerHTML += '<i style="background: green"></i><span>' + lang_general_word_confirmed + ' ('+confirmedcount+')</span><br>';
-        div.innerHTML += '<i style="background: orange"></i><span>' + lang_general_word_worked_not_confirmed + ' ('+workednotconfirmedcount+')</span><br>';
-        div.innerHTML += '<i style="background: red"></i><span>' + lang_general_word_not_worked + ' ('+notworkedcount+')</span><br>';
+        var band = $('#band2').val();
+        if (band == 'All') {
+           div.innerHTML += "<h4>" + lang_award_info_all_bands + "</h4>";
+        } else {
+           div.innerHTML += "<h4>Band: " + band + "</h4>";
+        }
+        div.innerHTML += '<i style="background: ' + confirmedColor + '"></i><span>' + lang_general_word_confirmed + ' ('+confirmedcount+')</span><br>';
+        div.innerHTML += '<i style="background: ' + workedColor + '"></i><span>' + lang_general_word_worked_not_confirmed + ' ('+workednotconfirmedcount+')</span><br>';
+        div.innerHTML += '<i style="background: ' + unworkedColor + '"></i><span>' + lang_general_word_not_worked + ' ('+notworkedcount+')</span><br>';
         return div;
     };
 
@@ -179,5 +230,125 @@ function addMarker(L, D, mapColor, map) {
 
 function onClick(e) {
     var marker = e.target;
-    displayContactsOnMap($("#dxccmap"),marker.options.adif, $('#band2').val(), $('#sats').val(), $('#orbits').val(), $('#mode').val(), 'DXCC2');
+    displayContactsOnMap($("#dxccmap"),marker.options.adif, $('#band2').val(), $('#sats').val(), $('#orbits').val(), $('#mode').val(), 'DXCC2', '', $('#dateFrom').val(), $('#dateTo').val(), $('#prop_mode').val());
+}
+
+// Preset functionality
+    function applyPreset(preset) {
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
+        const today = new Date();
+
+        // Format date as YYYY-MM-DD
+        function formatDate(date) {
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        switch(preset) {
+            case 'today':
+                dateFrom.value = formatDate(today);
+                dateTo.value = formatDate(today);
+                break;
+
+            case 'yesterday':
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getUTCDate() - 1);
+                dateFrom.value = formatDate(yesterday);
+                dateTo.value = formatDate(yesterday);
+                break;
+
+            case 'last7days':
+                const sevenDaysAgo = new Date(today);
+                sevenDaysAgo.setDate(sevenDaysAgo.getUTCDate() - 7);
+                dateFrom.value = formatDate(sevenDaysAgo);
+                dateTo.value = formatDate(today);
+                break;
+
+            case 'last30days':
+                const thirtyDaysAgo = new Date(today);
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getUTCDate() - 30);
+                dateFrom.value = formatDate(thirtyDaysAgo);
+                dateTo.value = formatDate(today);
+                break;
+
+            case 'thismonth':
+                const firstDayOfMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+                dateFrom.value = formatDate(firstDayOfMonth);
+                dateTo.value = formatDate(today);
+                break;
+
+            case 'lastmonth':
+                const firstDayOfLastMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
+                const lastDayOfLastMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0));
+                dateFrom.value = formatDate(firstDayOfLastMonth);
+                dateTo.value = formatDate(lastDayOfLastMonth);
+                break;
+
+            case 'thisyear':
+                const firstDayOfYear = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
+                dateFrom.value = formatDate(firstDayOfYear);
+                dateTo.value = formatDate(today);
+                break;
+
+            case 'lastyear':
+                const lastYear = today.getUTCFullYear() - 1;
+                const firstDayOfLastYear = new Date(Date.UTC(lastYear, 0, 1));
+                const lastDayOfLastYear = new Date(Date.UTC(lastYear, 11, 31));
+                dateFrom.value = formatDate(firstDayOfLastYear);
+                dateTo.value = formatDate(lastDayOfLastYear);
+                break;
+
+            case 'alltime':
+                dateFrom.value = '';
+                dateTo.value = '';
+                break;
+        }
+    }
+
+    // Reset dates function
+    function resetDates() {
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
+        dateFrom.value = '';
+        dateTo.value = '';
+    }
+
+// Lazy load progress tab content
+let progressLoaded = false;
+let progressFilterSnapshot = null;
+
+document.getElementById('progress-tab').addEventListener('shown.bs.tab', function () {
+    const currentFilters = JSON.stringify(getDxccFilterData());
+    if (!progressLoaded || progressFilterSnapshot !== currentFilters) {
+        progressFilterSnapshot = currentFilters;
+        loadProgressContent();
+    }
+});
+
+function loadProgressContent() {
+    const loadingEl = document.getElementById('progress-loading');
+    const contentEl = document.getElementById('progress-content');
+    loadingEl.style.display = '';
+    contentEl.innerHTML = '';
+    progressLoaded = true;
+
+	$.ajax({
+        url: base_url + 'index.php/awards/dxcc_progress',
+        type: 'post',
+        data: getDxccFilterData(),
+        success: function(data) {
+            if (data.success) {
+            contentEl.innerHTML = data.html;
+            loadingEl.style.display = 'none';
+        } else {
+            loadingEl.innerHTML = '<div class="alert alert-danger">' + (data.message || 'Error loading progress data') + '</div>';
+        }
+        },
+        error: function() {
+            loadingEl.innerHTML = '<div class="alert alert-danger">Error loading progress data</div>';
+        },
+    });
 }

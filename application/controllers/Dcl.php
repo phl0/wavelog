@@ -8,18 +8,12 @@ class Dcl extends CI_Controller {
 		$this->load->helper(array('form', 'url'));
 
 		if (!($this->config->item('enable_dcl_interface') ?? false)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); exit; }
-		$this->load->model('user_model');
 		if (ENVIRONMENT == 'maintenance' && $this->session->userdata('user_id') == '') {
 			echo __("Maintenance Mode is active. Try again later.")."\n";
 			redirect('user/login');
 		}
 	}
 
-	public function save_key() {
-		if (!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
-		$this->load->model('Dcl_model');
-		$this->Dcl_model->store_key($call);
-	}
 	public function key_import() {
 		if (!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		$this->load->library('Permissions');
@@ -49,7 +43,6 @@ class Dcl extends CI_Controller {
 	public function index() {
 		if (!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		$this->load->library('Permissions');
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		// Load required models for page generation
@@ -85,7 +78,6 @@ class Dcl extends CI_Controller {
 		// Called from cron / without Session: iterate through stations, check for DCL-Key and upload
 		ini_set('memory_limit', '-1');
 
-		$this->load->model('user_model');
 		$this->load->model('Dcl_model');
 
 		// set the last run in cron table for the correct cron id
@@ -222,8 +214,6 @@ class Dcl extends CI_Controller {
 
 	public function delete_key() {
 		if (!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
-		$this->load->model('user_model');
-		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		$this->load->model('Dcl_model');
 		$this->Dcl_model->delete_key();
 		$this->session->set_flashdata('success', __("Key(s) Deleted."));
@@ -241,7 +231,6 @@ class Dcl extends CI_Controller {
 	|
 	 */
 	function dcl_download($sync_user_id = null) {
-		$this->load->model('user_model');
 		$this->load->model('logbook_model');
 		$this->load->model('Stations');
 
@@ -253,7 +242,6 @@ class Dcl extends CI_Controller {
 	}
 
 	public function import() {	// Is only called via frontend. Cron uses "upload". within download the download is called
-		$this->load->model('user_model');
 		$this->load->model('Stations');
 		if(!$this->user_model->authorize(2)) {
 			$this->session->set_flashdata('error', __("You're not allowed to do that!"));

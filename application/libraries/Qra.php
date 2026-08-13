@@ -68,7 +68,10 @@ class Qra {
 	function get_bearing($tx, $rx, $ant_path = null) {
 		$my = qra2latlong($tx);
 		$stn = qra2latlong($rx);
-		return get_bearing($my[0], $my[1], $stn[0], $stn[1], $ant_path);
+		if ($my !== false && $stn !== false) {
+			return get_bearing($my[0], $my[1], $stn[0], $stn[1], $ant_path);
+		}
+		return false;
 	}
 
 	/*
@@ -134,7 +137,7 @@ class Qra {
 
 	function getMaxDistanceQSO($mylocator, $qsos, $unit = "M") {
 		//return nothing for empty QSO set
-		if (count($qsos->result()) < 1) {
+		if (count($qsos) < 1) {
 			return null;
 		}
 
@@ -143,14 +146,14 @@ class Qra {
 		$maxdistanceqso = null;
 
 		//iterate through all qsos
-		foreach ($qsos->result() as $row) {
+		foreach ($qsos as $row) {
 
-			if (empty($row->COL_GRIDSQUARE)) {
+			if (empty($row['gridsquare_recv'])) {
 				continue;
 			}
 
 			//get distance in kilometers
-			$distance = $this->distance($mylocator, $row->COL_GRIDSQUARE, $unit);
+			$distance = $this->distance($mylocator, $row['gridsquare_recv'], $unit);
 
 			//store new highscore if present
 			if ($distance > $maxdistance) {
@@ -201,6 +204,10 @@ class Qra {
 	}
 
 	function validate_grid($grid) {
+		// (Try to) Detect placeholders like AA00aa (returned from qrz.com for example)
+		if (strlen($grid) == 6 && strtoupper($grid) == 'AA00AA') {
+			return false;
+		}
 		// Allow 6-digit locator
 		if (preg_match('/^[A-Ra-r]{2}[0-9]{2}[A-Za-z]{2}$/', $grid)) return true;
 		// Allow 4-digit locator
@@ -215,6 +222,10 @@ class Qra {
 		else if (preg_match('/^[A-Ra-r]{2}[0-9]{2}[A-Za-z]{2}[0-9]{2}$/', $grid)) return true;
 		// Allow 10-digit locator
 		else if (preg_match('/^[A-Ra-r]{2}[0-9]{2}[A-Za-z]{2}[0-9]{2}[A-Za-z]{2}$/', $grid)) return true;
+		// Allow 6-digit grid line
+		else if (preg_match('/^[A-Ra-r]{2}[0-9]{2}[A-Za-z]{2},[A-Ra-r]{2}[0-9]{2}[A-Za-z]{2}$/', $grid)) return true;
+		// Allow 6-digit grid corner
+		else if (preg_match('/^[A-Ra-r]{2}[0-9]{2}[A-Za-z]{2},[A-Ra-r]{2}[0-9]{2}[A-Za-z]{2},[A-Ra-r]{2}[0-9]{2}[A-Za-z]{2},[A-Ra-r]{2}[0-9]{2}[A-Za-z]{2}$/', $grid)) return true;
 		return false;
 	}
 }
@@ -281,60 +292,41 @@ function bearing($lat1, $lon1, $lat2, $lon2, $unit = 'M', $ant_path = null) {
 	return round($bearing, 0) . "&#186; " . $dir . " " . $var_dist;
 }
 
-function get_bearing($lat1, $lon1, $lat2, $lon2) {
-	return (int)(rad2deg(atan2(sin(deg2rad($lon2) - deg2rad($lon1)) * cos(deg2rad($lat2)), cos(deg2rad($lat1)) * sin(deg2rad($lat2)) - sin(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($lon2) - deg2rad($lon1)))) + 360) % 360;
+function get_bearing($lat1, $lon1, $lat2, $lon2, $ant_path = null) {
+	$bearing = (int)(rad2deg(atan2(sin(deg2rad($lon2) - deg2rad($lon1)) * cos(deg2rad($lat2)), cos(deg2rad($lat1)) * sin(deg2rad($lat2)) - sin(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($lon2) - deg2rad($lon1)))) + 360) % 360;
+	if ($ant_path == 'L') {	// Long path is the reciprocal of the short-path bearing
+		$bearing = ($bearing + 180) % 360;
+	}
+	return $bearing;
 }
 
 function qra2latlong($strQRA) {
 	$strQRA = preg_replace('/\s+/', '', $strQRA);
 	if (substr_count($strQRA, ',') > 0) {
-		if (substr_count($strQRA, ',') == 3) {
-			// Handle grid corners
-			$grids = explode(',', $strQRA);
-			$gridlengths = array(strlen($grids[0]), strlen($grids[1]), strlen($grids[2]), strlen($grids[3]));
-			$same = array_count_values($gridlengths);
-			if (count($same) != 1) {
-				return false;
-			}
-			$coords = array(0, 0);
-			for ($i = 0; $i < 4; $i++) {
-				$cornercoords[$i] = qra2latlong($grids[$i]);
-				$coords[0] += $cornercoords[$i][0];
-				$coords[1] += $cornercoords[$i][1];
-			}
-			return array(round($coords[0] / 4), round($coords[1] / 4));
-		} else if (substr_count($strQRA, ',') == 1) {
-			// Handle grid lines
-			$grids = explode(',', $strQRA);
-			if (strlen($grids[0]) != strlen($grids[1])) {
-				return false;
-			}
-			$coords = array(0, 0);
-			for ($i = 0; $i < 2; $i++) {
-				$linecoords[$i] = qra2latlong($grids[$i]);
-			}
-			if ($linecoords[0][0] != $linecoords[1][0]) {
-				$coords[0] = round((($linecoords[0][0] + $linecoords[1][0]) / 2), 1);
-			} else {
-				$coords[0] = round($linecoords[0][0], 1);
-			}
-			if ($linecoords[0][1] != $linecoords[1][1]) {
-				$coords[1] = round(($linecoords[0][1] + $linecoords[1][1]) / 2);
-			} else {
-				$coords[1] = round($linecoords[0][1]);
-			}
-			return $coords;
-		} else {
+		$grids = explode(',', $strQRA);
+		if (count($grids) != 2 && count($grids) != 4) {
 			return false;
 		}
+		$lengths = array_map('strlen', $grids);
+		if (count(array_unique($lengths)) != 1) {
+			return false;
+		}
+		$lat = 0; $lng = 0;
+		foreach ($grids as $g) {
+			$c = qra2latlong($g);
+			if (!$c) { return false; }
+			$lat += $c[0]; $lng += $c[1];
+		}
+		$n = count($grids);
+		return array($lat / $n, $lng / $n);
 	}
 
 	if ((strlen($strQRA) % 2 == 0) && (strlen($strQRA) <= 10)) {	// Check if QRA is EVEN (the % 2 does that) and smaller/equal 8
 		$strQRA = strtoupper($strQRA);
-		if (strlen($strQRA) == 2)  $strQRA .= "55";	// Only 2 Chars? Fill with center "55"
-		if (strlen($strQRA) == 4)  $strQRA .= "LL";	// Only 4 Chars? Fill with center "LL" as only A-R allowed
-		if (strlen($strQRA) == 6)  $strQRA .= "55";	// Only 6 Chars? Fill with center "55"
-		if (strlen($strQRA) == 8)  $strQRA .= "LL";	// Only 8 Chars? Fill with center "LL" as only A-R allowed
+		if     (strlen($strQRA) == 2)  $strQRA .= "55AA00AA";
+		elseif (strlen($strQRA) == 4)  $strQRA .= "MM00AA";
+		elseif (strlen($strQRA) == 6)  $strQRA .= "55AA";
+		elseif (strlen($strQRA) == 8)  $strQRA .= "MM";
 
 		if (!preg_match('/^[A-R]{2}[0-9]{2}[A-X]{2}[0-9]{2}[A-X]{2}$/', $strQRA)) {
 			return false;

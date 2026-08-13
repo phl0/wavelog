@@ -4,13 +4,15 @@ class Gridmap extends CI_Controller {
 
 	function __construct() {
 		parent::__construct();
+
+		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
     public function index() {
 		$data['page_title'] = __("Gridsquare Map");
 
-        $this->load->model('bands');
-        $this->load->model('gridmap_model');
+		$this->load->model('bands');
+		$this->load->model('gridmap_model');
 		$this->load->model('stations');
 
 		$data['visitor'] = false;
@@ -20,6 +22,7 @@ class Gridmap extends CI_Controller {
 		$data['bands'] = $this->bands->get_worked_bands();
 		$data['orbits'] = $this->bands->get_worked_orbits();
 		$data['sats_available'] = $this->bands->get_worked_sats();
+		$data['countries'] = $this->gridmap_model->get_countries();
 
 		$data['user_default_band'] = $this->session->userdata('user_default_band');
 		$data['user_default_confirmation'] = $this->session->userdata('user_default_confirmation');
@@ -38,11 +41,18 @@ class Gridmap extends CI_Controller {
 		$data['gridsquares_fields_not_confirmed'] 	= __("Fields not confirmed");
 		$data['gridsquares_fields_total_worked'] 	= __("Total fields worked");
 
-        $footerData = [];
+		$data['user_map_custom'] = $this->optionslib->get_map_custom();
+
+		$data['adif_propmodes'] = $this->config->item('adif_propmodes');
+
+		$footerData = [];
 		$footerData['scripts'] = [
 			'assets/js/leaflet/geocoding.js',
+			'assets/js/sections/gridmap.js',
 			'assets/js/leaflet/L.MaidenheadColouredGridMap.js',
-			'assets/js/sections/gridmap.js?'
+			'assets/js/sections/itumap_geojson.js',
+			'assets/js/sections/cqmap_geojson.js',
+			'assets/js/bootstrap-multiselect.js',
 		];
 
 		$this->load->view('interface_assets/header', $data);
@@ -51,6 +61,7 @@ class Gridmap extends CI_Controller {
     }
 
 	public function getGridsjs() {
+		$call = $this->input->post('call', TRUE);
 		$band = $this->input->post('band', TRUE);
 		$mode = $this->input->post('mode', TRUE);
 		$qsl = $this->input->post('qsl', TRUE);
@@ -60,7 +71,16 @@ class Gridmap extends CI_Controller {
 		$sat = $this->input->post('sat', TRUE);
 		$orbit = $this->input->post('orbit', TRUE);
 		$propagation = $this->input->post('propagation', TRUE);
+		$dxcc = $this->input->post('dxcc', TRUE);
+		$datefrom = $this->input->post('datefrom', TRUE);
+		$dateto = $this->input->post('dateto', TRUE);
+
 		$this->load->model('gridmap_model');
+
+		$data['country_coords'] = $this->gridmap_model->get_coordinates_for_dxcc($dxcc);
+
+		$data['grids'] = $this->gridmap_model->get_grids_for_country($dxcc);
+		$data['grid_count'] = count($data['grids']);
 
 		$array_grid_2char = array();
 		$array_grid_4char = array();
@@ -78,7 +98,7 @@ class Gridmap extends CI_Controller {
 		$grid_4char_confirmed = "";
 		$grid_6char_confirmed = "";
 
-		$query = $this->gridmap_model->get_band_confirmed($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation);
+		$query = $this->gridmap_model->get_band_confirmed($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation, $dxcc, $data['grids'], $datefrom, $dateto, null, $call);
 
 		if ($query && $query->num_rows() > 0) {
 			foreach ($query->result() as $row) 	{
@@ -105,7 +125,7 @@ class Gridmap extends CI_Controller {
 			}
 		}
 
-		$query = $this->gridmap_model->get_band($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation);
+		$query = $this->gridmap_model->get_band($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation, $dxcc, $data['grids'], $datefrom, $dateto, null, $call);
 
 		if ($query && $query->num_rows() > 0) {
 			foreach ($query->result() as $row) {
@@ -132,50 +152,93 @@ class Gridmap extends CI_Controller {
 				}
 			}
 		}
-		$query_vucc = $this->gridmap_model->get_band_worked_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation);
+		$query_vucc = $this->gridmap_model->get_band_worked_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation, $datefrom, $dateto, null, $call);
 
 		if ($query_vucc && $query_vucc->num_rows() > 0) {
 			foreach ($query_vucc->result() as $row) {
 
 				$grids = explode(",", $row->COL_VUCC_GRIDS);
 
+				if (!empty($data['grids'])) {
+					$filtered = [];
+					foreach ($grids as $g6) {
+						foreach ($data['grids'] as $g4) {
+							if (strpos($g6, $g4) === 0) {
+								$filtered[] = $g6;
+								break;
+							}
+						}
+					}
+					$grids = $filtered;
+				}
+
 				foreach($grids as $key) {
 					$grid_two = strtoupper(substr(trim($key),0,2));
 					$grid_four = strtoupper(substr(trim($key),0,4));
+					if ($this->config->item('map_6digit_grids')) {
+						$grid_six = strtoupper(substr(trim($key),0,6));
+					}
 
 					// Check if 2 Char is in array
 					if(!in_array($grid_two, $array_grid_2char)){
 						array_push($array_grid_2char, $grid_two);
 					}
 
-
 					if(!in_array($grid_four, $array_grid_4char)){
 						array_push($array_grid_4char, $grid_four);
+					}
+
+					if ($this->config->item('map_6digit_grids')) {
+						if(!in_array($grid_six, $array_grid_6char)){
+							array_push($array_grid_6char, $grid_six);
+						}
 					}
 				}
 			}
 		}
 
 		// // Confirmed Squares
-		$query_vucc = $this->gridmap_model->get_band_confirmed_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation);
+		$query_vucc = $this->gridmap_model->get_band_confirmed_vucc_squares($band, $mode, $qsl, $lotw, $eqsl, $qrz, $sat, $orbit, $propagation, $datefrom, $dateto, null, $call);
 
 		if ($query_vucc && $query_vucc->num_rows() > 0) {
 			foreach ($query_vucc->result() as $row) 			{
 
 				$grids = explode(",", $row->COL_VUCC_GRIDS);
 
+				if (!empty($data['grids'])) {
+					$filtered = [];
+					foreach ($grids as $g6) {
+						foreach ($data['grids'] as $g4) {
+							if (strpos($g6, $g4) === 0) {
+								$filtered[] = $g6;
+								break;
+							}
+						}
+					}
+					$grids = $filtered;
+				}
+
 				foreach($grids as $key) {
 					$grid_2char_confirmed = strtoupper(substr(trim($key),0,2));
 					$grid_4char_confirmed = strtoupper(substr(trim($key),0,4));
+
+					if ($this->config->item('map_6digit_grids')) {
+						$grid_6char_confirmed = strtoupper(substr(trim($key),0,6));
+					}
 
 					// Check if 2 Char is in array
 					if(!in_array($grid_2char_confirmed, $array_grid_2char_confirmed)){
 						array_push($array_grid_2char_confirmed, $grid_2char_confirmed);
 					}
 
-
 					if(!in_array($grid_4char_confirmed, $array_grid_4char_confirmed)){
 						array_push($array_grid_4char_confirmed, $grid_4char_confirmed);
+					}
+
+					if ($this->config->item('map_6digit_grids')) {
+						if(!in_array($grid_6char_confirmed, $array_grid_6char_confirmed)){
+							array_push($array_grid_6char_confirmed, $grid_6char_confirmed);
+						}
 					}
 				}
 			}

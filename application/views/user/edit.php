@@ -1,18 +1,22 @@
 <div class="container">
 	<br>
-	<h3>
-	  <?php if (isset($user_add)) {
-		if ($clubstation) {
-			echo __("Create Clubstation Account");
-		} else {
-			echo __("Create User Account");
-		}
-	  } else {
-		echo __("Edit Account")." <small class=\"text-muted\">".$user_name."</small>";
-	  }
-	  ?>
+	<div class="d-flex justify-content-between align-items-center flex-wrap">
+		<h3>
+		  <?php if (isset($user_add)) {
+			if ($clubstation) {
+				echo __("Create Clubstation Account");
+			} else {
+				echo __("Create User Account");
+			}
+		  } else {
+			echo __("Edit Account")." <small class=\"text-muted\">".$user_name."</small>";
+		  }
+		  ?>
 
-	</h3>
+		</h3>
+		<!-- Settings search box gets injected here by assets/js/sections/user.js -->
+		<div id="wl-settings-search-slot"></div>
+	</div>
 
 	<?php if($this->session->flashdata('success')) { ?>
 		<!-- Display Success Message -->
@@ -37,6 +41,7 @@
 	<?php $this->load->helper('form'); ?>
 
 	<form method="post" action="<?php echo $user_form_action; ?>" name="users" autocomplete="off">
+	<input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>" />
 	<div class="accordion user_edit">
 		<!-- ZONE 1 / User General Information -->
 		<div class="accordion-item">
@@ -52,18 +57,41 @@
 							<div class="card">
 								<div class="card-header"><?= __("Account"); ?></div>
 								<div class="card-body">
+									<?php
+										// Returns true if the field is managed by the IdP and the user cannot change it
+										$idp_locked = function($field) use ($external_account, $sso_claim_config) {
+											return $external_account && isset($sso_claim_config[$field]) && empty($sso_claim_config[$field]['allow_manual_change']);
+										};
+										$idp_badge = '<span class="badge bg-secondary ms-1" data-bs-toggle="tooltip" title="' . $auth_header_locked_data_tip . '"><i class="fa fa-lock"></i> ' . $auth_header_locked_data_badge . '</span>';
+									?>
+
 									<div class="mb-3">
-										<label><?= __("Username"); ?></label>
-										<input class="form-control" type="text" name="user_name" value="<?php if(isset($user_name)) { echo $user_name; } ?>" <?php if (isset($user_name) && $user_name == 'demo' && file_exists('.demo') && $this->session->userdata('user_type') !== '99') { echo 'disabled'; } ?> />
-										<?php if(isset($username_error)) { echo "<small class=\"badge bg-danger\">".$username_error."</small>"; } ?>
+										<label>
+											<?= __("Username"); ?>
+											<?php if ($idp_locked('user_name')) { echo $idp_badge; } ?>
+										</label>
+										<?php if ($idp_locked('user_name')) { ?>
+											<input class="form-control-plaintext fw-bold" name="user_name" value="<?= htmlspecialchars($user_name ?? '') ?>" readonly/>
+										<?php } else { ?>
+											<input class="form-control" type="text" name="user_name" value="<?php if(isset($user_name)) { echo $user_name; } ?>" <?php if (isset($user_name) && $user_name == 'demo' && file_exists('.demo') && $this->session->userdata('user_type') !== '99') { echo 'disabled'; } ?> />
+											<?php if(isset($username_error)) { echo "<small class=\"badge bg-danger\">".$username_error."</small>"; } ?>
+										<?php } ?>
 									</div>
 
 									<div class="mb-3">
-										<label><?= __("Email Address"); ?></label>
-										<input class="form-control" type="text" name="user_email" value="<?php if(isset($user_email)) { echo $user_email; } ?>" />
-										<?php if(isset($email_error)) { echo "<small class=\"badge bg-danger\">".$email_error."</small>"; } ?>
+										<label>
+											<?= __("Email Address"); ?>
+											<?php if ($idp_locked('user_email')) { echo $idp_badge; } ?>
+										</label>
+										<?php if ($idp_locked('user_email')) { ?>
+											<input class="form-control-plaintext fw-bold" name="user_email" value="<?= htmlspecialchars($user_email ?? '') ?>" readonly/>
+										<?php } else { ?>
+											<input class="form-control" type="text" name="user_email" value="<?php if(isset($user_email)) { echo $user_email; } ?>" />
+											<?php if(isset($email_error)) { echo "<small class=\"badge bg-danger\">".$email_error."</small>"; } ?>
+										<?php } ?>
 									</div>
 
+									<?php if (!$auth_header_enable || ($auth_header_allow_direct_login && (!$external_account || !$auth_header_hide_password_field))){ ?>
 									<div class="mb-3">
 										<label><?= __("Password"); ?></label>
 										<div class="input-group">
@@ -78,6 +106,7 @@
 											} else if (!isset($user_add)) { ?>
 										<?php } ?>
 									</div>
+									<?php } ?>
 
 									<hr/>
 									<div class="mb-3">
@@ -97,7 +126,7 @@
 											</select>
 										<?php } else {
 											$l = $this->config->item('auth_level');
-											echo $l[$user_type];
+											echo "<br><b>" . $l[$user_type] . "</b>";
 										}?>
 										<?php if ($clubstation) { ?>
 											<input type="hidden" name="clubstation" value="1" />
@@ -113,17 +142,29 @@
 								<div class="card-header"><?php if ($clubstation) { echo __("Callsign Owner"); } else { echo __("Personal");} ?></div>
 								<div class="card-body">
 									<div class="mb-3">
-										<label><?= __("First Name"); ?></label>
-										<input class="form-control" type="text" name="user_firstname" value="<?php if(isset($user_firstname)) { echo $user_firstname; } ?>" />
-											<?php if(isset($firstname_error)) { echo "<small class=\"badge bg-danger\">".$firstname_error."</small>"; } else { ?>
-											<?php } ?>
+										<label>
+											<?= __("First Name"); ?>
+											<?php if ($idp_locked('user_firstname')) { echo $idp_badge; } ?>
+										</label>
+										<?php if ($idp_locked('user_firstname')) { ?>
+											<input class="form-control-plaintext fw-bold" name="user_firstname" value="<?= htmlspecialchars($user_firstname ?? '') ?>" readonly/>
+										<?php } else { ?>
+											<input class="form-control" type="text" name="user_firstname" value="<?php if(isset($user_firstname)) { echo $user_firstname; } ?>" />
+											<?php if(isset($firstname_error)) { echo "<small class=\"badge bg-danger\">".$firstname_error."</small>"; } ?>
+										<?php } ?>
 									</div>
 
 									<div class="mb-3">
-										<label><?= __("Last Name"); ?></label>
-										<input class="form-control" type="text" name="user_lastname" value="<?php if(isset($user_lastname)) { echo $user_lastname; } ?>" />
-											<?php if(isset($lastname_error)) { echo "<small class=\"badge bg-danger\">".$lastname_error."</small>"; } else { ?>
-											<?php } ?>
+										<label>
+											<?= __("Last Name"); ?>
+											<?php if ($idp_locked('user_lastname')) { echo $idp_badge; } ?>
+										</label>
+										<?php if ($idp_locked('user_lastname')) { ?>
+											<input class="form-control-plaintext fw-bold" name="user_lastname" value="<?= htmlspecialchars($user_lastname ?? '') ?>" readonly/>
+										<?php } else { ?>
+											<input class="form-control" type="text" name="user_lastname" value="<?php if(isset($user_lastname)) { echo $user_lastname; } ?>" />
+											<?php if(isset($lastname_error)) { echo "<small class=\"badge bg-danger\">".$lastname_error."</small>"; } ?>
+										<?php } ?>
 									</div>
 								</div>
 							</div>
@@ -134,17 +175,29 @@
 								<div class="card-header"><?= __("Ham Radio"); ?></div>
 								<div class="card-body">
 									<div class="mb-3">
-										<label><?php if ($clubstation) { echo __("Special/Club Callsign"); } else { echo __("Callsign"); } ?></label>
-										<input class="form-control uppercase" type="text" name="user_callsign" pattern="^\S+$" value="<?php if(isset($user_callsign)) { echo $user_callsign; } ?>" />
-											<?php if(isset($callsign_error)) { echo "<small class=\"badge bg-danger\">".$callsign_error."</small>"; } else { ?>
-											<?php } ?>
+										<label>
+											<?php if ($clubstation) { echo __("Special/Club Callsign"); } else { echo __("Callsign"); } ?>
+											<?php if ($idp_locked('user_callsign')) { echo $idp_badge; } ?>
+										</label>
+										<?php if ($idp_locked('user_callsign')) { ?>
+											<input class="form-control-plaintext fw-bold uppercase" name="user_callsign" value="<?= htmlspecialchars($user_callsign ?? '') ?>" readonly/>
+										<?php } else { ?>
+											<input class="form-control uppercase" type="text" name="user_callsign" pattern="^\S+$" value="<?php if(isset($user_callsign)) { echo $user_callsign; } ?>" />
+											<?php if(isset($callsign_error)) { echo "<small class=\"badge bg-danger\">".$callsign_error."</small>"; } ?>
+										<?php } ?>
 									</div>
 
 									<div class="mb-3">
-										<label><?= __("Gridsquare"); ?></label>
-										<input class="form-control uppercase" type="text" name="user_locator" value="<?php if(isset($user_locator)) { echo $user_locator; } ?>" />
-											<?php if(isset($locator_error)) { echo "<small class=\"badge bg-danger\">".$locator_error."</small>"; } else { ?>
-											<?php } ?>
+										<label>
+											<?= __("Gridsquare"); ?>
+											<?php if ($idp_locked('user_locator')) { echo $idp_badge; } ?>
+										</label>
+										<?php if ($idp_locked('user_locator')) { ?>
+											<input class="form-control-plaintext fw-bold uppercase" name="user_locator" value="<?= htmlspecialchars($user_locator ?? '') ?>" readonly/>
+										<?php } else { ?>
+											<input class="form-control uppercase" type="text" name="user_locator" value="<?php if(isset($user_locator)) { echo $user_locator; } ?>" />
+											<?php if(isset($locator_error)) { echo "<small class=\"badge bg-danger\">".$locator_error."</small>"; } ?>
+										<?php } ?>
 									</div>
 								</div>
 							</div>
@@ -210,6 +263,7 @@
 											<option value="Y-m-d" <?php if($user_date_format == "Y-m-d") { echo "selected=\"selected\""; } ?>><?php echo date('Y-m-d'); ?> - ( YYYY-MM-DD )</option>
 											<option value="M d, Y" <?php if($user_date_format == "M d, Y") { echo "selected=\"selected\""; } ?>><?php echo date('M d, Y'); ?> - ( MMM DD, YYYY )</option>
 											<option value="M d, y" <?php if($user_date_format == "M d, y") { echo "selected=\"selected\""; } ?>><?php echo date('M d, y'); ?> - ( MMM DD, YY )</option>
+											<option value="d M y" <?php if($user_date_format == "d M y") { echo "selected=\"selected\""; } ?>><?php echo date('d M y'); ?> - ( DD MMM YY )</option>
 										</select>
 										<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __("Select how you would like dates shown when logged into your account."); ?></small>
 									</div>
@@ -229,8 +283,8 @@
 							</div>
 						</div>
 
-						<!-- Logbook fields Setting -->
 						<div class="col-md">
+							<!-- Logbook fields Setting -->
 							<div class="card">
 								<div class="card-header"><?= __("Logbook fields"); ?></div>
 								<div class="card-body">
@@ -353,6 +407,22 @@
 									</div>
 								</div>
 							</div>
+							<!-- Active Logbook locations -->
+							<div class="card">
+								<div class="card-header"><?= __("Station Location Options"); ?></div>
+								<div class="card-body">
+									<?php if(!isset($user_stations_active_log_only)) { $user_stations_active_log_only='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_stations_active_log_only" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="stationsActiveLogOnly" name="user_stations_active_log_only" value="1" <?php if ($user_stations_active_log_only == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="stationsActiveLogOnly"><?= __("Only show station locations linked to active logbook"); ?></label>
+										</div>
+									</div>
+								</div>
+							</div>
 						</div>
 
 						<!-- QSO Logging Options -->
@@ -360,66 +430,90 @@
 							<div class="card">
 								<div class="card-header"><?= __("QSO Logging Options"); ?></div>
 								<div class="card-body">
-									<div class="mb-3">
-										<label for="logendtime"><?= __("Log End Times for QSOs Separately"); ?></label>
-										<?php if(!isset($user_qso_end_times)) { $user_qso_end_times='0'; }?>
-										<select class="form-select" id="logendtimes" name="user_qso_end_times">
-											<option value="1" <?php if ($user_qso_end_times == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
-											<option value="0" <?php if ($user_qso_end_times == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-										</select>
-										<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __("Choose yes here if you want to log QSO start and end times separately. If set to 'No' the end time will be the same as start time."); ?></small>
+									<?php if(!isset($user_qso_end_times)) { $user_qso_end_times='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_qso_end_times" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="logendtimes" name="user_qso_end_times" value="1" <?php if ($user_qso_end_times == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="logendtimes"><?= __("Log End Times for QSOs Separately"); ?></label>
+											<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __("Choose yes here if you want to log QSO start and end times separately. If set to 'No' the end time will be the same as start time."); ?></small>
+										</div>
 									</div>
 
 									<hr />
-									<div class="mb-3">
-										<label for="profileimages"><?= __("Show profile picture of QSO partner from qrz.com/hamqth.com profile in the log QSO section."); ?></label>
-										<?php if(!isset($user_show_profile_image)) { $user_show_profile_image='0'; }?>
-										<select class="form-select" id="profileimages" name="user_show_profile_image">
-											<option value="1" <?php if ($user_show_profile_image == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
-											<option value="0" <?php if ($user_show_profile_image == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-										</select>
-										<small class="form-text text-muted"><?= __("Please set your qrz.com/hamqth.com credentials in the general config file."); ?></small>
+									<?php if(!isset($user_qso_db_search_priority)) { $user_qso_db_search_priority='Y'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_qso_db_search_priority" value="N">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="db_search_priority" name="user_qso_db_search_priority" value="Y" <?php if ($user_qso_db_search_priority == 'Y') { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="db_search_priority"><?= __("Prioritize database search over external lookup"); ?></label>
+											<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __('When set to "Yes", callsign lookup will first use data from your previous QSOs before querying external services. Set to "No" to always use external lookup services instead.'); ?></small>
+										</div>
+									</div>
+									<hr />
+									<?php if(!isset($user_show_profile_image)) { $user_show_profile_image='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_show_profile_image" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="profileimages" name="user_show_profile_image" value="1" <?php if ($user_show_profile_image == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="profileimages"><?= __("Show profile picture of QSO partner from qrz.com/hamqth.com profile in the log QSO section."); ?></label>
+											<small class="form-text text-muted"><?= __("Please set your qrz.com/hamqth.com credentials in the general config file."); ?></small>
+										</div>
 									</div>
 
 									<hr />
-									<div class="mb-3">
-										<label for="qthlookup"><?= __("Location auto lookup."); ?></label>
-										<?php if(!isset($user_qth_lookup)) { $user_qth_lookup='0'; }?>
-										<select class="form-select" id="qthlookup" name="user_qth_lookup">
-											<option value="1" <?php if ($user_qth_lookup == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
-											<option value="0" <?php if ($user_qth_lookup == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-										</select>
-										<small class="form-text text-muted"><?= __("If set, gridsquare is fetched based on location name."); ?></small>
+									<?php if(!isset($user_qth_lookup)) { $user_qth_lookup='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_qth_lookup" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="qthlookup" name="user_qth_lookup" value="1" <?php if ($user_qth_lookup == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="qthlookup"><?= __("Location auto lookup."); ?></label>
+											<small class="form-text text-muted"><?= __("If set, gridsquare is fetched based on location name."); ?></small>
+										</div>
 									</div>
 
-									<div class="mb-3">
-										<label for="sotalookup"><?= __("SOTA auto lookup gridsquare and name for summit."); ?></label>
-										<?php if(!isset($user_sota_lookup)) { $user_sota_lookup='0'; }?>
-										<select class="form-select" id="sotalookup" name="user_sota_lookup">
-											<option value="1" <?php if ($user_sota_lookup == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
-											<option value="0" <?php if ($user_sota_lookup == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-										</select>
-										<small class="form-text text-muted"><?= __("If set, name and gridsquare is fetched from the API and filled in location and locator."); ?></small>
+									<?php if(!isset($user_sota_lookup)) { $user_sota_lookup='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_sota_lookup" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="sotalookup" name="user_sota_lookup" value="1" <?php if ($user_sota_lookup == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="sotalookup"><?= __("SOTA auto lookup gridsquare and name for summit."); ?></label>
+											<small class="form-text text-muted"><?= __("If set, name and gridsquare is fetched from the API and filled in location and locator."); ?></small>
+										</div>
 									</div>
 
-									<div class="mb-3">
-										<label for="wwfflookup"><?= __("WWFF auto lookup gridsquare and name for reference."); ?></label>
-										<?php if(!isset($user_wwff_lookup)) { $user_wwff_lookup='0'; }?>
-										<select class="form-select" id="wwfflookup" name="user_wwff_lookup">
-											<option value="1" <?php if ($user_wwff_lookup == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
-											<option value="0" <?php if ($user_wwff_lookup == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-										</select>
-										<small class="form-text text-muted"><?= __("If set, name and gridsquare is fetched from the API and filled in location and locator."); ?></small>
+									<?php if(!isset($user_wwff_lookup)) { $user_wwff_lookup='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_wwff_lookup" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="wwfflookup" name="user_wwff_lookup" value="1" <?php if ($user_wwff_lookup == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="wwfflookup"><?= __("WWFF auto lookup gridsquare and name for reference."); ?></label>
+											<small class="form-text text-muted"><?= __("If set, name and gridsquare is fetched from the API and filled in location and locator."); ?></small>
+										</div>
 									</div>
 
-									<div class="mb-3">
-										<label for="potalookup"><?= __("POTA auto lookup gridsquare and name for park."); ?></label>
-										<?php if(!isset($user_pota_lookup)) { $user_pota_lookup='0'; }?>
-										<select class="form-select" id="potalookup" name="user_pota_lookup">
-											<option value="1" <?php if ($user_pota_lookup == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
-											<option value="0" <?php if ($user_pota_lookup == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-										</select>
-										<small class="form-text text-muted"><?= __("If set, name and gridsquare is fetched from the API and filled in location and locator."); ?></small>
+									<?php if(!isset($user_pota_lookup)) { $user_pota_lookup='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_pota_lookup" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="potalookup" name="user_pota_lookup" value="1" <?php if ($user_pota_lookup == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="potalookup"><?= __("POTA auto lookup gridsquare and name for park."); ?></label>
+											<small class="form-text text-muted"><?= __("If set, name and gridsquare is fetched from the API and filled in location and locator."); ?></small>
+										</div>
 									</div>
 									<div class="mb-3">
 										<label for="qso-page-last-qso-count"><?= __("Number of previous contacts displayed on QSO page."); ?></label>
@@ -429,6 +523,18 @@
 												printf("<option value=\"{$i}\"{$selected_attribute_value}>{$i}</option>");
 											} ?>
 										</select>
+									</div>
+									<hr />
+									<!--- DX Waterfall -->
+									<div class="mb-3">
+											<label for="user_dxwaterfall_enable"><?= __("DX Waterfall"); ?></label>
+											<?php if(!isset($user_dxwaterfall_enable)) { $user_dxwaterfall_enable='N'; }?>
+											<select class="form-select" id="user_dxwaterfall_enable" name="user_dxwaterfall_enable" aria-describedby="user_dxwaterfall_enable_Help" required>
+												<option value='Y' <?php if($user_dxwaterfall_enable == "Y") { echo "selected=\"selected\""; } ?>><?= __("Enabled"); ?></option>
+												<option value='E' <?php if($user_dxwaterfall_enable == "E") { echo "selected=\"selected\""; } ?>><?= __("Enabled").' '.__("squelched"); ?></option>
+												<option value='N' <?php if($user_dxwaterfall_enable == "N") { echo "selected=\"selected\""; } ?>><?= __("Disabled"); ?></option>
+											</select>
+											<small id="user_dxwaterfall_enable_Help" class="form-text text-muted"><?= __("Show an interactive DX Cluster 'Waterfall' on the QSO logging page."); ?></small>
 									</div>
 								</div>
 							</div>
@@ -441,25 +547,29 @@
 							<div class="card">
 								<div class="card-header"><?= __("Menu Options"); ?></div>
 								<div class="card-body">
-									<div class="mb-3">
-										<label for="shownotes"><?= __("Show notes in the main menu."); ?></label>
-										<?php if(!isset($user_show_notes)) { $user_show_notes='0'; }?>
-										<select class="form-select" id="shownotes" name="user_show_notes">
-											<option value="1" <?php if ($user_show_notes == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
-											<option value="0" <?php if ($user_show_notes == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-										</select>
+									<?php if(!isset($user_show_notes)) { $user_show_notes='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_show_notes" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="shownotes" name="user_show_notes" value="1" <?php if ($user_show_notes == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="shownotes"><?= __("Show notes in the main menu."); ?></label>
+										</div>
 									</div>
 
 									<hr/>
 
-									<div class="mb-3">
-										<label for="quicklog"><?= __("Quicklog Field"); ?></label>
-										<?php if(!isset($user_quicklog)) { $user_quicklog='0'; }?>
-										<select class="form-select" id="quicklog" name="user_quicklog">
-											<option value="1" <?php if ($user_quicklog == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
-											<option value="0" <?php if ($user_quicklog == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-										</select>
-										<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __("With this feature, you can log callsigns using the search field in the header."); ?></small>
+									<?php if(!isset($user_quicklog)) { $user_quicklog='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_quicklog" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="quicklog" name="user_quicklog" value="1" <?php if ($user_quicklog == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="quicklog"><?= __("Quicklog Field"); ?></label>
+											<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __("With this feature, you can log callsigns using the search field in the header."); ?></small>
+										</div>
 									</div>
 
 									<div class="mb-3">
@@ -474,22 +584,37 @@
 									<?php if ($this->session->userdata('user_id') == $this->uri->segment(3)) { ?>
 									<hr/>
 
-									<div class="mb-3">
-										<label for="locations_quickswitch"><?= __("Station Locations Quickswitch"); ?></label>
-										<select class="form-select" id="locations_quickswitch" name="user_locations_quickswitch">
-											<option value="false" <?php if ($user_locations_quickswitch == 'false') { echo " selected =\"selected\""; } ?>><?= __("Disabled"); ?></option>
-											<option value="true" <?php if ($user_locations_quickswitch == 'true') { echo " selected =\"selected\""; } ?>><?= __("Enabled"); ?></option>
-										</select>
-										<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __("Show the Station Locations Quickswitch in the main menu. You can add locations by adding them to favourites at the station setup page."); ?></small>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_locations_quickswitch" value="false">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="locations_quickswitch" name="user_locations_quickswitch" value="true" <?php if ($user_locations_quickswitch == 'true') { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="locations_quickswitch"><?= __("Station Locations Quickswitch"); ?></label>
+											<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __("Show the Station Locations Quickswitch in the main menu. You can add locations by adding them to favourites at the station setup page."); ?></small>
+										</div>
 									</div>
 
-									<div class="mb-3">
-										<label for="utc_headermenu"><?= __("UTC Time in Menu"); ?></label>
-										<select class="form-select" id="utc_headermenu" name="user_utc_headermenu">
-											<option value="false" <?php if ($user_utc_headermenu == 'false') { echo " selected =\"selected\""; } ?>><?= __("Disabled"); ?></option>
-											<option value="true" <?php if ($user_utc_headermenu == 'true') { echo " selected =\"selected\""; } ?>><?= __("Enabled"); ?></option>
-										</select>
-										<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __("Show the current UTC Time in the menu"); ?></small>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_utc_headermenu" value="false">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="utc_headermenu" name="user_utc_headermenu" value="true" <?php if ($user_utc_headermenu == 'true') { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="utc_headermenu"><?= __("UTC Time in Menu"); ?></label>
+											<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __("Show the current UTC Time in the menu"); ?></small>
+										</div>
+									</div>
+
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_quick_theme_switcher" value="false">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="quick_theme_switcher" name="user_quick_theme_switcher" value="true" <?php if ($user_quick_theme_switcher == 'true') { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="quick_theme_switcher"><?= __("Quick Theme Switcher"); ?></label>
+											<small id="SelectDateFormatHelp" class="form-text text-muted"><?= __("Show the quick theme switcher in the header menu."); ?></small>
+										</div>
 									</div>
 									<?php } ?>
 								</div>
@@ -523,12 +648,12 @@
 									</div>
 									<div class="row"> <!-- QSO (default) -->
 										<div class="mb-3 col-md-4">
-											<label><?= __("QSO (by default)"); ?></label>
+											<label><?= __("QSO (worked, not confirmed)"); ?></label>
 										</div>
 										<div class="mb-3 col-md-3">
 											<div class="icon_selectBox" data-boxcontent="qso">
-												<input type="hidden" name="user_map_qso_icon" value="<?php echo $user_map_qso_icon; ?>">
-												<div class="form-select icon_overSelect"><?php echo "<i class='".$user_map_qso_icon."'></i>"; ?></div>
+												<input type="hidden" name="user_map_qso_icon" value="<?php echo $user_map_qso_icon ?? "fas fa-dot-circle"; ?>">
+												<div class="form-select icon_overSelect"><?php echo "<i class='".($user_map_qso_icon ?? "fas fa-dot-circle")."'></i>"; ?></div>
 											</div>
 											<div class="col-md-3 icon_selectBox_data" data-boxcontent="qso">
 												<?php foreach($map_icon_select['qso'] as $val) {
@@ -537,18 +662,18 @@
 											</div>
 										</div>
 										<div class="mb-3 col-md-2">
-											<input type="color" class="form-control user_icon_color" name="user_map_qso_color" id="user_map_qso_color" value="<?php echo $user_map_qso_color; ?>" style="padding:initial;" data-icon="qso" />
+											<input type="color" class="form-control user_icon_color" name="user_map_qso_color" id="user_map_qso_color" value="<?php echo $user_map_qso_color ?? "#E5A50A"; ?>" style="padding:initial;" data-icon="qso" />
 										</div>
 									</div>
 									<div class="row"> <!-- QSO (confirmed) -->
 										<div class="mb-3 col-md-4">
 											<label><?= __("QSO (confirmed)"); ?></label>
-											<small class="form-text text-muted"><?= __("(If 'No', displayed as 'QSO (by default))'"); ?></small>
+											<small class="form-text text-muted"><?= __("(If 'No', displayed as 'QSO (worked, not confirmed)')"); ?></small>
 										</div>
 										<div class="mb-3 col-md-3">
 											<div class="icon_selectBox" data-boxcontent="qsoconfirm">
-												<input type="hidden" name="user_map_qsoconfirm_icon" value="<?php echo $user_map_qsoconfirm_icon; ?>">
-												<div class="form-select icon_overSelect"><?php echo (($user_map_qsoconfirm_icon=="0")?__("No"):("<i class='".$user_map_qsoconfirm_icon."'></i>")); ?></div>
+												<input type="hidden" name="user_map_qsoconfirm_icon" value="<?php echo $user_map_qsoconfirm_icon ?? "0"; ?>">
+												<div class="form-select icon_overSelect"><?php echo ((!isset($user_map_qsoconfirm_icon) || $user_map_qsoconfirm_icon=="0")?__("No"):("<i class='".($user_map_qsoconfirm_icon ?? "")."'></i>")); ?></div>
 											</div>
 											<div class="col-md-3 icon_selectBox_data" data-boxcontent="qsoconfirm">
 												<?php foreach($map_icon_select['qsoconfirm'] as $val) {
@@ -557,20 +682,39 @@
 											</div>
 										</div>
 										<div class="md-3 col-md-2">
-											<input type="color" class="form-control user_icon_color" name="user_map_qsoconfirm_color" id="user_map_qsoconfirm_color" value="<?php echo $user_map_qsoconfirm_color; ?>" style="padding:initial;<?php echo ($user_map_qsoconfirm_icon=="0")?'display:none;':''; ?>" data-icon="qsoconfirm" />
+											<input type="color" class="form-control user_icon_color" name="user_map_qsoconfirm_color" id="user_map_qsoconfirm_color" value="<?php echo $user_map_qsoconfirm_color ?? "#90EE90"; ?>" style="padding:initial;<?php echo (!isset($user_map_qsoconfirm_icon) || $user_map_qsoconfirm_icon=="0")?'display:none;':''; ?>" data-icon="qsoconfirm" />
 										</div>
 									</div>
-									<div class="row">
-										<div class="md-3 col-md-4">
-											<label><?= __("Show Locator"); ?></label>
+									<div class="row"> <!-- Unworked (zones) color -->
+										<div class="mb-3 col-md-4">
+											<label><?= __("Unworked (e.g. Zones)"); ?></label>
+											<small class="form-text text-muted"><?= __("(Color for unworked zones)"); ?></small>
 										</div>
-										<div class="md-3 col-md-3">
-											<select class="form-select" id="user_map_gridsquare_show" name="user_map_gridsquare_show">
-												<option value="1" <?php if ($user_map_gridsquare_show == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
-												<option value="0" <?php if ($user_map_gridsquare_show == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-											</select>
+										<div class="mb-3 col-md-3">
+										</div>
+										<div class="md-3 col-md-2">
+											<input type="color" class="form-control user_icon_color" name="user_map_unworked_color" id="user_map_unworked_color" value="<?php echo $user_map_unworked_color ?? "#CC372D"; ?>" style="padding:initial;" data-icon="unworked" />
 										</div>
 									</div>
+									<?php if(!isset($user_map_gridsquare_show)) { $user_map_gridsquare_show='1'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_map_gridsquare_show" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="user_map_gridsquare_show" name="user_map_gridsquare_show" value="1" <?php if ($user_map_gridsquare_show == 1) { echo 'checked'; } ?>>
+										</div>
+										<label class="d-block mb-0" for="user_map_gridsquare_show"><?= __("Show Locator"); ?></label>
+									</div>
+								<?php if(!isset($user_map_tile_style)) { $user_map_tile_style = 'map-follow'; } ?>
+								<div class="mb-3">	<!-- Custom Map Tile Style -->
+									<label for="user_map_tile_style"><?= __("Map Tile Style"); ?></label>
+									<?php $styles = map_style_options(); $current = $user_map_tile_style ?? 'map-follow'; ?>
+										<select class="form-select"	id="user_map_tile_style" name="user_map_tile_style" >
+											<?php foreach ($styles as $slug => $label): ?>
+												<option value="<?= html_escape($slug); ?>" <?= $current == $slug ? 'selected' : ''; ?> ><?= html_escape($label); ?></option>
+											<?php endforeach; ?>
+										</select>
+								    <small class="form-text text-muted"><?= __("Choose the map tile rendering method; this will override the theme settings."); ?></small>
+								</div>
 								</div>
 							</div>
 						</div>
@@ -620,21 +764,70 @@
 											<label for="user_dashboard_map"><?= __("Show Dashboard Map"); ?></label>
 											<?php if(!isset($user_dashboard_map)) { $user_dashboard_map='Y'; }?>
 											<select class="form-select" id="user_dashboard_map" name="user_dashboard_map" aria-describedby="user_dashboard_map_Help" required>
-												<option value='Y' <?php if($user_dashboard_map == "Y") { echo "selected=\"selected\""; } ?>><?= __("Yes"); ?></option>
+												<option value='Y' <?php if($user_dashboard_map == "Y") { echo "selected=\"selected\""; } ?>><?= __("Map on top"); ?></option>
+												<option value='map_at_left' <?php if($user_dashboard_map == "map_at_left") { echo "selected=\"selected\""; } ?>><?= __("Map at left"); ?></option>
 												<option value='map_at_right' <?php if($user_dashboard_map == "map_at_right") { echo "selected=\"selected\""; } ?>><?= __("Map at right"); ?></option>
 												<option value='N' <?php if($user_dashboard_map == "N") { echo "selected=\"selected\""; } ?>><?= __("No"); ?></option>
 											</select>
 											<small id="user_dashboard_map_Help" class="form-text text-muted"><?= __("Choose whether to show map on dashboard or not"); ?></small>
 										</div>
 
+										<?php
+										if(!isset($user_dashboard_solar)) { $user_dashboard_solar='N'; }
+										if ($user_dashboard_solar === 'Y') { $user_dashboard_solar = 'bottom'; } // legacy "on" maps to bottom
+										?>
 										<div class="mb-3">
-											<label for="user_dashboard_banner"><?= __("Dashboard Notification Banner"); ?></label>
-											<?php if(!isset($user_dashboard_banner)) { $user_dashboard_banner='Y'; }?>
-											<select class="form-select" id="user_dashboard_banner" name="user_dashboard_banner" aria-describedby="user_dashboard_banner_Help" required>
-												<option value='true' <?php if($user_dashboard_banner == "true") { echo "selected=\"selected\""; } ?>><?= __("Enabled"); ?></option>
-												<option value='false' <?php if($user_dashboard_banner == "false") { echo "selected=\"selected\""; } ?>><?= __("Disabled"); ?></option>
+											<label for="user_dashboard_solar"><?= __("Dashboard solar and propagation data"); ?></label>
+											<select class="form-select" id="user_dashboard_solar" name="user_dashboard_solar" aria-describedby="user_dashboard_solar_Help" required>
+												<option value='top' <?php if($user_dashboard_solar == 'top') { echo "selected=\"selected\""; } ?>><?= __("Top"); ?></option>
+												<option value='bottom' <?php if($user_dashboard_solar == 'bottom') { echo "selected=\"selected\""; } ?>><?= __("Bottom"); ?></option>
+												<option value='N' <?php if($user_dashboard_solar == 'N') { echo "selected=\"selected\""; } ?>><?= __("Off"); ?></option>
 											</select>
-											<small id="user_dashboard_banner_Help" class="form-text text-muted"><?= __("This allows to disable the global notification banner on the dashboard."); ?></small>
+											<small id="user_dashboard_solar_Help" class="form-text text-muted"><?= __("Show solar and propagation data on the dashboard above the active expeditions cards (Top), at the bottom of the dashboard (Bottom), or hide it (Off)."); ?></small>
+										</div>
+
+										<?php if(!isset($user_dashboard_banner)) { $user_dashboard_banner='Y'; }?>
+										<div class="d-flex align-items-start gap-2 mb-3">
+											<input type="hidden" name="user_dashboard_banner" value="false">
+											<div class="form-check form-switch mt-1">
+												<input class="form-check-input" type="checkbox" role="switch" id="user_dashboard_banner" name="user_dashboard_banner" value="true" <?php if ($user_dashboard_banner == 'true' || $user_dashboard_banner == 'Y') { echo 'checked'; } ?>>
+											</div>
+											<div>
+												<label class="d-block mb-0" for="user_dashboard_banner"><?= __("Dashboard Notification Banner"); ?></label>
+												<small id="user_dashboard_banner_Help" class="form-text text-muted"><?= __("This allows to disable the global notification banner on the dashboard."); ?></small>
+											</div>
+										</div>
+
+										<?php if(!isset($user_dashboard_show_dxpeditions)) { $user_dashboard_show_dxpeditions='1'; }?>
+										<div class="d-flex align-items-start gap-2 mb-3">
+											<input type="hidden" name="user_dashboard_show_dxpeditions" value="0">
+											<div class="form-check form-switch mt-1">
+												<input class="form-check-input" type="checkbox" role="switch" id="dashboardShowDxpeditions" name="user_dashboard_show_dxpeditions" value="1" <?php if ($user_dashboard_show_dxpeditions == 1) { echo 'checked'; } ?>>
+											</div>
+											<div>
+												<label class="d-block mb-0" for="dashboardShowDxpeditions"><?= __("Active Expeditions"); ?></label>
+											</div>
+										</div>
+										<?php if(!isset($user_dashboard_show_contests)) { $user_dashboard_show_contests='1'; }?>
+										<div class="d-flex align-items-start gap-2 mb-3">
+											<input type="hidden" name="user_dashboard_show_contests" value="0">
+											<div class="form-check form-switch mt-1">
+												<input class="form-check-input" type="checkbox" role="switch" id="dashboardShowContests" name="user_dashboard_show_contests" value="1" <?php if ($user_dashboard_show_contests == 1) { echo 'checked'; } ?>>
+											</div>
+											<div>
+												<label class="d-block mb-0" for="dashboardShowContests"><?= __("Active Contests"); ?></label>
+											</div>
+										</div>
+										<?php if(!isset($user_dashboard_show_kpi_stats)) { $user_dashboard_show_kpi_stats='1'; }?>
+										<div class="d-flex align-items-start gap-2 mb-3">
+											<input type="hidden" name="user_dashboard_show_kpi_stats" value="0">
+											<div class="form-check form-switch mt-1">
+												<input class="form-check-input" type="checkbox" role="switch" id="dashboardShowKpiStats" name="user_dashboard_show_kpi_stats" value="1" <?php if ($user_dashboard_show_kpi_stats == 1) { echo 'checked'; } ?>>
+											</div>
+											<div>
+												<label class="d-block mb-0" for="dashboardShowKpiStats"><?= __("Dashboard KPI statistics"); ?></label>
+												<small id="dashboardShowKpiStats_Help" class="form-text text-muted"><?= __("This switches the display of the KPI statistics (Total QSOs, QSOs this year/month/today, Current Streak, Unique callsigns) on the dashboard."); ?></small>
+											</div>
 										</div>
 									</div>
 								</div>
@@ -642,8 +835,18 @@
 						</div>
 						<div class="col-md">
 							<div class="card">
-								<div class="card-header"><?= __("Show Reference Fields on QSO Tab"); ?></div>
+								<div class="card-header"><?= __("Show Fields on QSO Tab"); ?></div>
 								<div class="card-body">
+									<?php if(!isset($user_qso_show_map)) { $user_qso_show_map = 1; } ?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_qso_show_map" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="qsoShowMap" name="user_qso_show_map" value="1" <?php if ($user_qso_show_map == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="qsoShowMap"><?= __("Show map at QSO-Window"); ?></label>
+										</div>
+									</div>
 									<div class="row">
 										<div class="mb-3">
 											<label for="references_select"><?= __("The enabled items will be shown on the QSO tab rather than the General tab."); ?></label>
@@ -671,6 +874,10 @@
 												<input name="user_dok_to_qso_tab" class="form-check-input" type="checkbox" role="switch" id="dokToQsoTab" <?php if ($user_dok_to_qso_tab ?? false) { echo 'checked'; } ?>>
 												<label class="form-check-label" for="dokToQsoTab" ><?= __("DOK"); ?></label>
 											</div>
+											<div class="form-check form-switch">
+												<input name="user_station_to_qso_tab" class="form-check-input" type="checkbox" role="switch" id="stationToQsoTab" <?php if ($user_station_to_qso_tab ?? false) { echo 'checked'; } ?>>
+												<label class="form-check-label" for="stationToQsoTab" ><?= __("Station Location"); ?></label>
+											</div>
 										</div>
 									</div>
 									<button type="button" onclick="clearRefSwitches();" class="btn btn-primary"><i class="fas fa-recycle"></i> <?= __("Reset"); ?></button>
@@ -692,40 +899,62 @@
 												<input type="text" name="global_oqrs_text" class="form-control" id="global_oqrs_text" aria-describedby="global_oqrs_text" value="<?php echo ($global_oqrs_text ?? ''); ?>">
 												<small id="global_oqrs_text_help" class="form-text text-muted"><?= __("This text is an optional text that can be displayed on top of the OQRS page."); ?></small>
 											</div>
-											<div class="mb-3">
-												<label for="oqrs_grouped_search"><?= __("Grouped search"); ?></label>
-												<select name="oqrs_grouped_search" class="form-select" id="oqrs_grouped_search">
-													<option value="off" <?php if(($oqrs_grouped_search ?? 'off') == "off") { echo "selected=\"selected\""; } ?>><?= __("Off"); ?></option>
-													<option value="on" <?php if(($oqrs_grouped_search ?? 'off') == "on") { echo "selected=\"selected\""; } ?>><?= __("On"); ?></option>
-												</select>
-												<small id="oqrs_grouped_search_help" class="form-text text-muted"><?= __("When this is on, all station locations with OQRS active, will be searched at once."); ?></small>
+											<?php if(!isset($oqrs_grouped_search)) { $oqrs_grouped_search='off'; }?>
+											<div class="d-flex align-items-start gap-2 mb-3">
+												<input type="hidden" name="oqrs_grouped_search" value="off">
+												<div class="form-check form-switch mt-1">
+													<input class="form-check-input" type="checkbox" role="switch" id="oqrs_grouped_search" name="oqrs_grouped_search" value="on" <?php if ($oqrs_grouped_search == 'on') { echo 'checked'; } ?>>
+												</div>
+												<div>
+													<label class="d-block mb-0" for="oqrs_grouped_search"><?= __("Grouped search"); ?></label>
+													<small id="oqrs_grouped_search_help" class="form-text text-muted"><?= __("When this is on, all station locations with OQRS active, will be searched at once."); ?></small>
+												</div>
+											</div>
+
+											<?php if(!isset($oqrs_grouped_search_show_station_name)) { $oqrs_grouped_search_show_station_name='off'; }?>
+											<div class="d-flex align-items-start gap-2 mb-3">
+												<input type="hidden" name="oqrs_grouped_search_show_station_name" value="off">
+												<div class="form-check form-switch mt-1">
+													<input class="form-check-input" type="checkbox" role="switch" id="oqrs_grouped_search_show_station_name" name="oqrs_grouped_search_show_station_name" value="on" <?php if ($oqrs_grouped_search_show_station_name == 'on') { echo 'checked'; } ?>>
+												</div>
+												<div>
+													<label class="d-block mb-0" for="oqrs_grouped_search_show_station_name"><?= __("Show station location name in grouped search results"); ?></label>
+													<small id="oqrs_grouped_search_show_station_name_help" class="form-text text-muted"><?= __("If grouped search is ON, you can decide if the name of the station location shall be shown in the results table."); ?></small>
+												</div>
+											</div>
+
+											<?php if(!isset($oqrs_auto_matching)) { $oqrs_auto_matching='on'; }?>
+											<div class="d-flex align-items-start gap-2 mb-3">
+												<input type="hidden" name="oqrs_auto_matching" value="off">
+												<div class="form-check form-switch mt-1">
+													<input class="form-check-input" type="checkbox" role="switch" id="oqrs_auto_matching" name="oqrs_auto_matching" value="on" <?php if ($oqrs_auto_matching == 'on') { echo 'checked'; } ?>>
+												</div>
+												<div>
+													<label class="d-block mb-0" for="oqrs_auto_matching"><?= __("Automatic OQRS matching"); ?></label>
+													<small id="oqrs_auto_matching_help" class="form-text text-muted"><?= __("If this is on, automatic OQRS matching will happen, and the system will try to match incoming requests with existing logs automatically."); ?></small>
+												</div>
+											</div>
+
+											<?php if(!isset($oqrs_direct_auto_matching)) { $oqrs_direct_auto_matching='on'; }?>
+											<div class="d-flex align-items-start gap-2 mb-3">
+												<input type="hidden" name="oqrs_direct_auto_matching" value="off">
+												<div class="form-check form-switch mt-1">
+													<input class="form-check-input" type="checkbox" role="switch" id="oqrs_direct_auto_matching" name="oqrs_direct_auto_matching" value="on" <?php if ($oqrs_direct_auto_matching == 'on') { echo 'checked'; } ?>>
+												</div>
+												<div>
+													<label class="d-block mb-0" for="oqrs_direct_auto_matching"><?= __("Automatic OQRS matching for direct requests"); ?></label>
+													<small id="oqrs_direct_auto_matching_help" class="form-text text-muted"><?= __("If this is on, automatic OQRS matching for direct request will happen."); ?></small>
+												</div>
 											</div>
 
 											<div class="mb-3">
-												<label for="oqrs_grouped_search_show_station_name"><?= __("Show station location name in grouped search results"); ?></label>
-												<select name="oqrs_grouped_search_show_station_name" class="form-select" id="oqrs_grouped_search_show_station_name">
-													<option value="off" <?php if(($oqrs_grouped_search_show_station_name ?? 'off') == "off") { echo "selected=\"selected\""; } ?>><?= __("Off"); ?></option>
-													<option value="on" <?php if(($oqrs_grouped_search_show_station_name ?? 'off') == "on") { echo "selected=\"selected\""; } ?>><?= __("On"); ?></option>
+												<label for="oqrs_delivery_method"><?= __("QSL delivery methods offered via OQRS"); ?></label>
+												<select name="oqrs_delivery_method" class="form-select" id="oqrs_delivery_method">
+													<option value="both"   <?php if(($oqrs_delivery_method ?? 'both') == "both")   echo 'selected'; ?>><?= __("Bureau and Direct"); ?></option>
+													<option value="bureau" <?php if(($oqrs_delivery_method ?? 'both') == "bureau") echo 'selected'; ?>><?= __("Bureau only"); ?></option>
+													<option value="direct" <?php if(($oqrs_delivery_method ?? 'both') == "direct") echo 'selected'; ?>><?= __("Direct only"); ?></option>
 												</select>
-												<small id="oqrs_grouped_search_show_station_name_help" class="form-text text-muted"><?= __("If grouped search is ON, you can decide if the name of the station location shall be shown in the results table."); ?></small>
-											</div>
-
-											<div class="mb-3">
-												<label for="oqrs_auto_matching"><?= __("Automatic OQRS matching"); ?></label>
-												<select name="oqrs_auto_matching" class="form-select" id="oqrs_auto_matching">
-													<option value="off" <?php if(($oqrs_auto_matching ?? 'on') == "off") { echo "selected=\"selected\""; } ?>><?= __("Off"); ?></option>
-													<option value="on" <?php if(($oqrs_auto_matching ?? 'on') == "on") { echo "selected=\"selected\""; } ?>><?= __("On"); ?></option>
-												</select>
-												<small id="oqrs_auto_matching_help" class="form-text text-muted"><?= __("If this is on, automatic OQRS matching will happen, and the system will try to match incoming requests with existing logs automatically."); ?></small>
-											</div>
-
-											<div class="mb-3">
-												<label for="oqrs_direct_auto_matching"><?= __("Automatic OQRS matching for direct requests"); ?></label>
-												<select name="oqrs_direct_auto_matching" class="form-select" id="oqrs_direct_auto_matching">
-													<option value="off" <?php if(($oqrs_direct_auto_matching ?? 'on') == "off") { echo "selected=\"selected\""; } ?>><?= __("Off"); ?></option>
-													<option value="on" <?php if(($oqrs_direct_auto_matching ?? 'on') == "on") { echo "selected=\"selected\""; } ?>><?= __("On"); ?></option>
-												</select>
-												<small id="oqrs_direct_auto_matching_help" class="form-text text-muted"><?= __("If this is on, automatic OQRS matching for direct request will happen."); ?></small>
+												<small class="form-text text-muted"><?= __("Restrict which QSL delivery methods requesters can choose on your public OQRS page."); ?></small>
 											</div>
 										</div>
 									</div>
@@ -863,7 +1092,7 @@
 						<!-- eQSL -->
 						<div class="col-md">
 							<div class="card">
-								<div class="card-header"><?= __("eQSL"); ?></div>
+								<div class="card-header"><?= __("eQSL"); ?> <span class="badge text-bg-warning"><?= sprintf(__("Trouble? Check the %swiki%s."), '<a href="https://docs.wavelog.org/user-guide/qsl/eqsl/" target="_blank">', '</a>'); ?></span></div>
 								<div class="card-body">
 									<div class="mb-3">
 										<label><?= __("eQSL.cc Username"); ?></label>
@@ -892,8 +1121,8 @@
 								<div class="card-header"><?= __("Club Log"); ?></div>
 								<div class="card-body">
 									<div class="mb-3">
-										<label><?= __("Club Log Email/Callsign"); ?></label>
-										<input class="form-control" type="text" name="user_clublog_name" value="<?php if(isset($user_clublog_name)) { echo $user_clublog_name; } ?>" />
+										<label><?= __("Club Log Email"); ?></label>
+										<input class="form-control" type="email" name="user_clublog_name" value="<?php if(isset($user_clublog_name)) { echo $user_clublog_name; } ?>" />
 										<?php if(isset($userclublogname_error)) { echo "<small class=\"badge bg-danger\">".$userclublogname_error."</small>"; } ?>
 									</div>
 
@@ -930,30 +1159,45 @@
 							<div class="card">
 								<div class="card-header"><?= __("On-Air widget"); ?></div>
 								<div class="card-body">
-									<div class="mb-3">
-										<label><?= __("Enabled"); ?></label>
-										<?php if(!isset($on_air_widget_enabled)) { $on_air_widget_enabled='false'; }?>
-										<select class="form-select" name="on_air_widget_enabled" id="on_air_widget_enabled">
-											<option value="false" <?php if ($on_air_widget_enabled == "false") { echo 'selected="selected"'; } ?>><?= __("No"); ?></option>
-											<option value="true" <?php if ($on_air_widget_enabled == "true") { echo 'selected="selected"'; } ?>><?= __("Yes"); ?></option>
-										</select>
-										<small class="form-text text-muted">
-											<?= sprintf(__("Note: In order to use this widget, you need to have at least one CAT radio configured and working.")); ?>
-											<?php if (isset($on_air_widget_url)) {
-												// when adding user, the $on_air_widget_url url is not yet availalable, hence the if condition here
-												print("<br>");
-												printf(__("When enabled, widget will be available at %s."), "<a href='$on_air_widget_url' target='_blank'>$on_air_widget_url</a>");
-											} ?>
-										</small>
+									<?php if(!isset($on_air_widget_enabled)) { $on_air_widget_enabled='false'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="on_air_widget_enabled" value="false">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="on_air_widget_enabled" name="on_air_widget_enabled" value="true" <?php if ($on_air_widget_enabled == 'true') { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0"><?= __("Enabled"); ?></label>
+											<small class="form-text text-muted">
+												<?= sprintf(__("Note: In order to use this widget, you need to have at least one CAT radio configured and working.")); ?>
+												<?php if (isset($on_air_widget_url)) {
+													// when adding user, the $on_air_widget_url url is not yet availalable, hence the if condition here
+													print("<br>");
+													printf(__("When enabled, widget will be available at %s."), "<a href='$on_air_widget_url' target='_blank'>$on_air_widget_url</a>");
+												} ?>
+											</small>
+										</div>
 									</div>
-									<div class="mb-3">
-										<label><?= __('Display "Last seen" time'); ?></label>
-										<?php if(!isset($on_air_widget_display_last_seen)) { $on_air_widget_display_last_seen='false'; }?>
-										<select class="form-select" name="on_air_widget_display_last_seen" id="on_air_widget_display_last_seen">
-											<option value="false" <?php if ($on_air_widget_display_last_seen == "false") { echo 'selected="selected"'; } ?>><?= __("No"); ?></option>
-											<option value="true" <?php if ($on_air_widget_display_last_seen == "true") { echo 'selected="selected"'; } ?>><?= __("Yes"); ?></option>
-										</select>
-										<small class="form-text text-muted"><?= __("This setting control whether the 'Last seen' time is displayed in widget or not."); ?></small>
+									<?php if(!isset($on_air_widget_display_last_seen)) { $on_air_widget_display_last_seen='false'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="on_air_widget_display_last_seen" value="false">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="on_air_widget_display_last_seen" name="on_air_widget_display_last_seen" value="true" <?php if ($on_air_widget_display_last_seen == 'true') { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0"><?= __('Display "Last seen" time'); ?></label>
+											<small class="form-text text-muted"><?= __("This setting control whether the 'Last seen' time is displayed in widget or not."); ?></small>
+										</div>
+									</div>
+									<?php if(!isset($on_air_widget_display_radio_name)) { $on_air_widget_display_radio_name='false'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="on_air_widget_display_radio_name" value="false">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="on_air_widget_display_radio_name" name="on_air_widget_display_radio_name" value="true" <?php if ($on_air_widget_display_radio_name == 'true') { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0"><?= __("Display radio name"); ?></label>
+											<small class="form-text text-muted"><?= __("This setting controls whether the radio's name is displayed in the widget or not."); ?></small>
+										</div>
 									</div>
 									<div class="mb-3">
 										<label><?= __("Display only most recently updated radio"); ?></label>
@@ -974,14 +1218,16 @@
 							<div class="card">
 								<div class="card-header"><?= __("QSOs widget"); ?></div>
 								<div class="card-body">
-									<div class="mb-3">
-										<label><?= __('Display exact QSO time'); ?></label>
-										<?php if(!isset($qso_widget_display_qso_time)) { $qso_widget_display_qso_time='false'; }?>
-										<select class="form-select" name="qso_widget_display_qso_time" id="qso_widget_display_qso_time">
-											<option value="false" <?php if ($qso_widget_display_qso_time == "false") { echo 'selected="selected"'; } ?>><?= __("No"); ?></option>
-											<option value="true" <?php if ($qso_widget_display_qso_time == "true") { echo 'selected="selected"'; } ?>><?= __("Yes"); ?></option>
-										</select>
-										<small class="form-text text-muted"><?= __("This setting control whether exact QSO time should displayed in the QSO widget or not."); ?></small>
+									<?php if(!isset($qso_widget_display_qso_time)) { $qso_widget_display_qso_time='false'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="qso_widget_display_qso_time" value="false">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="qso_widget_display_qso_time" name="qso_widget_display_qso_time" value="true" <?php if ($qso_widget_display_qso_time == 'true') { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0"><?= __('Display exact QSO time'); ?></label>
+											<small class="form-text text-muted"><?= __("This setting control whether exact QSO time should displayed in the QSO widget or not."); ?></small>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -1004,13 +1250,15 @@
 							<div class="card">
 								<div class="card-header"><?= __("AMSAT Status Upload"); ?></div>
 								<div class="card-body">
-									<div class="mb-3">
-										<label for="amsatsatatusupload"><?= __("Upload status of SAT QSOs to"); ?> <a href="https://www.amsat.org/status/" target="_blank">https://www.amsat.org/status/</a>.</label>
-										<?php if(!isset($user_amsat_status_upload)) { $user_amsat_status_upload='0'; }?>
-										<select class="form-select" id="amsatstatusupload" name="user_amsat_status_upload">
-											<option value="1" <?php if ($user_amsat_status_upload == 1) { echo " selected =\"selected\""; } ?>><?= __("Yes"); ?></option>
-											<option value="0" <?php if ($user_amsat_status_upload == 0) { echo " selected =\"selected\""; } ?>><?= __("No"); ?></option>
-										</select>
+									<?php if(!isset($user_amsat_status_upload)) { $user_amsat_status_upload='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_amsat_status_upload" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="amsatstatusupload" name="user_amsat_status_upload" value="1" <?php if ($user_amsat_status_upload == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0" for="amsatsatatusupload"><?= __("Upload status of SAT QSOs to"); ?> <a href="https://www.amsat.org/status/" target="_blank">https://www.amsat.org/status/</a>.</label>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -1033,16 +1281,18 @@
 						<!-- Winkeyer -->
 						<div class="col-md">
 							<div class="card">
-								<div class="card-header"><?= __("Winkeyer"); ?> <span class="badge text-bg-danger float-end"><?= __("Experimental"); ?></span></div>
+								<div class="card-header"><?= __("Winkeyer"); ?></div>
 								<div class="card-body">
-									<div class="mb-3">
-										<label><?= __("Winkeyer Features Enabled"); ?></label>
-										<?php if(!isset($user_winkey)) { $user_winkey='0'; }?>
-										<select class="form-select" name="user_winkey" id="user_winkeyer">
-											<option value="0" <?php if ($user_winkey == 0) { echo 'selected="selected"'; } ?>><?= __("No"); ?></option>
-											<option value="1" <?php if ($user_winkey == 1) { echo 'selected="selected"'; } ?>><?= __("Yes"); ?></option>
-										</select>
-										<small class="form-text text-muted"><?= sprintf(__("Winkeyer support in Wavelog is very experimental. Read the wiki first at %s before enabling."), "<a href='https://github.com/wavelog/wavelog/wiki/Winkey' target='_blank'>https://github.com/wavelog/wavelog/wiki/Winkey</a>"); ?></small>
+									<?php if(!isset($user_winkey)) { $user_winkey='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_winkey" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="user_winkeyer" name="user_winkey" value="1" <?php if ($user_winkey == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0"><?= __("Winkeyer Features Enabled"); ?></label>
+											<small class="form-text text-muted"><?= sprintf(__("Winkeyer support in Wavelog is very experimental. Read the wiki first at %s before enabling."), "<a href='https://docs.wavelog.org/user-guide/integrations/winkey/' target='_blank'>https://docs.wavelog.org/user-guide/integrations/winkey/</a>"); ?></small>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -1060,14 +1310,16 @@
 										<input class="form-control" type="text" name="user_hamsat_key" value="<?php if(isset($user_hamsat_key)) { echo $user_hamsat_key; } ?>" />
 										<small class="form-text text-muted"><?= sprintf(_pgettext("Hint for Hamsat API Key; uses Link", "See your profile at %s."), "<a href='https://hams.at/users/settings' target='_blank'>https://hams.at/users/settings</a>"); ?></small>
 									</div>
-									<div class="mb-3">
-										<label><?= __("Show Workable Passes Only"); ?></label>
-										<?php if(!isset($user_hamsat_workable_only)) { $user_hamsat_workable_only='0'; }?>
-										<select class="form-select" name="user_hamsat_workable_only" id="user_hamsat_workable_only">
-											<option value="0" <?php if ($user_hamsat_workable_only == 0) { echo 'selected="selected"'; } ?>><?= __("No"); ?></option>
-											<option value="1" <?php if ($user_hamsat_workable_only == 1) { echo 'selected="selected"'; } ?>><?= __("Yes"); ?></option>
-										</select>
-										<small class="form-text text-muted"><?= __("If enabled shows only workable passes based on the gridsquare set in your hams.at account. Requires private feed key to be set."); ?></small>
+									<?php if(!isset($user_hamsat_workable_only)) { $user_hamsat_workable_only='0'; }?>
+									<div class="d-flex align-items-start gap-2 mb-3">
+										<input type="hidden" name="user_hamsat_workable_only" value="0">
+										<div class="form-check form-switch mt-1">
+											<input class="form-check-input" type="checkbox" role="switch" id="user_hamsat_workable_only" name="user_hamsat_workable_only" value="1" <?php if ($user_hamsat_workable_only == 1) { echo 'checked'; } ?>>
+										</div>
+										<div>
+											<label class="d-block mb-0"><?= __("Show Workable Passes Only"); ?></label>
+											<small class="form-text text-muted"><?= __("If enabled shows only workable passes based on the gridsquare set in your hams.at account. Requires private feed key to be set."); ?></small>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -1082,3 +1334,10 @@
 	<button type="submit" class="btn btn-primary mb-5 mt-3"><i class="fas fa-save"></i> <?= __("Save Account"); ?></button>
 </form>
 </div>
+
+<script>
+	// Search-box UI strings for assets/js/sections/user.js, localized via __()/gettext.
+	var lang_account_search_placeholder = "<?= __("Search settings"); ?>";
+	var lang_account_search_clear       = "<?= __("Clear"); ?>";
+	var lang_account_search_none        = "<?= __("No settings match your search."); ?>";
+</script>

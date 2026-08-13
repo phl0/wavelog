@@ -5,18 +5,18 @@
 
     <!-- Bootstrap CSS -->
     <?php if ($this->optionslib->get_theme()) { ?>
-        <link rel="stylesheet" href="<?php echo base_url(); ?>assets/css/<?php echo $this->optionslib->get_theme(); ?>/bootstrap.min.css">
-        <link rel="stylesheet" href="<?php echo base_url(); ?>assets/css/general.css">
-        <link rel="stylesheet" href="<?php echo base_url(); ?>assets/css/<?php echo $this->optionslib->get_theme(); ?>/overrides.css">
+        <link rel="stylesheet" href="<?php echo $this->paths->cache_buster('/assets/css/' . $this->optionslib->get_theme() . '/bootstrap.min.css'); ?>">
+        <link rel="stylesheet" href="<?php echo $this->paths->cache_buster('/assets/css/general.css'); ?>">
+        <link rel="stylesheet" href="<?php echo $this->paths->cache_buster('/assets/css/' . $this->optionslib->get_theme() . '/overrides.css'); ?>">
     <?php } ?>
 
-    <link rel="stylesheet" href="<?php echo base_url(); ?>assets/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="<?php echo $this->paths->cache_buster('/assets/fontawesome/css/all.min.css'); ?>">
 
-    <link rel="stylesheet" href="<?php echo base_url(); ?>assets/css/jquery.fancybox.min.css" />
+    <link rel="stylesheet" href="<?php echo $this->paths->cache_buster('/assets/css/jquery.fancybox.min.css'); ?>" />
 
-    <script src="<?php echo base_url(); ?>assets/js/jquery-3.3.1.min.js"></script>
-    <script src="<?php echo base_url(); ?>assets/js/jquery.fancybox.min.js"></script>
-    <script src="<?php echo base_url(); ?>assets/js/bootstrap.min.js"></script>
+    <script src="<?php echo $this->paths->cache_buster('/assets/js/jquery-3.3.1.min.js'); ?>"></script>
+    <script src="<?php echo $this->paths->cache_buster('/assets/js/jquery.fancybox.min.js'); ?>"></script>
+    <script src="<?php echo $this->paths->cache_buster('/assets/js/bootstrap.bundle.min.js'); ?>"></script>
 </head>
 
 <body class="container-fluid qso-edit-box">
@@ -71,12 +71,12 @@
                                     <div class="row">
                                         <div class="mb-3 col-sm-6">
                                             <label for="freq"><?= __("Frequency"); ?></label>
-                                            <input type="text" class="form-control" id="freq" name="freq" value="<?php echo $qso->COL_FREQ; ?>">
+                                            <input type="number" step="1" class="form-control" id="freq" name="freq" value="<?php echo $qso->COL_FREQ; ?>">
                                         </div>
 
                                         <div class="mb-3 col-sm-6">
                                             <label for="freq"><?= __("RX Frequency"); ?></label>
-                                            <input type="text" class="form-control" id="freqrx" name="freq_display_rx" value="<?php if ($qso->COL_FREQ_RX != "0") { echo $qso->COL_FREQ_RX; } ?>">
+                                            <input type="number" step="1" class="form-control" id="freqrx" name="freq_display_rx" value="<?php if ($qso->COL_FREQ_RX != "0") { echo $qso->COL_FREQ_RX; } ?>">
                                         </div>
                                     </div>
 
@@ -119,7 +119,7 @@
                                     <div class="row">
                                         <div class="mb-3 col-sm-6">
                                             <label for="freq"><?= __("Mode"); ?></label>
-                                            <select id="edit_mode" class="form-select mode" name="mode">
+                                            <select id="edit_mode" class="form-select" name="mode">
                                                 <?php
                                                 foreach ($modes->result() as $mode) {
                                                     var_dump($mode);
@@ -189,24 +189,9 @@
                                             <label for="prop_mode"><?= __("Propagation Mode"); ?></label>
                                             <select class="form-select" id="prop_mode_edit" name="prop_mode">
                                                 <option value="" <?php if ($qso->COL_PROP_MODE == "") { echo "selected=\"selected\""; } ?>></option>
-                                                <option value="AS" <?php if ($qso->COL_PROP_MODE == "AS") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Aircraft Scatter"); ?></option>
-                                                <option value="AUR" <?php if ($qso->COL_PROP_MODE == "AUR") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Aurora"); ?></option>
-                                                <option value="AUE" <?php if ($qso->COL_PROP_MODE == "AUE") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Aurora-E"); ?></option>
-                                                <option value="BS" <?php if ($qso->COL_PROP_MODE == "BS") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Back scatter"); ?></option>
-                                                <option value="ECH" <?php if ($qso->COL_PROP_MODE == "ECH") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "EchoLink"); ?></option>
-                                                <option value="EME" <?php if ($qso->COL_PROP_MODE == "EME") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Earth-Moon-Earth"); ?></option>
-                                                <option value="ES" <?php if ($qso->COL_PROP_MODE == "ES") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Sporadic E"); ?></option>
-                                                <option value="FAI" <?php if ($qso->COL_PROP_MODE == "FAI") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Field Aligned Irregularities"); ?></option>
-                                                <option value="F2" <?php if ($qso->COL_PROP_MODE == "F2") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "F2 Reflection"); ?></option>
-                                                <option value="INTERNET" <?php if ($qso->COL_PROP_MODE == "INTERNET") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Internet-assisted"); ?></option>
-                                                <option value="ION" <?php if ($qso->COL_PROP_MODE == "ION") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Ionoscatter"); ?></option>
-                                                <option value="IRL" <?php if ($qso->COL_PROP_MODE == "IRL") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "IRLP"); ?></option>
-                                                <option value="MS" <?php if ($qso->COL_PROP_MODE == "MS") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Meteor scatter"); ?></option>
-                                                <option value="RPT" <?php if ($qso->COL_PROP_MODE == "RPT") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Terrestrial or atmospheric repeater or transponder"); ?></option>
-                                                <option value="RS" <?php if ($qso->COL_PROP_MODE == "RS") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Rain scatter"); ?></option>
-                                                <option value="SAT" <?php if ($qso->COL_PROP_MODE == "SAT") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Satellite"); ?></option>
-                                                <option value="TEP" <?php if ($qso->COL_PROP_MODE == "TEP") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Trans-equatorial"); ?></option>
-                                                <option value="TR" <?php if ($qso->COL_PROP_MODE == "TR") { echo "selected=\"selected\""; } ?>><?= _pgettext("Propagation Mode", "Tropospheric ducting"); ?></option>
+                                                <?php foreach ($adif_propmodes as $mode => $desc) {
+                                                    echo "<option value=\"$mode\" ".($qso->COL_PROP_MODE == "$mode" ? "selected=\"selected\"" : "").">".htmlspecialchars_decode($desc)."</option>\n";
+                                                } ?>
                                             </select>
                                             <small id="lotw_propmode_hint" class="form-text text-muted">
                                                 <?php if (in_array($qso->COL_PROP_MODE, $this->config->item('lotw_unsupported_prop_modes'))) {
@@ -307,7 +292,8 @@
                                         <div class="mb-3 col-sm-6">
                                             <label for="cqz"><?= __("CQ Zone"); ?></label>
                                             <select class="form-select" id="cqz_edit" name="cqz" required>
-                                                <?php for ($i = 1; $i <= 40; $i++) { ?>
+												<option value=''></option>
+												<?php for ($i = 1; $i <= 40; $i++) { ?>
                                                     <option value="<?= $i; ?>" <?php if ($qso->COL_CQZ == $i) echo "selected=\"selected\""; ?>><?= $i; ?></option>
                                                 <?php } ?>
                                             </select>
@@ -598,7 +584,7 @@
                                                 </div>
                                             </div>
                                         </div>
-					<div class="tab-pane fade" id="dcl-edit" role="tabpanel" aria-labelledby="dcl-tab">
+                                        <div class="tab-pane fade" id="dcl-edit" role="tabpanel" aria-labelledby="dcl-tab">
                                             <div class="mt-3 mb-3 row">
                                                 <label for="sent" class="col-sm-3 col-form-label"><?= __("Sent"); ?></label>
                                                 <div class="col-sm-9">
@@ -624,7 +610,7 @@
                                                 </div>
                                             </div>
                                         </div>
-					<div class="tab-pane fade" id="clublog-edit" role="tabpanel" aria-labelledby="clublog-tab">
+                                        <div class="tab-pane fade" id="clublog-edit" role="tabpanel" aria-labelledby="clublog-tab">
                                             <div class="mt-3 mb-3 row">
                                                 <label for="sent" class="col-sm-3 col-form-label"><?= __("Sent"); ?></label>
                                                 <div class="col-sm-9">
@@ -660,15 +646,19 @@
                                     <?php
                                     $CI = &get_instance();
                                     $CI->load->model('stations');
-                                    $my_stations = $CI->stations->all_of_user();
+									if (!empty($CI->session->userdata('user_stations_active_log_only'))) {
+										$my_stations = $CI->logbooks_model->list_logbooks_linked($CI->session->userdata('active_station_logbook'));
+									} else {
+                                    	$my_stations = $CI->stations->all_of_user();
+									}
                                     ?>
 
                                     <div class="mb-3">
                                         <label for="inputStationProfile"><?= __("Change Station Profile"); ?></label>
                                         <select id="stationProfile" class="form-select" name="station_profile">
-                                            <?php foreach ($my_stations->result() as $stationrow) { ?>
+                                            <?php if ($my_stations !== FALSE) { foreach ($my_stations->result() as $stationrow) { ?>
                                                 <option value="<?= $stationrow->station_id; ?>" <?php if ($qso->station_id == $stationrow->station_id) echo "selected=\"selected\""; ?>><?= $stationrow->station_profile_name; ?></option>
-                                            <?php } ?>
+                                            <?php } } ?>
                                         </select>
                                     </div>
 

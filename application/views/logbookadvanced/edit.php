@@ -1,16 +1,21 @@
+<div class="alert alert-info" role="alert">
+	<i class="fas fa-exclamation-circle me-2"></i>
+	<?= __("Not all columns are available for batch editing. If you can't find the column you are looking for, use the regular QSO edit (click the callsign, then click the edit QSO button)."); ?>
+</div>
 <?= __("Please choose the column to be edited:"); ?><br/><br/>
 <form method="post" class="d-flex align-items-center">
 		<select id="editColumn" name="type" class="form-select form-select-sm w-auto me-2">
 			<option value="">-</option>
 			<optgroup label="<?= __("QSO details"); ?>">
 				<option value="band"><?= __("Band"); ?></option>
+				<option value="frequency"><?= __("Frequency"); ?></option>
 				<option value="comment"><?= __("Comment"); ?></option>
 				<option value="contest"><?= __("Contest"); ?></option>
 				<option value="stxstring"><?= __("Contest Exch (S)"); ?></option>
 				<option value="date"><?= __("Date"); ?></option>
 				<option value="distance"><?= __("Distance"); ?></option>
 				<option value="mode"><?= __("Mode"); ?></option>
-				<option value="operator"><?= __("Operator"); ?></option>
+				<?php if (clubaccess_check(9)) { ?><option value="operator"><?= __("Operator"); ?></option><?php } ?>
 				<option value="propagation"><?= __("Propagation"); ?></option>
 				<option value="rstr"><?= __("RST (R)"); ?></option>
 				<option value="rsts"><?= __("RST (S)"); ?></option>
@@ -22,7 +27,7 @@
 			<optgroup label="<?= __("Awards"); ?>">
 				<option value="continent"><?= __("Continent"); ?></option>
 				<option value="cqz"><?= __("CQ Zone"); ?></option>
-				<option value="dok"><?= __("DOK"); ?></option>
+				<option value="dok"><?= __("DARC DOK"); ?></option>
 				<option value="dxcc"><?= __("DXCC"); ?></option>
 				<option value="gridsquare"><?= __("Gridsquare"); ?></option>
 				<option value="iota"><?= __("IOTA"); ?></option>
@@ -31,6 +36,7 @@
 				<option value="region"><?= __("Region"); ?></option>
 				<option value="sota"><?= __("SOTA"); ?></option>
 				<option value="state"><?= __("State"); ?></option>
+				<option value="sig"><?= __("SIG / SIG_INFO"); ?></option>
 				<option value="wwff"><?= __("WWFF"); ?></option>
 			</optgroup>
 
@@ -45,6 +51,8 @@
 				<option value="lotwsent"><?= __("LoTW Sent"); ?></option>
 				<option value="qrzreceived"><?= __("QRZ Received"); ?></option>
 				<option value="qrzsent"><?= __("QRZ Sent"); ?></option>
+				<option value="qslreceived"><?= __("QSL Received"); ?></option>
+				<option value="qslsent"><?= __("QSL Sent"); ?></option>
 				<option value="qslmsg"><?= __("QSLMSG"); ?></option>
 				<option value="qslreceivedmethod"><?= __("QSL Received Method"); ?></option>
 				<option value="qslsentmethod"><?= __("QSL Sent Method"); ?></option>
@@ -60,6 +68,7 @@
 
 		<!-- CQ Zone -->
 		<select style="display:none" class="form-select form-select-sm w-auto" id="editCqz" name="cqz" required>
+			<option value="null">-</option>
 			<?php
 			for ($i = 1; $i <= 40; $i++) {
 				echo '<option value="' . $i . '">' . $i . '</option>';
@@ -69,6 +78,7 @@
 
 		<!-- ITU Zone -->
 		<select style="display:none" class="form-select form-select-sm w-auto" id="editItuz" name="ituz" required>
+			<option value="null">-</option>
 			<?php
 			for ($i = 1; $i <= 90; $i++) {
 				echo '<option value="' . $i . '">' . $i . '</option>';
@@ -129,6 +139,12 @@
 			?>
 		</select>
 
+		<label style="display:none" id="editFrequencyTxLabel" class="mx-2 w-auto" for="editFrequency"><?= __("Frequency TX (Hz)"); ?></label>
+		<input style="display:none" class="form-control form-control-sm w-auto" id="editFrequency" type="number" step="1" name="editFrequency" placeholder="" aria-label="editFrequency">
+
+		<label style="display:none" id="editFrequencyRxLabel" class="mx-2 w-auto" for="editFrequencyRx"><?= __("Frequency RX (Hz)"); ?></label>
+		<input style="display:none" class="form-control form-control-sm w-auto" id="editFrequencyRx" type="number" step="1" name="editFrequencyRx" placeholder="" aria-label="editFrequencyRx">
+
 		<select style="display:none" id="editMode" class="form-select mode form-select-sm w-auto" name="editMode">
 		<?php
 			foreach($modes->result() as $mode){
@@ -160,12 +176,19 @@
 			?>
 		</select>
 
-		<select style="display:none" class="form-select w-auto form-select-sm w-auto" id="editLoTW"  name="lotw">
+		<select style="display:none" class="form-select w-auto form-select-sm w-auto" id="editQsl"  name="qsl">
 			<option value="Y"><?= __("Yes"); ?></option>
 			<option value="N"><?= __("No"); ?></option>
 			<option value="R"><?= __("Requested"); ?></option>
 			<option value="I"><?= __("Invalid"); ?></option>
-			<option value="V"><?= __("Verified"); ?></option>
+		</select>
+
+		<select style="display:none" class="form-select w-auto form-select-sm w-auto" id="editLoTW"  name="lotw">
+			<option value="Y"><?= __("Yes"); ?></option>
+			<option value="N"><?= __("No"); ?></option>
+			<option value="R"><?= __("Requested"); ?></option>
+			<option value="Q"><?= __("Queued"); ?></option>
+			<option value="I"><?= __("Invalid"); ?></option>
 		</select>
 
 		<select style="display:none" class="form-select w-auto form-select-sm w-auto" id="editQrz"  name="qrz">
@@ -226,7 +249,14 @@
 		</select>
 
 		<label style="display:none" id="editDistanceInputLabel" class="mx-2 w-auto" for="editDistanceInput"><?= __("Distance (in km). Leave blank to recalculate distance. (It will only work if a gridsquare is set)."); ?></label>
-		<input style="display:none" class="form-control form-control-sm w-auto" id="editDistanceInput" type="text" name="editDistanceInput" placeholder="" aria-label="editDistanceInput">
+		<input style="display:none" class="form-control form-control-sm w-auto" id="editDistanceInput" type="number" step="any" name="editDistanceInput" placeholder="" aria-label="editDistanceInput">
 		<input style="display:none" class="form-control form-control-sm w-auto uppercase" id="editDokInput" type="text" name="editDokInput" placeholder="" aria-label="editDokInput">
 		<input style="display:none" class="form-control form-control-sm w-auto uppercase" id="editGridsquareInput" type="text" name="editGridsquareInput" placeholder="" aria-label="editGridsquareInput">
+
+		<label style="display:none" id="editSigLabel" class="mx-2 w-auto" for="editSig"><?= __("SIG"); ?></label>
+		<input style="display:none" class="form-control form-control-sm w-auto" id="editSig" type="text" name="editSig" placeholder="" aria-label="editSig">
+		<input style="display:none" id="clearSig" class="mx-2 w-auto" type="checkbox" name="clearSig"><label style="display:none" id="clearSigLabel" for="clearSig"><?= __("clear"); ?></label>
+		<label style="display:none" id="editSigInfoLabel" class="mx-2 w-auto" for="editSigInfo"><?= __("SIG_INFO"); ?></label>
+		<input style="display:none" class="form-control form-control-sm w-auto" id="editSigInfo" type="text" name="editSigInfo" placeholder="" aria-label="editSigInfo">
+		<input style="display:none" id="clearSigInfo" class="mx-2 w-auto" type="checkbox" name="clearSigInfo"><label style="display:none" id="clearSigInfoLabel" for="clearSigInfo"><?= __("clear"); ?></label>
 	</form>

@@ -71,27 +71,27 @@ class WAPC extends CI_Model {
 				foreach ($wapcBand as $line) {
 					// B
 					if($line->col_dxcc == '318'){
-						$bandWapc[$line->col_state][$band] = '<div class="bg-danger awardsBgDanger"><a href=\'javascript:displayContacts("' . $line->col_state . '","' . $band . '","All","All","'. $postdata['mode'] . '","WAPC", "")\'>W</a></div>';
+						$bandWapc[$line->col_state][$band] = '<div class="bg-danger awardsBgWarning"><a href=\'javascript:displayContacts("' . $line->col_state . '","' . $band . '","All","All","'. $postdata['mode'] . '","WAPC", "")\'>W</a></div>';
 						$provinces[$line->col_state]['count']++;
 					}
 					// BS7
 					else if($line->col_dxcc == '506'){
-						$bandWapc['HI'][$band] = '<div class="bg-danger awardsBgDanger"><a href=\'javascript:displayContacts("HI","' . $band . '","All","All","'. $postdata['mode'] . '","WAPC", "")\'>W</a></div>';
+						$bandWapc['HI'][$band] = '<div class="bg-danger awardsBgWarning"><a href=\'javascript:displayContacts("HI","' . $band . '","All","All","'. $postdata['mode'] . '","WAPC", "")\'>W</a></div>';
 						$provinces['HI']['count']++;
 					}
 					// VR
 					else if($line->col_dxcc == '321'){
-						$bandWapc['HK'][$band] = '<div class="bg-danger awardsBgDanger"><a href=\'javascript:displayContacts("' . "321" . '","' . $band . '","All","All","'. $postdata['mode'] . '","DXCC2", "")\'>W</a></div>';
+						$bandWapc['HK'][$band] = '<div class="bg-danger awardsBgWarning"><a href=\'javascript:displayContacts("HK","' . $band . '","All","All","'. $postdata['mode'] . '","WAPC", "")\'>W</a></div>';
 						$provinces['HK']['count']++;
 					}
 					// XX9
 					else if($line->col_dxcc == '152'){
-						$bandWapc['MO'][$band] = '<div class="bg-danger awardsBgDanger"><a href=\'javascript:displayContacts("' . "152" . '","' . $band . '","All","All","'. $postdata['mode'] . '","DXCC2", "")\'>W</a></div>';
+						$bandWapc['MO'][$band] = '<div class="bg-danger awardsBgWarning"><a href=\'javascript:displayContacts("MO","' . $band . '","All","All","'. $postdata['mode'] . '","WAPC", "")\'>W</a></div>';
 						$provinces['MO']['count']++;
 					}
 					// BU-BX/BV9P
 					else if($line->col_dxcc == '386' || $line->col_dxcc == '505'){
-						$bandWapc['TW'][$band] = '<div class="bg-danger awardsBgDanger"><a href=\'javascript:displayContacts("' . "386" . '","' . $band . '","All","All","'. $postdata['mode'] . '","DXCC2", "")\'>W</a></div>';
+						$bandWapc['TW'][$band] = '<div class="bg-danger awardsBgWarning"><a href=\'javascript:displayContacts("TW","' . $band . '","All","All","'. $postdata['mode'] . '","WAPC", "")\'>W</a></div>';
 						$provinces['TW']['count']++;
 					}
 				}
@@ -111,18 +111,18 @@ class WAPC extends CI_Model {
 					}
 					// VR
 					else if($line->col_dxcc == '321'){
-						$bandWapc['HK'][$band] = '<div class="bg-success awardsBgSuccess"><a href=\'javascript:displayContacts("' . "321" . '","' . $band . '","All","All","'. $postdata['mode'] . '","DXCC2", "'.$qsl.'")\'>C</a></div>';
+						$bandWapc['HK'][$band] = '<div class="bg-success awardsBgSuccess"><a href=\'javascript:displayContacts("HK","' . $band . '","All","All","'. $postdata['mode'] . '","WAPC", "'.$qsl.'")\'>C</a></div>';
 						$provinces['HK']['count']++;
 					}
 					// XX9
 					else if($line->col_dxcc == '152'){
-						$bandWapc['MO'][$band] = '<div class="bg-success awardsBgSuccess"><a href=\'javascript:displayContacts("' . "152" . '","' . $band . '","All","All","'. $postdata['mode'] . '","DXCC2", "'.$qsl.'")\'>C</a></div>';
+						$bandWapc['MO'][$band] = '<div class="bg-success awardsBgSuccess"><a href=\'javascript:displayContacts("MO","' . $band . '","All","All","'. $postdata['mode'] . '","WAPC", "'.$qsl.'")\'>C</a></div>';
 						$provinces['MO']['count']++;
 					}
 					// BU-BX/BV9P
 					else if($line->col_dxcc == '386' || $line->col_dxcc == '505'){
-						$bandWapc['TW'][$band] = '<div class="bg-success awardsBgSuccess"><a href=\'javascript:displayContacts("' . "386" . '","' . $band . '","All","All","'. $postdata['mode'] . '","DXCC2", "'.$qsl.'")\'>C</a></div>';
-						$provinces['MO']['count']++;
+						$bandWapc['TW'][$band] = '<div class="bg-success awardsBgSuccess"><a href=\'javascript:displayContacts("TW","' . $band . '","All","All","'. $postdata['mode'] . '","WAPC", "'.$qsl.'")\'>C</a></div>';
+						$provinces['TW']['count']++;
 					}
 				}
 			}
@@ -157,64 +157,6 @@ class WAPC extends CI_Model {
 		} else {
 			return 0;
 		}
-	}
-
-	function getWapcBandConfirmed($location_list, $band, $postdata) {
-		$bindings=[];
-		$sql = "select adif as wapc, name from dxcc_entities
-			join (
-				select col_dxcc from ".$this->config->item('table_name')." thcv
-				where station_id in (" . $location_list .
-				") and col_dxcc > 0";
-
-		$sql .= $this->genfunctions->addBandToQuery($band,$bindings);
-
-		if ($postdata['mode'] != 'All') {
-			$sql .= " and (col_mode = ? or col_submode = ?)";
-			$bindings[]=$postdata['mode'];
-			$bindings[]=$postdata['mode'];
-		}
-
-		$sql .= $this->genfunctions->addQslToQuery($postdata);
-
-		$sql .= " group by col_dxcc
-				) x on dxcc_entities.adif = x.col_dxcc";
-
-		if ($postdata['includedeleted'] == NULL) {
-			$sql .= " and dxcc_entities.end is null";
-		}
-
-		$query = $this->db->query($sql,$bindings);
-
-		return $query->result();
-	}
-
-	function getWapcBandWorked($location_list, $band, $postdata) {
-		$bindings=[];
-		$sql = "select adif as wapc, name from dxcc_entities
-			join (
-				select col_dxcc from ".$this->config->item('table_name')." thcv
-				where station_id in (" . $location_list .
-				") and col_dxcc > 0";
-
-		$sql .= $this->genfunctions->addBandToQuery($band,$bindings);
-
-		if ($postdata['mode'] != 'All') {
-			$sql .= " and (col_mode = ? or col_submode = ?)";
-			$bindings[]=$postdata['mode'];
-			$bindings[]=$postdata['mode'];
-		}
-
-		$sql .= " group by col_dxcc
-				) x on dxcc_entities.adif = x.col_dxcc";;
-
-		if ($postdata['includedeleted'] == NULL) {
-			$sql .= " and dxcc_entities.end is null";
-		}
-
-		$query = $this->db->query($sql,$bindings);
-
-		return $query->result();
 	}
 
 	/*
@@ -299,7 +241,16 @@ class WAPC extends CI_Model {
 
 	function getSummaryByBand($band, $postdata, $location_list) {
 		$bindings=[];
-		$sql = "SELECT count(distinct thcv.col_state, thcv.col_dxcc) as count FROM " . $this->config->item('table_name') . " thcv";
+		$sql = "SELECT count(
+			DISTINCT CASE
+				WHEN thcv.col_dxcc = '318' THEN thcv.col_state
+				WHEN thcv.col_dxcc = '506' THEN 'HI'
+				WHEN thcv.col_dxcc = '321' THEN 'HK'
+				WHEN thcv.col_dxcc = '152' THEN 'MO'
+				WHEN thcv.col_dxcc = '386' THEN 'TW'
+				WHEN thcv.col_dxcc = '505' THEN 'TW'
+			END
+		) AS count FROM " . $this->config->item('table_name') . " thcv";
 		$sql .= " where station_id in (" . $location_list . ")";
 
 		if ($band == 'SAT') {
@@ -314,9 +265,9 @@ class WAPC extends CI_Model {
 			$bandslots_list = "'".implode("','",$bandslots)."'";
 
 			$sql .= " and thcv.col_band in (" . $bandslots_list . ")";
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 		} else {
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 			$sql .= " and thcv.col_band = ?";
 			$bindings[]=$band;
 		}
@@ -336,7 +287,16 @@ class WAPC extends CI_Model {
 
 	function getSummaryByBandConfirmed($band, $postdata, $location_list) {
 		$bindings=[];
-		$sql = "SELECT count(distinct thcv.col_state, thcv.col_dxcc) as count FROM " . $this->config->item('table_name') . " thcv";
+		$sql = "SELECT count(
+			DISTINCT CASE
+				WHEN thcv.col_dxcc = '318' THEN thcv.col_state
+				WHEN thcv.col_dxcc = '506' THEN 'HI'
+				WHEN thcv.col_dxcc = '321' THEN 'HK'
+				WHEN thcv.col_dxcc = '152' THEN 'MO'
+				WHEN thcv.col_dxcc = '386' THEN 'TW'
+				WHEN thcv.col_dxcc = '505' THEN 'TW'
+			END
+		) AS count FROM " . $this->config->item('table_name') . " thcv";
 		$sql .= " where station_id in (" . $location_list . ")";
 
 		if ($band == 'SAT') {
@@ -347,9 +307,9 @@ class WAPC extends CI_Model {
 			$bandslots = $this->bands->get_worked_bands('wapc');
 			$bandslots_list = "'".implode("','",$bandslots)."'";
 			$sql .= " and thcv.col_band in (" . $bandslots_list . ")";
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 		} else {
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 			$sql .= " and thcv.col_band = ?";
 			$bindings[]=$band;
 		}

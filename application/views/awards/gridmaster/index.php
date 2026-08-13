@@ -1,6 +1,9 @@
-<div class="container gridsquare_map_form">
+<script>
+	let user_map_custom = JSON.parse('<?php echo $user_map_custom; ?>');
+</script>
+
+<div class="container gridsquare_map_form px-3 px-lg-4 mt-3 mb-3">
         <!-- Award Info Box -->
-        <br>
         <div id="awardInfoButton">
             <script>
             var lang_awards_info_button = "<?= __("Award Info"); ?>";
@@ -66,5 +69,6 @@ var dxcc = '<?php echo $dxcc; ?>';
     echo 'var gridsquares_gridsquares_worked = "' . $gridsquares_gridsquares_worked . '";';
     echo 'var gridsquares_gridsquares_lotw = "' . $gridsquares_gridsquares_lotw . '";';
     echo 'var gridsquares_gridsquares_paper = "' . $gridsquares_gridsquares_paper . '";';
+    echo 'var gridsquares_total_gridsquares_worked = "' . $gridsquares_total_gridsquares_worked . '";';
 ?>
 </script>

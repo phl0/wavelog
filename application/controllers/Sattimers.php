@@ -5,7 +5,6 @@ class Sattimers extends CI_Controller {
 	function __construct() {
 		parent::__construct();
 
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
@@ -13,12 +12,16 @@ class Sattimers extends CI_Controller {
 		$this->load->model('stations');
 		$footerData = [];
 		$footerData['scripts'] = [
-			'assets/js/sections/sattimers.js?'
+			'assets/js/sections/sattimers.js'
 		];
 
 		$url = 'https://www.df2et.de/tevel/api2.php?grid='.strtoupper($this->stations->find_gridsquare());
 
-		$this->load->driver('cache', array('adapter' => 'file', 'backup' => 'file'));
+		$this->load->driver('cache', [
+			'adapter' => $this->config->item('cache_adapter') ?? 'file', 
+			'backup' => $this->config->item('cache_backup') ?? 'file',
+			'key_prefix' => $this->config->item('cache_key_prefix') ?? ''
+		]);
 		if (!$RawData = $this->cache->get('SatTimers'.strtoupper($this->stations->find_gridsquare()))) {
 			$RawData = file_get_contents($url, true);
 			$this->cache->save('SatTimers'.strtoupper($this->stations->find_gridsquare()), $RawData, (60*1));

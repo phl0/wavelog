@@ -4,6 +4,29 @@ var geojson;
 var map;
 var info;
 
+let confirmedColor = 'rgba(144,238,144)';
+if (typeof(user_map_custom.qsoconfirm) !== 'undefined') {
+    confirmedColor = user_map_custom.qsoconfirm.color;
+}
+let workedColor = 'rgba(229, 165, 10)';
+if (typeof(user_map_custom.qso) !== 'undefined') {
+    workedColor = user_map_custom.qso.color;
+}
+let unworkedColor = 'rgba(204, 55, 45)';
+if (typeof(user_map_custom.unworked) !== 'undefined') {
+    unworkedColor = user_map_custom.unworked.color;
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll('.dropdown').forEach(dd => {
+		dd.addEventListener('hide.bs.dropdown', function (e) {
+			if (e.clickEvent && e.clickEvent.target.closest('.dropdown-menu')) {
+				e.preventDefault(); // stop Bootstrap from closing
+			}
+		});
+	});
+});
+
 function load_cq_map() {
     $('.nav-tabs a[href="#cqmaptab"]').tab('show');
     $.ajax({
@@ -19,6 +42,8 @@ function load_cq_map() {
             eqsl: +$('#eqsl').prop('checked'),
             lotw: +$('#lotw').prop('checked'),
             qrz: +$('#qrz').prop('checked'),
+			datefrom: $('#dateFrom').val(),
+			dateto: $('#dateTo').val(),
         },
         success: function(data) {
 			cqz = data;
@@ -61,15 +86,15 @@ function load_cq_map2(data) {
     var workednotconfirmed = 0;
 
 	for (var i = 0; i < cqzonenames.length; i++) {
-        var mapColor = 'red';
+        var mapColor = unworkedColor;
 
         if (data[i] == 'C') {
-            mapColor = 'green';
+            mapColor = confirmedColor;
             confirmed++;
             notworked--;
         }
         if (data[i] == 'W') {
-			mapColor = 'orange';
+			mapColor = workedColor;
 			workednotconfirmed++;
 			notworked--;
         }
@@ -93,10 +118,11 @@ function load_cq_map2(data) {
 
     legend.onAdd = function(map) {
         var div = L.DomUtil.create("div", "legend");
-        div.innerHTML += "<h4>" + lang_general_word_colors + "</h4>";
-        div.innerHTML += "<i style='background: green'></i><span>" + lang_general_word_confirmed + " (" + confirmed + ")</span><br>";
-        div.innerHTML += "<i style='background: orange'></i><span>" + lang_general_word_worked_not_confirmed + " (" + workednotconfirmed + ")</span><br>";
-        div.innerHTML += "<i style='background: red'></i><span>" + lang_general_word_not_worked + " (" + notworked + ")</span><br>";
+        var band = $('#band2').val();
+        div.innerHTML += "<h4>Band: " + band + "</h4>";
+        div.innerHTML += "<i style='background: "+confirmedColor+"'></i><span>" + lang_general_word_confirmed + " (" + confirmed + ")</span><br>";
+        div.innerHTML += "<i style='background: "+workedColor+"'></i><span>" + lang_general_word_worked_not_confirmed + " (" + workednotconfirmed + ")</span><br>";
+        div.innerHTML += "<i style='background: "+unworkedColor+"'></i><span>" + lang_general_word_not_worked + " (" + notworked + ")</span><br>";
         return div;
     };
 
@@ -123,9 +149,9 @@ function load_cq_map2(data) {
 }
 
 function getColor(d) {
-    return 	cqz[d-1] == 'C' ? 'green'  :
-			cqz[d-1] == 'W' ? 'orange' :
-							   'red';
+    return 	cqz[d-1] == 'C' ? confirmedColor :
+        cqz[d-1] == 'W' ? workedColor :
+        unworkedColor;
 }
 
 function highlightFeature(e) {
@@ -171,13 +197,95 @@ function style(feature) {
 }
 
 function onClick(e) {
-    var marker = e.target;
-    displayContactsOnMap($("#cqmap"),marker.options.title, $('#band2').val(), 'All', 'All', $('#mode').val(), 'CQZone');
+    let marker = e.target;
+    displayContactsOnMap($("#cqmap"),marker.options.title, $('#band2').val(), 'All', 'All', $('#mode').val(), 'CQZone', '', $('#dateFrom').val(), $('#dateTo').val());
 }
 
 function onClick2(e) {
 	zoomToFeature(e);
-	console.log(e);
-    var marker = e.target;
-    displayContactsOnMap($("#cqmap"),marker.feature.properties.cq_zone_number, $('#band2').val(), 'All', 'All', $('#mode').val(), 'CQZone');
+    let marker = e.target;
+    displayContactsOnMap($("#cqmap"),marker.feature.properties.cq_zone_number, $('#band2').val(), 'All', 'All', $('#mode').val(), 'CQZone', '', $('#dateFrom').val(), $('#dateTo').val());
 }
+
+// Preset functionality
+    function applyPreset(preset) {
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
+        const today = new Date();
+
+        // Format date as YYYY-MM-DD
+        function formatDate(date) {
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        switch(preset) {
+            case 'today':
+                dateFrom.value = formatDate(today);
+                dateTo.value = formatDate(today);
+                break;
+
+            case 'yesterday':
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getUTCDate() - 1);
+                dateFrom.value = formatDate(yesterday);
+                dateTo.value = formatDate(yesterday);
+                break;
+
+            case 'last7days':
+                const sevenDaysAgo = new Date(today);
+                sevenDaysAgo.setDate(sevenDaysAgo.getUTCDate() - 7);
+                dateFrom.value = formatDate(sevenDaysAgo);
+                dateTo.value = formatDate(today);
+                break;
+
+            case 'last30days':
+                const thirtyDaysAgo = new Date(today);
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getUTCDate() - 30);
+                dateFrom.value = formatDate(thirtyDaysAgo);
+                dateTo.value = formatDate(today);
+                break;
+
+            case 'thismonth':
+                const firstDayOfMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+                dateFrom.value = formatDate(firstDayOfMonth);
+                dateTo.value = formatDate(today);
+                break;
+
+            case 'lastmonth':
+                const firstDayOfLastMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
+                const lastDayOfLastMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0));
+                dateFrom.value = formatDate(firstDayOfLastMonth);
+                dateTo.value = formatDate(lastDayOfLastMonth);
+                break;
+
+            case 'thisyear':
+                const firstDayOfYear = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
+                dateFrom.value = formatDate(firstDayOfYear);
+                dateTo.value = formatDate(today);
+                break;
+
+            case 'lastyear':
+                const lastYear = today.getUTCFullYear() - 1;
+                const firstDayOfLastYear = new Date(Date.UTC(lastYear, 0, 1));
+                const lastDayOfLastYear = new Date(Date.UTC(lastYear, 11, 31));
+                dateFrom.value = formatDate(firstDayOfLastYear);
+                dateTo.value = formatDate(lastDayOfLastYear);
+                break;
+
+            case 'alltime':
+                dateFrom.value = '';
+                dateTo.value = '';
+                break;
+        }
+    }
+
+    // Reset dates function
+    function resetDates() {
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
+        dateFrom.value = '';
+        dateTo.value = '';
+    }

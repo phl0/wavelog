@@ -120,7 +120,7 @@ function saveNotInLogRequest() {
 	const qsos = [];
     $(".alertinfo").remove();
     if ($("#emailInput").val() == '') {
-        $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>You need to fill out an email address!</div></div>');
+        $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>You need to fill out an email address!</div></div>');
     } else {
         $(".notinlog-table tbody tr").each(function(i) {
             var data = [];
@@ -128,6 +128,10 @@ function saveNotInLogRequest() {
             var timecell = $("#time", this).val();
             var bandcell = $("#band", this).val();
             var modecell = $("#mode", this).val();
+            if (datecell !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(datecell)) {
+                $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>'+lang_oqrs_invalid_date+'</div></div>');
+                return false;
+            }
             if (datecell != "" && timecell != "" && bandcell != "" && modecell != "") {
                 data.push(datecell);
                 data.push(timecell);
@@ -137,7 +141,7 @@ function saveNotInLogRequest() {
             }
         });
         if (qsos.length === 0) {
-            $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>You need to fill the QSO information before submitting a request!</div></div>');
+            $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>You need to fill the QSO information before submitting a request!</div></div>');
         } else {
             $.ajax({
                 url: base_url+'index.php/oqrs/save_not_in_log',
@@ -151,7 +155,11 @@ function saveNotInLogRequest() {
                 success: function (data) {
                     $(".stationinfo").empty();
                     $(".searchinfo").empty();
-                    $(".stationinfo").append('<br /><div class="alert alert-success"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>Your not in log query has been saved!</div>');
+                    $(".stationinfo").append('<br /><div class="alert alert-success alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>Your not in log query has been saved!</div>');
+                },
+                error: function(xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.error) || lang_oqrs_request_failed;
+                    $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-danger alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' + msg + '</div></div>');
                 }
             });
         }
@@ -165,7 +173,7 @@ function oqrsAddLine() {
     var $row = $('<tr></tr>');
 
     var $iterator = $('<td></td>').html(rowCount);
-    var $date = $('<td></td>').html('<input class="form-control" type="date" name="date" value="" id="date" placeholder="YYYY-MM-DD">');
+    var $date = $('<td></td>').html('<input class="form-control" type="date" name="date" value="" id="date" max="' + new Date().toISOString().slice(0,10) + '" required>');
     var $time = $('<td></td>').html('<input class="form-control qsotime" type="text" name="time" value="" id="time" maxlength="5" placeholder="hh:mm">');
     var $band = $('<td></td>').html('<input class="form-control" type="text" name="band" value="" id="band">');
     var $mode = $('<td></td>').html('<input class="form-control" type="text" name="mode" value="" id="mode">');
@@ -236,7 +244,7 @@ function submitOqrsRequest() {
 	const qsos = [];
     $(".alertinfo").remove();
     if ($("#emailInput").val() == '') {
-        $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>You need to fill out an email address!</div></div>');
+        $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>You need to fill out an email address!</div></div>');
     } else {
         $(".result-table tbody tr").each(function(i) {
             var data = [];
@@ -244,6 +252,10 @@ function submitOqrsRequest() {
             var timecell = $("#time", this).val();
             var bandcell = $("#band", this).text();
             var modecell = $("#mode", this).text();
+            if (datecell !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(datecell)) {
+                $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>'+lang_oqrs_invalid_date+'</div></div>');
+                return false;
+            }
             if (datecell != "" && timecell != "") {
                 data.push(datecell);
                 data.push(timecell);
@@ -254,7 +266,7 @@ function submitOqrsRequest() {
         });
 
         if (qsos.length === 0) {
-            $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>You need to fill the QSO information before submitting a request!</div></div>');
+            $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>You need to fill the QSO information before submitting a request!</div></div>');
         } else {
             $.ajax({
                 url: base_url+'index.php/oqrs/save_oqrs_request',
@@ -270,7 +282,11 @@ function submitOqrsRequest() {
                     $(".resulttable").empty();
                     $(".stationinfo").empty();
                     $(".searchinfo").empty();
-                    $(".stationinfo").append('<br /><div class="alert alert-success"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>Your QSL request has been saved!</div>');
+                    $(".stationinfo").append('<br /><div class="alert alert-success alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>Your QSL request has been saved!</div>');
+                },
+                error: function(xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.error) || lang_oqrs_request_failed;
+                    $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-danger alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' + msg + '</div></div>');
                 }
             });
         }
@@ -281,7 +297,7 @@ function submitOqrsRequestGrouped() {
 	const qsos = [];
     $(".alertinfo").remove();
     if ($("#emailInput").val() == '') {
-        $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>You need to fill out an email address!</div></div>');
+        $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>You need to fill out an email address!</div></div>');
     } else {
         $(".result-table tbody tr").each(function(i) {
             var data = [];
@@ -290,6 +306,10 @@ function submitOqrsRequestGrouped() {
             var timecell = $("#time", this).val();
             var bandcell = $("#band", this).text();
             var modecell = $("#mode", this).text();
+            if (datecell !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(datecell)) {
+                $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>'+lang_oqrs_invalid_date+'</div></div>');
+                return false;
+            }
             if (datecell != "" && timecell != "") {
                 data.push(datecell);
                 data.push(timecell);
@@ -301,7 +321,7 @@ function submitOqrsRequestGrouped() {
         });
 
         if (qsos.length === 0) {
-            $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>You need to fill the QSO information before submitting a request!</div></div>');
+            $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-warning alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>You need to fill the QSO information before submitting a request!</div></div>');
         } else {
             $.ajax({
                 url: base_url+'index.php/oqrs/save_oqrs_request_grouped',
@@ -316,7 +336,11 @@ function submitOqrsRequestGrouped() {
                 success: function (data) {
                     $(".stationinfo").empty();
                     $(".searchinfo").empty();
-                    $(".stationinfo").append('<br /><div class="alert alert-success"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>Your QSL request has been saved!</div>');
+                    $(".stationinfo").append('<br /><div class="alert alert-success alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>Your QSL request has been saved!</div>');
+                },
+                error: function(xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.error) || lang_oqrs_request_failed;
+                    $(".searchinfo").prepend('<div class="alertinfo"><br /><div class="alert alert-danger alert-dismissible fade show"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' + msg + '</div></div>');
                 }
             });
         }
@@ -773,7 +797,7 @@ function deleteQsoMatch(qsoid, oqrsid) {
 						error: function (data) {
 							BootstrapDialog.alert({
 								title: 'ERROR',
-								message: 'An error ocurred while making the request',
+								message: 'An error occurred while making the request',
 								type: BootstrapDialog.TYPE_DANGER,
 								closable: false,
 								draggable: false,

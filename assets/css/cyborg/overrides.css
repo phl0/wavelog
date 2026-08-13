@@ -53,16 +53,6 @@ span.grid-text-worked > font {
 	font-weight: 400 !important;
 }
 
-path.grid-confirmed {
-	fill: rgba(20, 109, 20, 0.7) !important;
-	stroke: rgba(20, 255, 144, 0.7) !important;
-}
-
-path.grid-worked {
-	fill: rgba(172, 40, 40, 0.7) !important;
-	stroke: rgba(248, 96, 129, 0.7) !important;
-}
-
 .map-leaflet {
 	background-color: #2d3537!important;
 }
@@ -172,15 +162,6 @@ path.grid-worked {
 
 #edit_qso:not(.btn) {
 	float: left;
-}
-
-.qso_call {
-	float: left;
-	width: 140px;
-}
-
-.qso_icons {
-	float: right;
 }
 
 #qsoList_wrapper th {
@@ -328,4 +309,18 @@ svg text.month {
 	margin-left: -5px;
 	position: absolute;
 	width: 0;
+}
+
+::-webkit-scrollbar {
+	width: 12px;
+}
+
+::-webkit-scrollbar-track {
+	-webkit-box-shadow: inset 0 0 6px rgba(196, 196, 196, 0.185);
+	border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+	border-radius: 10px;
+	-webkit-box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.5);
 }

@@ -7,6 +7,8 @@
 
 class Qrzru {
 
+	public $callbookname = 'QRZ.ru';
+
 	// Return session key
 	public function session($username, $password) {
 		// URL to the XML Source
@@ -22,7 +24,6 @@ class Qrzru {
 		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 		curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog/'.$ci->optionslib->get_option('version'));
 		$xml = curl_exec($ch);
-		curl_close($ch);
 
 		// Create XML object
 		$xml = simplexml_load_string($xml);
@@ -48,7 +49,6 @@ class Qrzru {
 		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 		curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog/'.$ci->optionslib->get_option('version'));
 		$xml = curl_exec($ch);
-		curl_close($ch);
 
 		// Create XML object
 		$xml = simplexml_load_string($xml);
@@ -78,7 +78,6 @@ class Qrzru {
 			curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog/'.$ci->optionslib->get_option('version'));
 			$xml = curl_exec($ch);
 			$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-			curl_close($ch);
 
 			// Create XML object
 			$xml = simplexml_load_string($xml);
@@ -99,6 +98,7 @@ class Qrzru {
 				$data['dxcc'] 	= '';
 				$data['state'] = !empty((string)$xml->Callsign->state) ? substr((string)$xml->Callsign->state, 0, 2) : '';
 				$data['iota'] 	= '';
+				$data['image'] 	= (string)$xml->Files->file;
 				$data['county'] = (string)$xml->Callsign->state;
 				$data['ituz'] 	= (string)$xml->Callsign->itu_zone;
 				$data['cqz'] 	= (string)$xml->Callsign->cq_zone;
@@ -110,12 +110,18 @@ class Qrzru {
 				$data['dxcc'] 	= '';
 				$data['state'] 	= '';
 				$data['iota'] 	= '';
+				$data['image'] 	= (string)$xml->Files->file;
 				$data['county'] = '';
 				$data['ituz'] = '';
 				$data['cqz'] = '';
 			}
 		} finally {
+			$data['source'] = $this->sourcename();
 			return $data;
 		}
+	}
+
+	public function sourcename() {
+		return $this->callbookname;
 	}
 }

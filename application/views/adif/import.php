@@ -1,4 +1,21 @@
-<div class="container adif" id="adif_import">
+<style>
+	/* Ensure label sits above multiselect, not beside it (overrides span.multiselect-native-select) */
+	span.multiselect-native-select {
+		display: block !important;
+		width: 100% !important;
+	}
+	/* Ensure label sits above multiselect, not beside it */
+	span.multiselect-native-select .btn-group {
+		width: 100% !important;
+	}
+	/* Force the multiselect button to fill its column and drop the inherited .me-sm-2 right margin */
+	span.multiselect-native-select .multiselect {
+		width: 100% !important;
+		margin-right: 0 !important;
+		text-align: left !important;
+	}
+</style>
+<div class="container adif px-3 px-lg-4 mt-3 mb-3" id="adif_import">
 
     <h2><?php echo $page_title; ?></h2>
     <?php
@@ -11,58 +28,58 @@
     <div class="card">
         <div class="card-header">
             <ul class="nav nav-tabs card-header-tabs pull-right" role="tablist">
+                <?php
+                // Define all available tabs
+                $all_tabs = ['import', 'export', 'lotw', 'dcl', 'pota', 'cbr'];
+
+                // Use allowed_tabs if set, otherwise show all tabs
+                $tabs_to_show = isset($allowed_tabs) ? $allowed_tabs : $all_tabs;
+                ?>
+
+                <?php if (in_array('import', $tabs_to_show)): ?>
                 <li class="nav-item">
-                    <a class="nav-link <?php if ($showtab == '' || $showtab == 'adif') {
-                                            echo 'active';
-                                        } ?>" id="import-tab" data-bs-toggle="tab" href="#import" role="tab" aria-controls="import" aria-selected="<?php if ($showtab == '' || $showtab == 'adif') {
-                                                                                                                                                        echo 'true';
-                                                                                                                                                    } else {
-                                                                                                                                                        echo 'false';
-                                                                                                                                                    } ?>"><?= __("ADIF Import") ?></a>
+                    <a class="nav-link <?php if ($showtab == '' || $showtab == 'adif') { echo 'active';	} ?>"
+						id="import-tab" data-bs-toggle="tab" href="#import" role="tab" aria-controls="import"
+						aria-selected="<?php if ($showtab == '' || $showtab == 'adif') { echo 'true'; } else { echo 'false'; } ?>"><?= __("ADIF Import") ?></a>
                 </li>
+                <?php endif; ?>
+
+                <?php if (in_array('export', $tabs_to_show)): ?>
                 <li class="nav-item">
                     <a class="nav-link" id="export-tab" data-bs-toggle="tab" href="#export" role="tab" aria-controls="export" aria-selected="false"><?= __("ADIF Export") ?></a>
                 </li>
+                <?php endif; ?>
+
+                <?php if (in_array('dcl', $tabs_to_show)): ?>
                 <li class="nav-item">
-                    <a class="nav-link" id="lotw-tab" data-bs-toggle="tab" href="#lotw" role="tab" aria-controls="lotw" aria-selected="false"><?= __("Logbook of the World") ?></a>
+                    <a class="nav-link <?php if ($showtab == 'dcl') { echo 'active'; } ?>"
+						id="dcl-tab" data-bs-toggle="tab" href="#dcl" role="tab" aria-controls="dcl"
+						aria-selected="<?php if ($showtab == 'dcl') { echo 'true'; } else { echo 'false'; } ?>"><?= __("DARC DCL") ?></a>
                 </li>
+                <?php endif; ?>
+
+                <?php if (in_array('pota', $tabs_to_show)): ?>
                 <li class="nav-item">
-                    <a class="nav-link <?php if ($showtab == 'dcl') {
-                                            echo 'active';
-                                        } ?>" id="dcl-tab" data-bs-toggle="tab" href="#dcl" role="tab" aria-controls="dcl" aria-selected="<?php if ($showtab == 'dcl') {
-                                                                                                                                                echo 'true';
-                                                                                                                                            } else {
-                                                                                                                                                echo 'false';
-                                                                                                                                            } ?>"><?= __("DARC DCL") ?></a>
+                    <a class="nav-link <?php if ($showtab == 'potab') { echo 'active'; } ?>"
+						id="potab-tab" data-bs-toggle="tab" href="#potab" role="tab" aria-controls="potab"
+						aria-selected="<?php if ($showtab == 'potab') { echo 'true'; } else { echo 'false'; } ?>"><?= __("POTA") ?></a>
                 </li>
+                <?php endif; ?>
+
+                <?php if (in_array('cbr', $tabs_to_show)): ?>
                 <li class="nav-item">
-                    <a class="nav-link <?php if ($showtab == 'potab') {
-                                            echo 'active';
-                                        } ?>" id="potab-tab" data-bs-toggle="tab" href="#potab" role="tab" aria-controls="potab" aria-selected="<?php if ($showtab == 'potab') {
-                                                                                                                                                echo 'true';
-                                                                                                                                            } else {
-                                                                                                                                                echo 'false';
-                                                                                                                                            } ?>"><?= __("POTA") ?></a>
+                    <a class="nav-link <?php if ($showtab == 'cbr') { echo 'active'; } ?>"
+						id="cbr-tab" data-bs-toggle="tab" href="#cbr" role="tab" aria-controls="cbr"
+						aria-selected="<?php if ($showtab == 'cbr') { echo 'true'; } else { echo 'false'; } ?>"><?= __("CBR Import") ?></a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link <?php if ($showtab == 'cbr') {
-                                            echo 'active';
-                                        } ?>" id="cbr-tab" data-bs-toggle="tab" href="#cbr" role="tab" aria-controls="cbr" aria-selected="<?php if ($showtab == 'cbr') {
-                                                                                                                                                echo 'true';
-                                                                                                                                            } else {
-                                                                                                                                                echo 'false';
-                                                                                                                                            } ?>"><?= __("CBR Import") ?></a>
-                </li>
+                <?php endif; ?>
             </ul>
         </div>
 
         <div class="card-body">
             <div class="tab-content">
-                <div class="tab-pane <?php if ($showtab == '' || $showtab == 'adif') {
-                                            echo 'active';
-                                        } else {
-                                            echo 'fade';
-                                        } ?>" id="import" role="tabpanel" aria-labelledby="import-tab">
+                <?php if (in_array('import', $tabs_to_show)): ?>
+                <div class="tab-pane <?php if ($showtab == '' || $showtab == 'adif') { echo 'active'; } else { echo 'fade'; } ?>" id="import" role="tabpanel" aria-labelledby="import-tab">
 
                     <?php if (isset($error) && ($showtab == '' || $showtab == 'adif')) { ?>
                         <div class="alert alert-danger" role="alert">
@@ -81,11 +98,11 @@
 								<div class="small form-text text-muted"><?= __("Select Station Location") ?></div>
 								<select name="station_profile" class="form-select mb-2 me-sm-2">
 									<option value="0"><?= __("Select Station Location") ?></option>
-									<?php foreach ($station_profile->result() as $station) { ?>
-										<option value="<?php echo $station->station_id; ?>" <?php if ($station->station_id == $active_station_id) {
-																								echo " selected =\"selected\"";
-																							} ?>><?= __("Callsign") . ": " ?><?php echo $station->station_callsign; ?> (<?php echo $station->station_profile_name; ?>)</option>
-									<?php } ?>
+									<?php if ($station_profile !== FALSE) {
+									foreach ($station_profile->result() as $station) { ?>
+										<option value="<?php echo $station->station_id; ?>"<?php if ($station->station_id == $active_station_id) { echo " selected =\"selected\""; } ?>>
+										<?= __("Callsign") . ": " ?><?php echo $station->station_callsign; ?> (<?php echo $station->station_profile_name; ?>)</option>
+									<?php } } ?>
 								</select>
 
 								<div class="small form-text text-muted"><?= __("Choose ADIF File") ?></div>
@@ -123,7 +140,7 @@
 											<input class="form-check-input" type="checkbox" name="skipDuplicate" value="1" id="skipDuplicate">
 											<label class="form-check-label" for="skipDuplicate"><?= __("Import duplicate QSOs") ?></label>
 										</div>
-										<div class="small form-text text-muted"><?= __("Select if want to import QSOs, even if they already exist.") ?></div>
+										<div class="small form-text text-muted"><?= __("Select if QSOs shall be imported, even if they already exist.") ?></div>
 									</div>
 										<div class="col-md-6">
 											<div class="form-check-inline">
@@ -135,6 +152,7 @@
 								</div>
 
 								<div class="mb-3 row">
+								<?php if ($cd_p_level != 6){ ?>
 									<div class="col-md-6">
 										<div class="form-check-inline">
 											<input class="form-check-input" type="checkbox" name="skipStationCheck" value="1" id="skipStationCheck">
@@ -142,19 +160,30 @@
 										</div>
 										<div class="small form-text text-muted"><?= sprintf(__("If selected, Wavelog will try to import %sall%s QSOs from the ADIF, regardless if they match to the chosen station-location."), '<b>', '</b>'); ?></div>
 									</div>
+                                    <div class="col-md-6">
+                                        <div class="form-check-inline">
+                                            <input class="form-check-input" type="checkbox" name="skipGridCheck" value="1" id="skipGridCheck">
+                                            <label class="form-check-label" for="skipGridCheck"><span class="badge text-bg-warning"><?= __("DANGER") ?></span> <?= __("Ignore grid check on import") ?></label>
+                                        </div>
+                                        <div class="small form-text text-muted"><?= __("If selected, Wavelog will try to import QSOs even if the MY_GRIDSQUARE field in ADIF records does not match the locator of the chosen station-location.") ?></div>
+                                    </div>
+                                <?php } ?>
+                                </div>
 
-								<?php if ($show_operator_question) { ?>
+                                <?php if (($show_operator_question) && ($cd_p_level != 6)){ ?>
+                                    <div class="mb-3 row">
 										<div class="col-md-6">
 											<div class="form-check-inline">
 												<input class="form-check-input" type="checkbox" name="operatorName" value="1" id="operatorName">
 												<label class="form-check-label" for="operatorName"><?= __("Always use the logged-in account callsign as the operator call during import") ?></label>
 											</div>
 										</div>
+                                    </div>
 								<?php } ?>
-								</div>
 							</div>
 						</div>
 
+						<?php if ($cd_p_level != 6) { ?>
 						<div class="card mb-3">
 							<div class="card-header">
 								<h6 class="mb-0"><?= __("Mark QSOs as uploaded (This does NOT upload QSOs to these services!)") ?></h6>
@@ -216,12 +245,15 @@
 								<button type="button" class="btn mb-2 btn-sm btn-success" onclick="toggleAll(this)"><?= __("Toggle all checkboxes") ?></button>
 							</div>
 						</div>
+						<?php } ?>
 
 
                         <button id="prepare_sub" class="btn btn-sm btn-primary mb-2 ld-ext-right" value="Upload"><?= __("Upload") ?><div class="ld ld-ring ld-spin"></div></button>
                     </form>
                 </div>
+                <?php endif; ?>
 
+                <?php if (in_array('export', $tabs_to_show)): ?>
                 <div class="tab-pane fade" id="export" role="tabpanel" aria-labelledby="export-tab">
 
                     <form class="form" action="<?php echo site_url('adif/export_custom'); ?>" method="post" enctype="multipart/form-data">
@@ -232,17 +264,20 @@
 						<div class="row mb-4">
 							<div class="col-md-12">
 								<div class="col-md-6">
-									<div class="small form-text text-muted"><?= __("Select Station Location") ?></div>
+									<div class="small form-text text-muted"><?= __("Select Station Location") ?>
+										<?php if ($stations_active_log_only) { ?><br><span class="badge text-bg-info"><i class="fa-solid fa-info"></i></span> <?= __("All is limited to station locations linked to active logbook") ?><?php } ?>
+									</div>
 									<select name="station_profile" class="form-select mb-2 me-sm-2">
 										<option value="0"><?= __("All") ?></option>
-										<?php foreach ($station_profile->result() as $station) { ?>
+										<?php if ($station_profile !== FALSE) {
+										foreach ($station_profile->result() as $station) { ?>
 											<option value="<?php echo $station->station_id; ?>"
 												<?php if ($station->station_id == $this->stations->find_active()) {
 													echo " selected =\"selected\"";
 												} ?>>
 												<?= __("Callsign") . ": " ?><?php echo $station->station_callsign; ?> (<?php echo $station->station_profile_name; ?>)
 											</option>
-										<?php } ?>
+										<?php } } ?>
 									</select>
 								</div>
 							</div>
@@ -269,14 +304,16 @@
 								<h6 class="mb-0"><?= __("Export options") ?></h6>
 							</div>
 							<div class="card-body">
+                						<?php if (in_array('lotw', $tabs_to_show)) {?>
 								<div class="mb-3 row">
 									<div class="col-md-10">
 										<div class="form-check-inline">
 											<input class="form-check-input" type="checkbox" name="markLotw" value="1" id="markLotwExport">
-											<label class="form-check-label" for="markLotwExport"><?= __("Mark exported QSOs as uploaded to LoTW") ?></label>
+											<label class="form-check-label" for="markLotwExport"><?= __("Mark exported QSOs as already uploaded to LoTW") ?></label>
 										</div>
 									</div>
 								</div>
+								<?php } ?>
 								<div class="mb-3 row">
 									<div class="col-md-10">
 										<div class="form-check-inline">
@@ -298,39 +335,21 @@
 
                     <p><a href="<?php echo site_url('adif/exportsatlotw'); ?>" title="Export All Satellite QSOs Confirmed on LoTW" target="_blank" class="btn btn-sm btn-primary"><?= __("Export All Satellite QSOs Confirmed on LoTW") ?></a></p>
                 </div>
+                <?php endif; ?>
 
-                <div class="tab-pane fade" id="lotw" role="tabpanel" aria-labelledby="lotw-tab">
-                    <form class="form" action="<?php echo site_url('adif/mark_lotw'); ?>" method="post" enctype="multipart/form-data">
-                        <select name="station_profile" class="form-select mb-2 me-sm-2 w-50 w-lg-100">
-                            <option value="0"><?= __("Select Station Location") ?></option>
-                            <?php foreach ($station_profile->result() as $station) { ?>
-                                <option value="<?php echo $station->station_id; ?>"><?= __("Callsign") . ": " ?><?php echo $station->station_callsign; ?> (<?php echo $station->station_profile_name; ?>)</option>
-                            <?php } ?>
-                        </select>
-                        <p><span class="badge text-bg-warning"><?= __("Warning") ?></span> <?= __("If a date range is not selected then all QSOs will be marked!") ?></p>
-                        <br>
-                        <label for="from"><?= __("From date") . ": " ?></label>
-                        <input name="from" id="from" type="date" class="form-control w-auto">
-                        <br>
-                        <label for="to"><?= __("To date") . ": " ?></label>
-                        <input name="to" id="to" type="date" class="form-control w-auto">
-                        <br>
-                        <button type="button" class="btn btn-sm btn-primary" id="markExportedToLotw" value="Export"><?= __("Mark QSOs as exported to LoTW") ?></button>
-                    </form>
-                </div>
-
+                <?php if (in_array('dcl', $tabs_to_show)): ?>
                 <div class="tab-pane <?php if ($showtab == 'dcl') {
-                                            echo 'active';
-                                        } else {
-                                            echo 'fade';
-                                        } ?>" id="dcl" role="tabpanel" aria-labelledby="dcl-tab">
+                                                    echo 'active';
+                                                } else {
+                                                    echo 'fade';
+                                                } ?>" id="dcl" role="tabpanel" aria-labelledby="dcl-tab">
                     <?php if (isset($error) && $showtab == 'dcl') { ?>
                         <div class="alert alert-danger" role="alert">
                             <?php echo $error; ?>
                         </div>
                     <?php } ?>
 
-                    <p class="card-text"><?= sprintf(__("Go to %s and export your logbook with confirmed DOKs. To speed up the process you can select only DL QSOs to download (i.e. put 'DL' into Prefix List). The downloaded ADIF file can be uploaded here in order to update QSOs with DOK info."), "<a href='http://dcl.darc.de/dml/export_adif_form.php' target='_blank'>" . __("DARC DCL") . "</a>") ?></p>
+                    <p class="card-text"><?= sprintf(__("Go to %s and export your logbook with confirmed DOKs. To speed up the process you can select only DL QSOs to download (i.e. put 'DL' into Prefix List). The downloaded ADIF file can be uploaded here in order to update QSOs with DOK info."), "<a href='https://dcl.darc.de/dml/export_adif_form.php' target='_blank'>" . __("DARC DCL") . "</a>") ?> <?= sprintf(__("More information regarding the confirmation status in DCL can be found on the %sDCL Confluence page%s."), '<a target="_blank" href="https://confluence.darc.de/pages/viewpage.action?pageId=21037270">', '</a>'); ?></p>
                     <form class="form" action="<?php echo site_url('adif/dcl'); ?>" method="post" enctype="multipart/form-data">
 
                         <div class="mb-3 row">
@@ -360,16 +379,18 @@
                                 <div class="small form-text text-muted"><?= __("If unchecked, information about QSOs which could not be found in Wavelog will be displayed.") ?></div>
                             </div>
                         </div>
-                        <input class="form-control w-auto mb-2 me-sm-2" type="file" name="userfile" size="20" />
+                        <input class="form-control w-auto mb-2 me-sm-2" type="file" name="userfile" size="20" accept=".adi,.ADI,.adif,.ADIF" />
                         <button type="submit" class="btn btn-sm btn-primary mb-2" value="Upload"><?= __("Upload") ?></button>
                     </form>
                 </div>
+                <?php endif; ?>
 
+                <?php if (in_array('pota', $tabs_to_show)): ?>
                 <div class="tab-pane <?php if ($showtab == 'potab') {
-                                            echo 'active';
-                                        } else {
-                                            echo 'fade';
-                                        } ?>" id="potab" role="tabpanel" aria-labelledby="potab-tab">
+                                                    echo 'active';
+                                                } else {
+                                                    echo 'fade';
+                                                } ?>" id="potab" role="tabpanel" aria-labelledby="potab-tab">
                     <?php if (isset($error) && $showtab == 'potab') { ?>
                         <div class="alert alert-danger" role="alert">
                             <?php echo $error; ?>
@@ -380,11 +401,13 @@
                     <p><?= sprintf(__("An example for a tool to export the POTA hunter log in ADIF format is %s made by AF0G and available on GitHub."), '<a target="_blank" href="https://github.com/adamfast/pota-hunter-log-adif">'.'pota-hunter-log-adif'.'</a>'); ?></p>
                     <form class="form" action="<?php echo site_url('adif/pota'); ?>" method="post" enctype="multipart/form-data">
 
-                        <input class="form-control w-auto mb-2 me-sm-2" type="file" name="userfile" size="20" />
+                        <input class="form-control w-auto mb-2 me-sm-2" type="file" name="userfile" size="20" accept=".adi,.ADI,.adif,.ADIF" />
                         <button type="submit" class="btn btn-sm btn-primary mb-2" value="Upload"><?= __("Upload") ?></button>
                     </form>
                 </div>
+                <?php endif; ?>
 
+                <?php if (in_array('cbr', $tabs_to_show)): ?>
                 <div class="tab-pane <?php if ($showtab == 'cbr') {
                                             echo 'active';
                                         } else {
@@ -411,6 +434,10 @@
                                     } ?>
                                 </select>
                                 <div class="form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="trx_number_present" value="1" id="serial_number_present" unchecked>
+                                    <label class="form-check-label" for="trx_number_present"><?= __("The CBR file contains a TRX number at the end of each QSO line (for multi-op stations)") ?></label>
+                                </div>
+                                <div class="form-check-inline">
                                     <input class="form-check-input" type="checkbox" name="serial_number_present" value="1" id="serial_number_present" unchecked>
                                     <label class="form-check-label" for="serial_number_present"><?= __("A serial number is ALWAYS part of the exchange for both parties in this contest.") ?></label>
                                 </div>
@@ -418,10 +445,11 @@
                                 <div class="small form-text text-muted"><?= __("If unchecked, this will erase the default serial number that (for example) N1MM+ produces. If checked, it will correct the serial number if necessary.") ?></div>
                             </div>
                         </div>
-                        <input class="form-control w-auto mb-2 me-sm-2" type="file" name="userfile" size="20" />
+                        <input class="form-control w-auto mb-2 me-sm-2" type="file" name="userfile" size="20" accept=".cbr,.CBR" />
                         <button type="submit" class="btn btn-sm btn-primary mb-2" value="Upload"><?= __("Upload") ?></button>
                     </form>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

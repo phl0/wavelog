@@ -15,17 +15,12 @@
 	        <a class="nav-link" href="<?php echo site_url('search/filter'); ?>"><?= __("Advanced Search"); ?></a>
 	      </li>
 		  <li class="nav-item">
-	        <a class="nav-link" href="<?php echo site_url('search/incorrect_cq_zones'); ?>"><?= __("Incorrect CQ Zones"); ?></a>
-	      </li>
-		  <li class="nav-item">
-	        <a class="nav-link" href="<?php echo site_url('search/incorrect_itu_zones'); ?>"><?= __("Incorrect ITU Zones"); ?></a>
-	      </li>
-		  <li class="nav-item">
 	        <a class="nav-link" href="<?php echo site_url('search/lotw_unconfirmed'); ?>"><?= __("QSOs unconfirmed on LoTW"); ?></a>
 	      </li>
 	    </ul>
 	  </div>
 	  <div class="card-body">
+		<?php if ($stations_active_log_only) { ?><p class="card-text"><span class="badge text-bg-info"><i class="fa-solid fa-info"></i></span> <?= __("Search is limited to station locations linked to active logbook") ?></p><?php } ?>
 	  	<form method="post" action="" id="search_box" name="test">
 		  <div class="mb-3 row">
 		    <label for="callsign" class="col-sm-2 col-form-label"><?= __("Callsign / Gridsquare"); ?></label>

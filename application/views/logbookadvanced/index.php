@@ -1,28 +1,115 @@
 <script type="text/javascript">
-    var user_id = <?php echo $this->session->userdata('user_id'); ?>;
+    let user_id = <?php echo $this->session->userdata('user_id'); ?>;
 
     /*
      * Custom user settings
      */
-    var custom_date_format = "<?php echo $custom_date_format ?>";
+    let custom_date_format = "<?php echo $custom_date_format ?>";
     let user_map_custom = JSON.parse('<?php echo $user_map_custom; ?>');
 
-    var lang_gen_hamradio_latitude = '<?= __("Latitude"); ?>';
-    var lang_gen_hamradio_longitude = '<?= __("Longitude"); ?>';
-    var lang_gen_hamradio_gridsquare = '<?= __("Gridsquare"); ?>';
-    var lang_gen_hamradio_gridsquares = '<?= _pgettext("Map Options", "Gridsquares"); ?>';
-    var lang_gen_hamradio_distance = '<?= __("Distance"); ?>';
-    var lang_gen_hamradio_bearing = '<?= __("Bearing"); ?>';
-    var lang_gen_hamradio_pathlines = '<?= _pgettext("Map Options", "Path lines"); ?>';
-    var lang_gen_hamradio_callsigns = '<?= __("Show Callsigns"); ?>';
-    var lang_gen_hamradio_cq_zones = '<?= _pgettext("Map Options", "CQ Zones"); ?>';
-    var lang_gen_hamradio_itu_zones = '<?= _pgettext("Map Options", "ITU Zones"); ?>';
-    var lang_gen_hamradio_nightshadow = '<?= _pgettext("Map Options", "Night Shadow"); ?>';
-    var lang_gen_hamradio_ituzone = '<?= __("ITU Zone"); ?>';
-    var lang_gen_hamradio_cqzone = '<?= __("CQ Zone"); ?>';
-	var lang_gen_advanced_logbook_help = '<?= __("Advanced Logbook Help"); ?>';
+    let lang_gen_hamradio_latitude = '<?= __("Latitude"); ?>';
+    let lang_gen_hamradio_longitude = '<?= __("Longitude"); ?>';
+    let lang_gen_hamradio_gridsquare = '<?= __("Gridsquare"); ?>';
+    let lang_gen_hamradio_gridsquares = '<?= _pgettext("Map Options", "Gridsquares"); ?>';
+    let lang_gen_hamradio_distance = '<?= __("Distance"); ?>';
+    let lang_gen_hamradio_bearing = '<?= __("Bearing"); ?>';
+    let lang_gen_hamradio_pathlines = '<?= _pgettext("Map Options", "Path lines"); ?>';
+    let lang_gen_hamradio_callsigns = '<?= __("Show Callsigns"); ?>';
+    let lang_gen_hamradio_cq_zones = '<?= _pgettext("Map Options", "CQ Zones"); ?>';
+    let lang_gen_hamradio_itu_zones = '<?= _pgettext("Map Options", "ITU Zones"); ?>';
+    let lang_gen_hamradio_nightshadow = '<?= _pgettext("Map Options", "Night Shadow"); ?>';
+    let lang_gen_hamradio_ituzone = '<?= __("ITU Zone"); ?>';
+    let lang_gen_hamradio_cqzone = '<?= __("CQ Zone"); ?>';
+    let lang_gen_advanced_logbook_help = '<?= __("Advanced Logbook Help"); ?>';
+    let lang_gen_advanced_logbook_continent_fix = '<?= __("Continent fix"); ?>';
+    let lang_gen_advanced_logbook_problem_fixing_itu_zones = '<?= __("There was a problem fixing ITU Zones."); ?>';
+    let lang_gen_advanced_logbook_problem_fixing_cq_zones = '<?= __("There was a problem fixing CQ Zones."); ?>';
+    let lang_gen_advanced_logbook_itu_zones_updated = '<?= __("ITU Zones updated successfully!"); ?>';
+    let lang_gen_advanced_logbook_cq_zones_updated = '<?= __("CQ Zones updated successfully!"); ?>';
+    let lang_gen_advanced_logbook_select_row_itu_zones = '<?= __("You need to select at least 1 row to fix ITU Zones!"); ?>';
+    let lang_gen_advanced_logbook_select_row_cq_zones = '<?= __("You need to select at least 1 row to fix CQ Zones!"); ?>';
+    let lang_gen_advanced_logbook_select_row_state = '<?= __("You need to select at least 1 row to fix State!"); ?>';
+    let lang_gen_advanced_logbook_state_updated = '<?= __("State updated successfully!"); ?>';
+    let lang_gen_advanced_logbook_problem_fixing_state = '<?= __("There was a problem fixing State."); ?>';
+    let lang_gen_advanced_logbook_fixing_state = '<?= __("Fixing State"); ?>';
+    let lang_gen_advanced_logbook_fixing_state_qsos = '<?= __("Fixing State (%s QSOs)"); ?>';
+    let lang_gen_advanced_logbook_fixing_state_remaining = '<?= __("Fixing State: %s remaining"); ?>';
+    let lang_gen_advanced_logbook_fixed = '<?= __("Fixed"); ?>';
+    let lang_gen_advanced_logbook_fixed_with_count = '<?= __("Fixed: %s"); ?>';
+    let lang_gen_advanced_logbook_skipped = '<?= __("Skipped"); ?>';
+    let lang_gen_advanced_logbook_skipped_with_count = '<?= __("Skipped: %s, see details for skipped rows below"); ?>';
+    let lang_gen_advanced_logbook_state_fix_complete = '<?= __("State Fix Complete"); ?>';
+    let lang_gen_advanced_logbook_state_not_supported = '<?= __("Not all DXCC entities have state support. If you need support for additional countries, please create a ticket at %s with the GeoJSON file and desired letter coding for your country."); ?>';
+    let lang_gen_advanced_logbook_github_url = 'https://github.com/wavelog/wavelog/issues';
+    let lang_gen_advanced_logbook_github_link = '<a href="https://github.com/wavelog/wavelog/issues" target="_blank">Wavelog GitHub</a>';
+    let lang_gen_advanced_logbook_select_only_one_row_quickfilter = '<?= __("Only 1 row can be selected for Quickfilter!"); ?>'
+    let lang_gen_advanced_logbook_select_at_least_one_row_quickfilter = '<?= __("You need to select a row to use the Quickfilters!"); ?>';
+    let lang_gen_advanced_logbook_select_at_least_one_row_qslcard = '<?= __("You need to select a least 1 row to display a QSL card!"); ?>';
+    let lang_gen_advanced_logbook_continents_updated = '<?= __("Continents updated successfully!"); ?>';
+    let lang_gen_advanced_logbook_problem_fixing_continents = '<?= __("There was a problem fixing Continents."); ?>';
+    let lang_gen_advanced_logbook_error = '<?= __("ERROR"); ?>';
+    let lang_gen_advanced_logbook_success = '<?= __("SUCCESS"); ?>';
+    let lang_gen_advanced_logbook_info = '<?= __("INFO"); ?>';
+    let lang_gen_advanced_logbook_warning = '<?= __("WARNING"); ?>';
+    let lang_gen_advanced_logbook_qsl_card = '<?= __("QSL Card"); ?>';
+    let lang_gen_advanced_logbook_close = '<?= __("Close"); ?>';
+    let lang_gen_advanced_logbook_save = '<?= __("Save"); ?>';
+    let lang_gen_advanced_logbook_update_now = '<?= __("Update now"); ?>';
+    let lang_gen_advanced_logbook_options = '<?= __("Options for the Advanced Logbook"); ?>';
+    let lang_gen_advanced_logbook_label_print_error = '<?= __("Something went wrong with label print. Go to labels and check if you have defined a label, and that it is set for print!"); ?>';
+    let lang_gen_advanced_logbook_select_at_least_one_row = '<?= __("You need to select a least 1 row!"); ?>';
+    let lang_gen_advanced_logbook_start_printing_at_which_label = '<?= __("Start printing at which label?"); ?>';
+    let lang_gen_advanced_logbook_select_at_least_one_row_label = '<?= __("You need to select at least 1 row to print a label!"); ?>';
+    let lang_gen_advanced_logbook_error_saving_options = '<?= __("An error occurred while saving options: "); ?>';
+    let lang_gen_advanced_logbook_select_at_least_one_row_delete = '<?= __("You need to select a least 1 row to delete!"); ?>';
+    let lang_gen_advanced_logbook_select_at_least_one_row_callbook = '<?= __("You need to select a least 1 row to update from callbook!"); ?>';
+    let lang_gen_advanced_logbook_an_error_occurred_while_making_request = '<?= __("An error occurred while making the request"); ?>';
+    let lang_gen_advanced_logbook_select_at_least_one_location = '<?= __("You need to select at least 1 location to do a search!"); ?>';
+    let lang_gen_advanced_logbook_update_distances = '<?= __("Update Distances"); ?>';
+    let lang_gen_advanced_logbook_records_updated = '<?= __("QSO records updated."); ?>';
+    let lang_gen_advanced_logbook_problem_updating_distances = '<?= __("There was a problem updating distances."); ?>';
+    let lang_gen_advanced_logbook_distances_updated = '<?= __("Distances updated successfully!"); ?>';
+
+    let lang_gen_advanced_logbook_confirm_fix_missing_dxcc = '<?= __("Are you sure you want to fix all QSOs with missing DXCC information? This action cannot be undone."); ?>';
+    let lang_gen_advanced_logbook_dupe_search = '<?= __("Duplicate Search"); ?>';
+    let lang_gen_advanced_logbook_search = '<?= __("Search"); ?>';
+
+    let lang_gen_advanced_logbook_show_more = '<?= __("Show more"); ?>';
+    let lang_gen_advanced_logbook_show_less = '<?= __("Show less"); ?>';
+
+	let lang_gen_advanced_logbook_confirmedLabel = '<?= __("Gridsquares for"); ?>';
+	let lang_gen_advanced_logbook_workedLabel = '<?= __("Non DXCC matching gridsquare"); ?>';
+	let lang_label_print_options = "<?= __("Label Print Options"); ?>";
+
+	let lang_gen_advanced_logbook_select_row_merge_qso = '<?= __("You need to select exactly 2 QSOs to merge!"); ?>';
+	let lang_gen_advanced_logbook_merge_qsos = '<?= __("Merge QSOs"); ?>';
+	let lang_gen_advanced_logbook_confirm_merge_qsos = '<?= __("Are you really sure you want to merge these QSOs? This operation CAN\'T be undone!"); ?>';
+	let lang_gen_advanced_logbook_danger = '<?= __("Danger"); ?>';
+	let lang_gen_advanced_logbook_cancel = '<?= __("Cancel"); ?>';
+	let lang_gen_advanced_logbook_yes_merge_qsos = '<?= __("Yes, Merge QSOs"); ?>';
+	let lang_gen_advanced_logbook_qsos_merged = '<?= __("QSOs merged successfully!"); ?>';
+	let lang_gen_advanced_logbook_error_merging_qsos = '<?= __("Error merging QSOs"); ?>';
+	let lang_gen_advanced_logbook_error_loading_merge_dialog = '<?= __("Error loading merge dialog"); ?>';
+
+    let lang_gen_advanced_logbook_least_one = '<?= __("You need at least 1 QSO!"); ?>';
+	let lang_gen_advanced_logbook_attach_qsos = '<?= __("Attach QSOs to Contest"); ?>';
+    let lang_gen_advanced_logbook_error_loading_attach_dialog = '<?= __("Error loading attach to contest dialog"); ?>';
+	let lang_gen_advanced_logbook_qsos_attached = '<?= __("QSOs attached to contest successfully!"); ?>';
+	let lang_gen_advanced_logbook_error_attaching = '<?= __("Error attaching QSOs"); ?>';
+
+	let lang_gen_advanced_logbook_detach_qsos = '<?= __("Detach QSOs to Contest"); ?>';
+    let lang_gen_advanced_logbook_error_loading_detach_dialog = '<?= __("Error loading detach to contest dialog"); ?>';
+	let lang_gen_advanced_logbook_qsos_detached = '<?= __("QSOs detached to contest successfully!"); ?>';
+	let lang_gen_advanced_logbook_error_detaching = '<?= __("Error detaching QSOs"); ?>';
+
+	let lang_lba_edit_skipped   = '<?= __("%d of %d selected QSOs were skipped because you can only edit your own QSOs."); ?>';
+	let lang_lba_delete_skipped = '<?= __("%d of %d selected QSOs were skipped because you can only delete your own QSOs."); ?>';
+
+	let lang_gen_advanced_logbook_select_at_least_one_row_qslcard_print = '<?= __("You need to select at least 1 row to print a QSL card!"); ?>';
+	let lang_gen_advanced_logbook_qslcard_print_option = '<?= __("QSL Card print options"); ?>';
+
+    let homegrid ='<?php echo strtoupper($homegrid[0]); ?>';
     <?php
-    echo "var homegrid ='" . strtoupper($homegrid[0]) . "';";
     if (!isset($options)) {
         $options = "{
             \"datetime\":{\"show\":\"true\"},
@@ -56,6 +143,7 @@
             \"dok\":{\"show\":\"true\"},
             \"wwff\":{\"show\":\"true\"},
             \"sig\":{\"show\":\"true\"},
+            \"sig_info\":{\"show\":\"false\"},
             \"continent\":{\"show\":\"true\"},
             \"qrz\":{\"show\":\"true\"},
             \"profilename\":{\"show\":\"true\"},
@@ -68,6 +156,8 @@
             \"qth\":{\"show\":\"true\"},
             \"frequency\":{\"show\":\"true\"},
             \"dcl\":{\"show\":\"true\"},
+            \"last_modification\":{\"show\":\"false\"},
+            \"duration\":{\"show\":\"false\"},
         }";
     }
     $current_opts = json_decode($options);
@@ -128,6 +218,10 @@
         echo "\nvar o_template = { sig: {show: 'true'}};";
         echo "\nuser_options={...user_options, ...o_template};";
     }
+    if (!isset($current_opts->sig_info)) {
+        echo "\nvar o_template = { sig_info: {show: 'false'}};";
+        echo "\nuser_options={...user_options, ...o_template};";
+    }
     if (!isset($current_opts->continent)) {
         echo "\nvar o_template = { continent: {show: 'true'}};";
         echo "\nuser_options={...user_options, ...o_template};";
@@ -160,23 +254,30 @@
         echo "\nvar o_template = { antennaelevation: {show: 'true'}};";
         echo "\nuser_options={...user_options, ...o_template};";
     }
-	if (!isset($current_opts->county)) {
+    if (!isset($current_opts->county)) {
         echo "\nvar o_template = { county: {show: 'true'}};";
         echo "\nuser_options={...user_options, ...o_template};";
     }
-	if (!isset($current_opts->qth)) {
+    if (!isset($current_opts->qth)) {
         echo "\nvar o_template = { qth: {show: 'true'}};";
         echo "\nuser_options={...user_options, ...o_template};";
     }
-	if (!isset($current_opts->frequency)) {
+    if (!isset($current_opts->frequency)) {
         echo "\nvar o_template = { frequency: {show: 'true'}};";
         echo "\nuser_options={...user_options, ...o_template};";
     }
-		if (!isset($current_opts->dcl)) {
+    if (!isset($current_opts->dcl)) {
         echo "\nvar o_template = { dcl: {show: 'true'}};";
         echo "\nuser_options={...user_options, ...o_template};";
     }
-
+    if (!isset($current_opts->last_modification)) {
+        echo "\nvar o_template = { last_modification: {show: 'false'}};";
+        echo "\nuser_options={...user_options, ...o_template};";
+    }
+	if (!isset($current_opts->duration)) {
+        echo "\nvar o_template = { duration: {show: 'false'}};";
+        echo "\nuser_options={...user_options, ...o_template};";
+    }
 
     foreach ($mapoptions as $mo) {
 	    if ($mo != null) {
@@ -194,6 +295,21 @@
         padding-right: 5px;
         padding-left: 5px;
     }
+    #csv-button-container .dt-buttons {
+        display: contents;
+    }
+    .btn-filter-active {
+        background-color: #ffc107 !important;
+        border-color: #ffc107 !important;
+        color: #000 !important;
+    }
+    .btn-filter-active:hover {
+        background-color: #e0a800 !important;
+        border-color: #e0a800 !important;
+    }
+    .btn-filter-active .fas {
+        color: #000 !important;
+    }
 </style>
 <?php
 $options = json_decode($options);
@@ -209,443 +325,543 @@ $options = json_decode($options);
         <div class="row">
 
             <form id="searchForm" name="searchForm" action="<?php echo base_url() . "index.php/logbookadvanced/search"; ?>" method="post">
-                <input type="hidden" id="dupes" name="dupes" value="">
-				<input type="hidden" id="invalid" name="invalid" value="">
-                <div class="filterbody collapse">
-                    <div class="row">
-                        <div <?php if (($options->datetime->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="dateFrom"><?= __("From") . ": " ?></label>
-                            <input name="dateFrom" id="dateFrom" type="date" class="form-control form-control-sm w-auto">
-                        </div>
-                        <div <?php if (($options->datetime->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="dateTo"><?= __("To") . ": " ?></label>
-                            <input name="dateTo" id="dateTo" type="date" class="form-control form-control-sm w-auto">
-                        </div>
-                        <div <?php if (($options->dx->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="dx"><?= __("Dx"); ?></label>
-                            <input onclick="this.select()" type="text" name="dx" id="dx" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
-                        <div <?php if (($options->dxcc->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="dxcc"><?= __("DXCC"); ?></label>
-                            <select class="form-select form-select-sm" id="dxcc" name="dxcc">
-                                <option value="">-</option>
-                                <?php
-                                foreach ($dxccarray as $dxcc) {
-                                    if ($dxcc->adif == '0') {
-                                        echo '<option value='.$dxcc->adif.'>';
-                                        echo $dxcc->name;
-                                        echo '</option>';
-                                    } else {
-                                        echo '<option value=' . $dxcc->adif;
-                                        echo '>' . $dxcc->prefix . ' - ' . ucwords(strtolower($dxcc->name), "- (/");
-                                        if ($dxcc->Enddate != null) {
-                                            echo ' - (' . __("Deleted DXCC") . ')';
-                                        }
-                                    }
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div <?php if (($options->state->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="state"><?= __("State"); ?></label>
-                            <input onclick="this.select()" type="text" name="state" id="state" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
-                        <div <?php if (($options->gridsquare->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="gridsquare"><?= __("Gridsquare"); ?></label>
-                            <input onclick="this.select()" type="text" name="gridsquare" id="gridsquare" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
-                        <div <?php if (($options->mode->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="mode"><?= __("Mode"); ?></label>
-                            <select id="mode" name="mode" class="form-select form-select-sm">
-                                <option value=""><?= __("All"); ?></option>
-                                <?php
-                                foreach ($modes as $modeId => $mode) {
-                                ?><option value="<?php echo htmlspecialchars($mode ?? ''); ?>"><?php echo htmlspecialchars($mode ?? ''); ?></option><?php
-                                                                                                                                }
-                                                                                                                                    ?>
-                            </select>
-                        </div>
-                        <div <?php if (($options->band->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="band"><?= __("Band"); ?></label>
-                            <select id="band" name="band" class="form-select form-select-sm">
-                                <option value=""><?= __("All"); ?></option>
-                                <?php
-                                foreach ($bands as $band) {
-                                ?><option value="<?php echo htmlentities($band ?? ''); ?>"><?php echo htmlspecialchars($band ?? ''); ?></option><?php
-                                                                                                                            }
-                                                                                                                                ?>
-                            </select>
-                        </div>
-                        <div hidden class="sats_dropdown mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="sats"><?= __("Satellite"); ?></label>
-                            <select class="form-select form-select-sm" id="sats" name="sats">
-                                <option value="All"><?= __("All"); ?></option>
-                                <?php foreach ($sats as $sat) {
-                                    echo '<option value="' . htmlentities($sat) . '"' . '>' . htmlentities($sat) . '</option>' . "\n";
-                                } ?>
-                            </select>
-                        </div>
-                        <div hidden class="orbits_dropdown mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="orbits"><?= __("Orbit"); ?></label>
-                            <select class="form-select form-select-sm" id="orbits" name="orbits">
-                                <option value="All"><?= __("All"); ?></option>
-                                <?php foreach ($orbits as $orbit) {
-                                    echo '<option value="' . htmlentities($orbit) . '"' . '>' . htmlentities($orbit) . '</option>' . "\n";
-                                } ?>
-                            </select>
-                        </div>
-                        <div <?php if (($options->propagation->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="selectPropagation"><?= __("Propagation"); ?></label>
-                            <select id="selectPropagation" class="form-select form-select-sm" name="propmode">
-                                <option value=""><?= __("All"); ?></option>
-                                <option value="None"><?= _pgettext("Propagation Mode", "None/Empty"); ?></option>
-                                <option value="AS"><?= _pgettext("Propagation Mode", "Aircraft Scatter"); ?></option>
-                                <option value="AUR"><?= _pgettext("Propagation Mode", "Aurora"); ?></option>
-                                <option value="AUE"><?= _pgettext("Propagation Mode", "Aurora-E"); ?></option>
-                                <option value="BS"><?= _pgettext("Propagation Mode", "Back scatter"); ?></option>
-                                <option value="ECH"><?= _pgettext("Propagation Mode", "EchoLink"); ?></option>
-                                <option value="EME"><?= _pgettext("Propagation Mode", "Earth-Moon-Earth"); ?></option>
-                                <option value="ES"><?= _pgettext("Propagation Mode", "Sporadic E"); ?></option>
-                                <option value="FAI"><?= _pgettext("Propagation Mode", "Field Aligned Irregularities"); ?></option>
-                                <option value="F2"><?= _pgettext("Propagation Mode", "F2 Reflection"); ?></option>
-                                <option value="INTERNET"><?= _pgettext("Propagation Mode", "Internet-assisted"); ?></option>
-                                <option value="ION"><?= _pgettext("Propagation Mode", "Ionoscatter"); ?></option>
-                                <option value="IRL"><?= _pgettext("Propagation Mode", "IRLP"); ?></option>
-                                <option value="MS"><?= _pgettext("Propagation Mode", "Meteor scatter"); ?></option>
-                                <option value="RPT"><?= _pgettext("Propagation Mode", "Terrestrial or atmospheric repeater or transponder"); ?></option>
-                                <option value="RS"><?= _pgettext("Propagation Mode", "Rain scatter"); ?></option>
-                                <option value="SAT"><?= _pgettext("Propagation Mode", "Satellite"); ?></option>
-                                <option value="TEP"><?= _pgettext("Propagation Mode", "Trans-equatorial"); ?></option>
-                                <option value="TR"><?= _pgettext("Propagation Mode", "Tropospheric ducting"); ?></option>
-                            </select>
-                        </div>
-                        <div <?php if (($options->cqzone->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="cqzone"><?= __("CQ Zone"); ?></label>
-                            <select id="cqzone" name="cqzone" class="form-select form-select-sm">
-                                <option value="All"><?= __("All"); ?></option>
-                                <option value=""><?= __("Empty"); ?></option>
-                                <?php
-                                for ($i = 1; $i <= 40; $i++) {
-                                    echo '<option value="' . $i . '">' . $i . '</option>';
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div <?php if (($options->ituzone->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="ituzone"><?= __("ITU Zone"); ?></label>
-                            <select id="ituzone" name="ituzone" class="form-select form-select-sm">
-                                <option value="All"><?= __("All"); ?></option>
-                                <option value=""><?= __("Empty"); ?></option>
-                                <?php
-                                for ($i = 1; $i <= 90; $i++) {
-                                    echo '<option value="' . $i . '">' . $i . '</option>';
-                                }
-                                ?>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row">
-						<div <?php if (($options->county->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="county"><?= __("County"); ?></label>
-                            <input onclick="this.select()" type="text" name="county" id="county" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
-						<div <?php if (($options->dok->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="dok"><?= __("DOK"); ?></label>
-                            <input onclick="this.select()" type="text" name="dok" id="dok" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
-                        <div <?php if (($options->sota->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="sota"><?= __("SOTA"); ?></label>
-                            <input onclick="this.select()" type="text" name="sota" id="sota" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
-                        <div <?php if (($options->pota->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="pota"><?= __("POTA"); ?></label>
-                            <input onclick="this.select()" type="text" name="pota" id="pota" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
-                        <div <?php if (($options->iota->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="iota"><?= __("IOTA"); ?></label>
-                            <select class="form-select form-select-sm" id="iota" name="iota">
-                                <option value="">-</option>
-                                <?php
-                                foreach ($iotaarray as $iota) {
-                                    echo '<option value=' . $iota->tag;
-                                    echo '>' . $iota->tag . ' - ' . $iota->name . '</option>';
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div <?php if (($options->wwff->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="wwff"><?= __("WWFF"); ?></label>
-                            <input onclick="this.select()" type="text" name="wwff" id="wwff" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
-                        <div <?php if (($options->operator->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="operator"><?= __("Operator"); ?></label>
-                            <input onclick="this.select()" type="text" name="operator" id="operator" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
+                <input type="hidden" id="dupes" name="dupes" value="" class="filter-field">
+				<input type="hidden" id="invalid" name="invalid" value="" class="filter-field">
+				<input type="hidden" id="dupedate" name="dupedate" value="" class="filter-field">
+				<input type="hidden" id="dupemode" name="dupemode" value="" class="filter-field">
+				<input type="hidden" id="dupeband" name="dupeband" value="" class="filter-field">
+				<input type="hidden" id="dupesat" name="dupesat" value="" class="filter-field">
 
-                        <div <?php if (($options->contest->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="contest"><?= __("Contest"); ?></label>
-                            <input onclick="this.select()" type="text" name="contest" id="contest" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
-
-						<div <?php if (($options->continent->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="continent"><?= __("Continent"); ?></label>
-							<select id="continent" name="continent" class="form-select form-select-sm">
-								<option value=""><?= __("All"); ?></option>
-								<option value="blank"><?= __("None/Empty"); ?></option>
-								<option value="af"><?= __("Africa"); ?></option>
-								<option value="an"><?= __("Antarctica"); ?></option>
-								<option value="na"><?= __("North America"); ?></option>
-								<option value="as"><?= __("Asia"); ?></option>
-								<option value="eu"><?= __("Europe"); ?></option>
-								<option value="sa"><?= __("South America"); ?></option>
-								<option value="oc"><?= __("Oceania"); ?></option>
-								<option value="invalid"><?= __("Invalid"); ?></option>
-							</select>
-                        </div>
-
-						<div <?php if (($options->comment->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                            <label class="form-label" for="comment"><?= __("Comment"); ?></label>
-                            <input onclick="this.select()" type="text" name="comment" id="comment" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                        </div>
-                    </div>
-                </div>
-        </div>
-        <div class="qslfilterbody collapse">
-            <div class="row">
-                <div  <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="qslSent"><?= __("QSL sent"); ?></label>
-                    <select id="qslSent" name="qslSent" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                        <option value="R"><?= __("Requested"); ?></option>
-                        <option value="Q"><?= __("Queued"); ?></option>
-                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
-                    </select>
-                </div>
-                <div  <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="qslReceived"><?= __("QSL received"); ?></label>
-                    <select id="qslReceived" name="qslReceived" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                        <option value="R"><?= __("Requested"); ?></option>
-                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
-                        <option value="V"><?= __("Verified"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="qslSentMethod"><?= __("QSL send. method"); ?></label>
-                    <select id="qslSentMethod" name="qslSentMethod" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="B"><?= __("Bureau"); ?></option>
-                        <option value="D"><?= __("Direct"); ?></option>
-                        <option value="E"><?= __("Electronic"); ?></option>
-                        <option value="M"><?= __("Manager"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="qslReceivedMethod"><?= __("QSL recv. method"); ?></label>
-                    <select id="qslReceivedMethod" name="qslReceivedMethod" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="B"><?= __("Bureau"); ?></option>
-                        <option value="D"><?= __("Direct"); ?></option>
-                        <option value="E"><?= __("Electronic"); ?></option>
-                        <option value="M"><?= __("Manager"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->lotw->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="lotwSent"><?= __("LoTW sent"); ?></label>
-                    <select id="lotwSent" name="lotwSent" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                        <option value="R"><?= __("Requested"); ?></option>
-                        <option value="Q"><?= __("Queued"); ?></option>
-                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->lotw->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="lotwReceived"><?= __("LoTW received"); ?></label>
-                    <select id="lotwReceived" name="lotwReceived" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                        <option value="R"><?= __("Requested"); ?></option>
-                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
-                        <option value="V"><?= __("Verified"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->clublog->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="clublogSent"><?= __("Clublog sent"); ?></label>
-                    <select id="clublogSent" name="clublogSent" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                        <option value="R"><?= __("Requested"); ?></option>
-                        <option value="Q"><?= __("Queued"); ?></option>
-                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->clublog->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="clublogReceived"><?= __("Clublog received"); ?></label>
-                    <select id="clublogReceived" name="clublogReceived" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                        <option value="R"><?= __("Requested"); ?></option>
-                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
-                        <option value="V"><?= __("Verified"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->eqsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="eqslSent"><?= __("eQSL sent"); ?></label>
-                    <select id="eqslSent" name="eqslSent" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                        <option value="R"><?= __("Requested"); ?></option>
-                        <option value="Q"><?= __("Queued"); ?></option>
-                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->eqsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="eqslReceived"><?= __("eQSL received"); ?></label>
-                    <select id="eqslReceived" name="eqslReceived" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                        <option value="R"><?= __("Requested"); ?></option>
-                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
-                        <option value="V"><?= __("Verified"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->dcl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="dclSent"><?= __("DCL sent"); ?></label>
-                    <select id="dclSent" name="dclSent" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->dcl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="dclReceived"><?= __("DCL received"); ?></label>
-                    <select id="dclReceived" name="dclReceived" class="form-select form-select-sm">
-                        <option value=""><?= __("All"); ?></option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                        <option value="I"><?= __("Invalid (Ignore)"); ?></option>
-                    </select>
-                </div>
-                <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="qslvia"><?= __("QSL via"); ?></label>
-                    <input onclick="this.select()" type="search" name="qslvia" class="form-control form-control-sm" value="*" placeholder="<?= __("Empty"); ?>">
-                </div>
-                <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
-                    <label for="qslimages"><?= __("QSL Images"); ?></label>
-                    <select class="form-select form-select-sm" id="qslimages" name="qslimages">
-                        <option value="">-</option>
-                        <option value="Y"><?= __("Yes"); ?></option>
-                        <option value="N"><?= __("No"); ?></option>
-                    </select>
-                </div>
-            </div>
-        </div>
-		<?php if(clubaccess_check(9)) { ?>
-        <div class="actionbody collapse">
-            <script>
-                var lang_filter_actions_delete_warning = '<?= __("Warning! Are you sure you want to delete the marked QSO(s)?"); ?>';
-                var lang_filter_actions_delete_warning_details = '<?= __(" QSO(s) will be deleted"); ?>';
-            </script>
-            <div class="mb-2 btn-group">
-                <span class="h6 me-1"><?= __("With selected: "); ?></span>
-                <button type="button" class="btn btn-sm btn-primary me-1" id="btnUpdateFromCallbook"><?= __("Update from Callbook"); ?></button>
-                <button type="button" class="btn btn-sm btn-primary me-1" id="queueBureau"><?= __("Queue Bureau"); ?></button>
-                <button type="button" class="btn btn-sm btn-primary me-1" id="queueDirect"><?= __("Queue Direct"); ?></button>
-                <button type="button" class="btn btn-sm btn-primary me-1" id="queueElectronic"><?= __("Queue Electronic"); ?></button>
-                <button type="button" class="btn btn-sm btn-success me-1" id="sentBureau"><?= __("Sent (Bureau)"); ?></button>
-                <button type="button" class="btn btn-sm btn-success me-1" id="sentDirect"><?= __("Sent (Direct)"); ?></button>
-                <button type="button" class="btn btn-sm btn-success me-1" id="sentElectronic"><?= __("Sent (Electronic)"); ?></button>
-                <button type="button" class="btn btn-sm btn-danger me-1" id="dontSend"><?= __("Not Sent"); ?></button>
-                <button type="button" class="btn btn-sm btn-danger me-1" id="notRequired"><?= __("QSL Not Required"); ?></button>
-                <button type="button" class="btn btn-sm btn-danger me-1" id="notReceived"><?= __("Not Received"); ?></button>
-                <button type="button" class="btn btn-sm btn-warning me-1" id="receivedBureau"><?= __("Received (Bureau)"); ?></button>
-                <button type="button" class="btn btn-sm btn-warning me-1" id="receivedDirect"><?= __("Received (Direct)"); ?></button>
-                <button type="button" class="btn btn-sm btn-warning me-1" id="receivedElectronic"><?= __("Received (Electronic)"); ?></button>
-                <button type="button" class="btn btn-sm btn-info me-1" id="exportAdif"><?= __("Create ADIF"); ?></button>
-                <button type="button" class="btn btn-sm btn-info me-1" id="printLabel"><?= __("Print Label"); ?></button>
-                <button type="button" class="btn btn-sm btn-info me-1" id="qslSlideshow"><?= __("QSL Slideshow"); ?></button>
-				<button type="button" class="btn btn-sm btn-success me-1" id="fixCqZones"><?= __("Fix CQ Zones"); ?></button>
-				<button type="button" class="btn btn-sm btn-success me-1" id="fixItuZones"><?= __("Fix ITU Zones"); ?></button>
-            </div>
-        </div>
-		<?php } ?>
-        <div class="quickfilterbody collapse">
-            <div class="mb-2 btn-group">
-                <span class="h6 me-1"><?= __("Quicksearch with selected: "); ?></span>
-				<?php if (($options->datetime->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchDate"><?= __("Search Date"); ?></button><?php
-                                                                                                                                    } ?>
-                <?php if (($options->dx->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchCallsign"><?= __("Search Callsign"); ?></button><?php
-                                                                                                                                    } ?>
-                <?php if (($options->dxcc->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchDxcc"><?= __("Search DXCC"); ?></button><?php
-                                                                                                                            } ?>
-                <?php if (($options->state->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchState"><?= __("Search State"); ?></button><?php
-                                                                                                                                } ?>
-                <?php if (($options->gridsquare->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchGridsquare"><?= __("Search Gridsquare"); ?></button><?php
-                                                                                                                                        } ?>
-                <?php if (($options->cqzone->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchCqZone"><?= __("Search CQ Zone"); ?></button><?php
-                                                                                                                                    } ?>
-                <?php if (($options->ituzone->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchItuZone"><?= __("Search ITU Zone"); ?></button><?php
-                                                                                                                                    } ?>
-                <?php if (($options->mode->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchMode"><?= __("Search Mode"); ?></button><?php
-                                                                                                                            } ?>
-                <?php if (($options->band->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchBand"><?= __("Search Band"); ?></button><?php
-                                                                                                                            } ?>
-                <?php if (($options->iota->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchIota"><?= __("Search IOTA"); ?></button><?php
-                                                                                                                            } ?>
-                <?php if (($options->sota->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchSota"><?= __("Search SOTA"); ?></button><?php
-                                                                                                                            } ?>
-                <?php if (($options->pota->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchPota"><?= __("Search POTA"); ?></button><?php
-                                                                                                                            } ?>
-                <?php if (($options->wwff->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchWwff"><?= __("Search WWFF"); ?></button><?php
-                                                                                                                            } ?>
-                <?php if (($options->operator->show ?? "true") == "true") { ?>
-                    <button type="button" class="btn btn-sm btn-primary me-1" id="searchOperator"><?= __("Search Operator"); ?></button><?php
-                                                                                                                                    } ?>
-            </div>
-        </div>
         <div class="row pt-2">
 			<div class="d-flex flex-wrap btn-group w-auto mx-auto">
-				<button type="button" class="btn btn-sm btn-primary me-1 mb-2 lba_buttons flex-grow-0" data-bs-toggle="collapse" data-bs-target=".quickfilterbody" style="white-space: nowrap;">
-					<i class="fas fa-filter"></i> <?= __("Quickfilters"); ?>
-				</button>
-				<button type="button" class="btn btn-sm btn-primary me-1 lba_buttons flex-grow-0 mb-2" data-bs-toggle="collapse" data-bs-target=".qslfilterbody" style="white-space: nowrap;">
-					<i class="fas fa-filter"></i> <?= __("QSL Filters"); ?>
-				</button>
-				<button type="button" class="btn btn-sm btn-primary me-1 lba_buttons flex-grow-0 mb-2" data-bs-toggle="collapse" data-bs-target=".filterbody" style="white-space: nowrap;">
-					<i class="fas fa-filter"></i> <?= __("Filters"); ?>
-				</button>
-				<?php if(clubaccess_check(9)) { ?>
-				<button type="button" class="btn btn-sm btn-success lba_buttons me-1 flex-grow-0 mb-2" data-bs-toggle="collapse" data-bs-target=".actionbody" style="white-space: nowrap;">
-					<i class="fas fa-tasks"></i> <?= __("Actions"); ?>
-				</button>
-				<?php } ?>
+
+                <!-- Main Filters Dropdown -->
+                    <div class="dropdown d-inline-block" data-bs-auto-close="outside">
+                        <button class="btn btn-sm btn-primary dropdown-toggle me-1" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-filter"></i> <?= __("Filters"); ?>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-start p-3 mt-2" aria-labelledby="filterDropdown" style="min-width: 900px; max-height: 600px; overflow-y: auto;">
+                            <div class="card-body filterbody container-fluid">
+								<div class="row">
+									<div class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+									<label class="form-label" for="checkboxes"><?= __("Date Presets") . ": " ?></label>
+										<div class="d-flex flex-wrap gap-1">
+											<button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="applyPreset('today')"><?= __("Today") ?></button>
+											<button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="applyPreset('yesterday')"><?= __("Yesterday") ?></button>
+											<button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="applyPreset('last7days')"><?= __("Last 7 Days") ?></button>
+											<button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="applyPreset('last30days')"><?= __("Last 30 Days") ?></button>
+											<button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="applyPreset('thismonth')"><?= __("This Month") ?></button>
+											<button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="applyPreset('lastmonth')"><?= __("Last Month") ?></button>
+											<button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="applyPreset('thisyear')"><?= __("This Year") ?></button>
+											<button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="applyPreset('lastyear')"><?= __("Last Year") ?></button>
+											<button type="button" class="btn btn-danger btn-sm flex-shrink-0" onclick="resetDates()"><i class="fas fa-times"></i> <?= __("Clear") ?></button>
+										</div>
+									</div>
+								</div>
+                                <div class="row">
+                                    <div <?php if (($options->datetime->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="dateFrom"><?= __("From") . ": " ?></label>
+                                        <input name="dateFrom" id="dateFrom" type="date" class="form-control form-control-sm border border-secondary filter-field">
+                                    </div>
+                                    <div <?php if (($options->datetime->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="dateTo"><?= __("To") . ": " ?></label>
+                                        <input name="dateTo" id="dateTo" type="date" class="form-control form-control-sm border border-secondary filter-field">
+                                    </div>
+                                    <div <?php if (($options->dx->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="dx"><?= __("Dx"); ?></label>
+                                        <input onclick="this.select()" type="text" name="dx" id="dx" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+                                    <div <?php if (($options->dxcc->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="dxcc"><?= __("DXCC"); ?></label>
+                                        <select class="form-select form-select-sm border border-secondary filter-field" id="dxcc" name="dxcc">
+                                            <option value="">-</option>
+                                            <?php
+                                            foreach ($dxccarray as $dxcc) {
+                                                if ($dxcc->adif == '0') {
+                                                    echo '<option value='.$dxcc->adif.'>';
+                                                    echo $dxcc->name;
+                                                    echo '</option>';
+                                                } else {
+                                                    echo '<option value=' . $dxcc->adif;
+                                                    echo '>' . $dxcc->prefix . ' - ' . ucwords(strtolower($dxcc->name), "- (/");
+                                                    if ($dxcc->Enddate != null) {
+                                                        echo ' - (' . __("Deleted DXCC") . ')';
+                                                    }
+                                                }
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->state->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="state"><?= __("State"); ?></label>
+                                        <input onclick="this.select()" type="text" name="state" id="state" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+								</div>
+								<div class="row">
+                                    <div <?php if (($options->gridsquare->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="gridsquare"><?= __("Gridsquare"); ?></label>
+                                        <input onclick="this.select()" type="text" name="gridsquare" id="gridsquare" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+                                    <div <?php if (($options->mode->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="mode"><?= __("Mode"); ?></label>
+                                        <select id="mode" name="mode" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <?php
+                                            foreach ($modes as $modeId => $mode) {
+                                            ?><option value="<?php echo htmlspecialchars($mode ?? ''); ?>"><?php echo htmlspecialchars($mode ?? ''); ?></option><?php
+                                                                                                                                            }
+                                                                                                                                                ?>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->band->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="band"><?= __("Band"); ?></label>
+                                        <select id="band" name="band" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <?php
+                                            foreach ($bands as $band) {
+                                            ?><option value="<?php echo htmlentities($band ?? ''); ?>"><?php echo htmlspecialchars($band ?? ''); ?></option><?php
+                                                                                                                                        }
+                                                                                                                                            ?>
+                                        </select>
+                                    </div>
+                                    <div hidden class="sats_dropdown mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="sats"><?= __("Satellite"); ?></label>
+                                        <select class="form-select form-select-sm border border-secondary filter-field" id="sats" name="sats">
+                                            <option value="All"><?= __("All"); ?></option>
+                                            <?php foreach ($sats as $sat) {
+                                                echo '<option value="' . htmlentities($sat) . '"' . '>' . htmlentities($sat) . '</option>' . "\n";
+                                            } ?>
+                                        </select>
+                                    </div>
+                                    <div hidden class="orbits_dropdown mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="orbits"><?= __("Orbit"); ?></label>
+                                        <select class="form-select form-select-sm border border-secondary filter-field" id="orbits" name="orbits">
+                                            <option value="All"><?= __("All"); ?></option>
+                                            <?php foreach ($orbits as $orbit) {
+                                                echo '<option value="' . htmlentities($orbit) . '"' . '>' . htmlentities($orbit) . '</option>' . "\n";
+                                            } ?>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->propagation->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="selectPropagation"><?= __("Propagation"); ?></label>
+                                        <select id="selectPropagation" class="form-select form-select-sm border border-secondary filter-field" name="propmode">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="None"><?= _pgettext("Propagation Mode", "None/Empty"); ?></option>
+                                            <?php foreach ($adif_propmodes as $mode => $desc) {
+                                               echo "<option value=\"$mode\">".htmlspecialchars_decode($desc)."</option>\n";
+                                            } ?>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->cqzone->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="cqzone"><?= __("CQ Zone"); ?></label>
+                                        <select id="cqzone" name="cqzone" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value="All"><?= __("All"); ?></option>
+                                            <option value=""><?= __("Empty"); ?></option>
+                                            <?php
+                                            for ($i = 1; $i <= 40; $i++) {
+                                                echo '<option value="' . $i . '">' . $i . '</option>';
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+								</div>
+								<div class="row">
+                                    <div <?php if (($options->ituzone->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="ituzone"><?= __("ITU Zone"); ?></label>
+                                        <select id="ituzone" name="ituzone" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value="All"><?= __("All"); ?></option>
+                                            <option value=""><?= __("Empty"); ?></option>
+                                            <?php
+                                            for ($i = 1; $i <= 90; $i++) {
+                                                echo '<option value="' . $i . '">' . $i . '</option>';
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->county->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="county"><?= __("County"); ?></label>
+                                        <input onclick="this.select()" type="text" name="county" id="county" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+                                    <div <?php if (($options->dok->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="dok"><?= __("DOK"); ?></label>
+                                        <input onclick="this.select()" type="text" name="dok" id="dok" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+                                    <div <?php if (($options->sota->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="sota"><?= __("SOTA"); ?></label>
+                                        <input onclick="this.select()" type="text" name="sota" id="sota" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+                                    <div <?php if (($options->pota->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="pota"><?= __("POTA"); ?></label>
+                                        <input onclick="this.select()" type="text" name="pota" id="pota" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+								</div>
+								<div class="row">
+                                    <div <?php if (($options->iota->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="iota"><?= __("IOTA"); ?></label>
+                                        <select class="form-select form-select-sm border border-secondary filter-field" id="iota" name="iota">
+                                            <option value="">-</option>
+                                            <?php
+                                            foreach ($iotaarray as $iota) {
+                                                echo '<option value=' . $iota->tag;
+                                                echo '>' . $iota->tag . ' - ' . $iota->name . '</option>';
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->wwff->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="wwff"><?= __("WWFF"); ?></label>
+                                        <input onclick="this.select()" type="text" name="wwff" id="wwff" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+                                    <div <?php if (($options->operator->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="operator"><?= __("Operator"); ?></label>
+                                        <input onclick="this.select()" type="text" name="operator" id="operator" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+                                    <div <?php if (($options->contest->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="contest"><?= __("Contest"); ?></label>
+                                        <input onclick="this.select()" type="text" name="contest" id="contest" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+                                    <div <?php if (($options->continent->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="continent"><?= __("Continent"); ?></label>
+                                        <select id="continent" name="continent" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="blank"><?= __("None/Empty"); ?></option>
+                                            <option value="af"><?= __("Africa"); ?></option>
+                                            <option value="an"><?= __("Antarctica"); ?></option>
+                                            <option value="na"><?= __("North America"); ?></option>
+                                            <option value="as"><?= __("Asia"); ?></option>
+                                            <option value="eu"><?= __("Europe"); ?></option>
+                                            <option value="sa"><?= __("South America"); ?></option>
+                                            <option value="oc"><?= __("Oceania"); ?></option>
+                                            <option value="invalid"><?= __("Invalid"); ?></option>
+                                        </select>
+                                    </div>
+								</div>
+								<div class="row">
+                                    <div <?php if (($options->comment->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="comment"><?= __("Comment"); ?></label>
+                                        <input onclick="this.select()" type="text" name="comment" id="comment" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+									<div <?php if (($options->distance->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="distance"><?= __("Distance"); ?> <i class="fa fa-question-circle" aria-hidden="true" data-bs-toggle="tooltip" title="<?= __("Distance in kilometers. Search will look for distances greater than or equal to this value."); ?>"></i></label>
+                                        <input onclick="this.select()" type="text" name="distance" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+									<div <?php if (($options->duration->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="duration"><?= __("Duration"); ?> <i class="fa fa-question-circle" aria-hidden="true" data-bs-toggle="tooltip" title="<?= __("Duration in minutes. Search will look for durations greater than or equal to this value."); ?>"></i></label>
+                                        <input onclick="this.select()" type="text" name="duration" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+                                </div>
+								<div class="row">
+                                    <div class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="sortcolumn"><?= __("Sort column"); ?></label>
+										<select id="sortcolumn" name="sortcolumn" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value="qsotime"><?= __("QSO Time"); ?></option>
+                                            <option value="band"><?= __("Band"); ?></option>
+                                            <option value="mode"><?= __("Mode"); ?></option>
+                                            <option value="qsomodified"><?= __("QSO Modified"); ?></option>
+                                        </select>
+                                    </div>
+									<div class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label class="form-label" for="sortdirection"><?= __("Sort direction"); ?></label>
+										<select id="sortdirection" name="sortdirection" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value="desc"><?= __("Descending"); ?></option>
+                                            <option value="asc"><?= __("Ascending"); ?></option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+							<div class="row">
+									<div class="col-lg-2 col-md-2 col-sm-3 col-xl">
+										<div class="d-flex flex-wrap gap-1">
+											<button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="$('#searchForm').submit(); $('#filterDropdown').dropdown('hide');"><i class="fas fa-search"></i> <?= __("Apply filters"); ?></button>
+										</div>
+									</div>
+								</div>
+							</div>
+                    </div>
+
+                    <!-- QSL Filters Dropdown -->
+                    <div class="dropdown d-inline-block" data-bs-auto-close="outside">
+                        <button class="btn btn-sm btn-primary dropdown-toggle me-1" type="button" id="qslFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-filter"></i> <?= __("QSL Filters"); ?>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-start p-3 mt-2" aria-labelledby="qslFilterDropdown" style="min-width: 900px; max-height: 600px; overflow-y: auto;">
+                            <div class="card-body qslfilterbody">
+                                <div class="row">
+                                    <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="qslSent"><?= __("QSL sent"); ?></label>
+                                        <select id="qslSent" name="qslSent" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="R"><?= __("Requested"); ?></option>
+                                            <option value="Q"><?= __("Queued"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="qslReceived"><?= __("QSL received"); ?></label>
+                                        <select id="qslReceived" name="qslReceived" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="R"><?= __("Requested"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                            <option value="V"><?= __("Verified"); ?></option>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="qslSentMethod"><?= __("QSL send. method"); ?></label>
+                                        <select id="qslSentMethod" name="qslSentMethod" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="B"><?= __("Bureau"); ?></option>
+                                            <option value="D"><?= __("Direct"); ?></option>
+                                            <option value="E"><?= __("Electronic"); ?></option>
+                                            <option value="M"><?= __("Manager"); ?></option>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="qslReceivedMethod"><?= __("QSL recv. method"); ?></label>
+                                        <select id="qslReceivedMethod" name="qslReceivedMethod" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="B"><?= __("Bureau"); ?></option>
+                                            <option value="D"><?= __("Direct"); ?></option>
+                                            <option value="E"><?= __("Electronic"); ?></option>
+                                            <option value="M"><?= __("Manager"); ?></option>
+                                        </select>
+                                    </div>
+								</div>
+                                <div class="row">
+                                    <div <?php if (($options->lotw->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="lotwSent"><?= __("LoTW sent"); ?></label>
+                                        <select id="lotwSent" name="lotwSent" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="R"><?= __("Requested"); ?></option>
+                                            <option value="Q"><?= __("Queued"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->lotw->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="lotwReceived"><?= __("LoTW received"); ?></label>
+                                        <select id="lotwReceived" name="lotwReceived" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="R"><?= __("Requested"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                            <option value="V"><?= __("Verified"); ?></option>
+                                        </select>
+                                    </div>
+
+                                    <div <?php if (($options->clublog->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="clublogSent"><?= __("Clublog sent"); ?></label>
+                                        <select id="clublogSent" name="clublogSent" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="R"><?= __("Requested"); ?></option>
+                                            <option value="Q"><?= __("Queued"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->clublog->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="clublogReceived"><?= __("Clublog received"); ?></label>
+                                        <select id="clublogReceived" name="clublogReceived" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="R"><?= __("Requested"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                            <option value="V"><?= __("Verified"); ?></option>
+                                        </select>
+                                    </div>
+								</div>
+                                <div class="row">
+                                    <div <?php if (($options->eqsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="eqslSent"><?= __("eQSL sent"); ?></label>
+                                        <select id="eqslSent" name="eqslSent" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="R"><?= __("Requested"); ?></option>
+                                            <option value="Q"><?= __("Queued"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->eqsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="eqslReceived"><?= __("eQSL received"); ?></label>
+                                        <select id="eqslReceived" name="eqslReceived" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="R"><?= __("Requested"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                            <option value="V"><?= __("Verified"); ?></option>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->dcl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="dclSent"><?= __("DCL sent"); ?></label>
+                                        <select id="dclSent" name="dclSent" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->dcl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="dclReceived"><?= __("DCL received"); ?></label>
+                                        <select id="dclReceived" name="dclReceived" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                        </select>
+                                    </div>
+								</div>
+                                <div class="row">
+                                    <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="qslvia"><?= __("QSL via"); ?></label>
+                                        <input onclick="this.select()" type="search" name="qslvia" class="form-control form-control-sm border border-secondary filter-field" value="*" placeholder="<?= __("Empty"); ?>">
+                                    </div>
+                                    <div <?php if (($options->qsl->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="qslimages"><?= __("QSL Images"); ?></label>
+                                        <select class="form-select form-select-sm border border-secondary filter-field" id="qslimages" name="qslimages">
+                                            <option value="">-</option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                        </select>
+                                    </div>
+									<div <?php if (($options->qrz->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="qrzSent"><?= __("QRZ sent"); ?></label>
+                                        <select id="qrzSent" name="qrzSent" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                        </select>
+                                    </div>
+                                    <div <?php if (($options->qrz->show ?? "true") == "false") { echo 'style="display:none"'; } ?> class="mb-3 col-lg-2 col-md-2 col-sm-3 col-xl">
+                                        <label for="qrzReceived"><?= __("QRZ received"); ?></label>
+                                        <select id="qrzReceived" name="qrzReceived" class="form-select form-select-sm border border-secondary filter-field">
+                                            <option value=""><?= __("All"); ?></option>
+                                            <option value="Y"><?= __("Yes"); ?></option>
+                                            <option value="N"><?= __("No"); ?></option>
+                                            <option value="I"><?= __("Invalid (Ignore)"); ?></option>
+                                        </select>
+                                    </div>
+                                </div>
+								<div class="row">
+									<div class="col-lg-2 col-md-2 col-sm-3 col-xl">
+										<div class="d-flex flex-wrap gap-1">
+											<button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="$('#searchForm').submit(); $('#qslFilterDropdown').dropdown('hide');"><i class="fas fa-search"></i> <?= __("Apply filters"); ?></button>
+										</div>
+									</div>
+								</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quickfilters Dropdown -->
+                    <div class="dropdown d-inline-block" data-bs-auto-close="outside">
+                        <button class="btn btn-sm btn-primary dropdown-toggle me-1" type="button" id="quickfilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-filter me-1"></i> <?= __("Quickfilters"); ?>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-start" aria-labelledby="quickfilterDropdown">
+                            <li><h6 class="dropdown-header text-body"><?= __("Quicksearch with selected: "); ?></h6></li>
+                            <?php if (($options->datetime->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchDate"><i class="fas fa-fw fa-calendar-days me-1"></i><?= __("Search Date"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->dx->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchCallsign"><i class="fas fa-fw fa-tower-broadcast me-1"></i><?= __("Search Callsign"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->dxcc->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchDxcc"><i class="fas fa-fw fa-globe me-1"></i><?= __("Search DXCC"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->state->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchState"><i class="fas fa-fw fa-map-location-dot me-1"></i><?= __("Search State"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->gridsquare->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchGridsquare"><i class="fas fa-fw fa-table-cells me-1"></i><?= __("Search Gridsquare"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->cqzone->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchCqZone"><i class="fas fa-fw fa-layer-group me-1"></i><?= __("Search CQ Zone"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->ituzone->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchItuZone"><i class="fas fa-fw fa-border-all me-1"></i><?= __("Search ITU Zone"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->mode->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchMode"><i class="fas fa-fw fa-wave-square me-1"></i><?= __("Search Mode"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->band->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchBand"><i class="fas fa-fw fa-signal me-1"></i><?= __("Search Band"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->iota->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchIota"><i class="fas fa-fw fa-umbrella-beach me-1"></i><?= __("Search IOTA"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->sota->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchSota"><i class="fas fa-fw fa-mountain me-1"></i><?= __("Search SOTA"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->pota->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchPota"><i class="fas fa-fw fa-tree me-1"></i><?= __("Search POTA"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->wwff->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchWwff"><i class="fas fa-fw fa-leaf me-1"></i><?= __("Search WWFF"); ?></button></li>
+                            <?php } ?>
+                            <?php if (($options->operator->show ?? "true") == "true") { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="searchOperator"><i class="fas fa-fw fa-user me-1"></i><?= __("Search Operator"); ?></button></li>
+                            <?php } ?>
+                        </ul>
+                    </div>
+
+				<!-- End of Main Filters Dropdown -->
+
+                <!-- Actions Dropdown -->
+                <script>
+                    var lang_filter_actions_delete_warning = '<?= __("Warning! Are you sure you want to delete the marked QSO(s)?"); ?>';
+                    var lang_filter_actions_delete_warning_details = '<?= __(" QSO(s) will be deleted"); ?>';
+                </script>
+                <div class="dropdown d-inline-block" data-bs-auto-close="outside">
+                    <button class="btn btn-sm btn-success dropdown-toggle me-1" type="button" id="actionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-tasks me-1"></i> <?= __("Actions"); ?>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-start" aria-labelledby="actionsDropdown">
+                        <?php if(clubaccess_check(9)) { ?>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="btnUpdateFromCallbook"><i class="fas fa-fw fa-sync-alt me-1"></i><?= __("Update from Callbook"); ?></button></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="queueBureau"><i class="fas fa-fw fa-inbox me-1"></i><?= __("Queue Bureau"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="queueDirect"><i class="fas fa-fw fa-inbox me-1"></i><?= __("Queue Direct"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="queueElectronic"><i class="fas fa-fw fa-inbox me-1"></i><?= __("Queue Electronic"); ?></button></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="sentBureau"><i class="fas fa-fw fa-paper-plane me-1"></i><?= __("Sent (Bureau)"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="sentDirect"><i class="fas fa-fw fa-paper-plane me-1"></i><?= __("Sent (Direct)"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="sentElectronic"><i class="fas fa-fw fa-paper-plane me-1"></i><?= __("Sent (Electronic)"); ?></button></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="dontSend"><i class="fas fa-fw fa-times me-1"></i><?= __("Not Sent"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="notRequired"><i class="fas fa-fw fa-ban me-1"></i><?= __("QSL Not Required"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="notReceived"><i class="fas fa-fw fa-times-circle me-1"></i><?= __("Not Received"); ?></button></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="receivedBureau"><i class="fas fa-fw fa-check-circle me-1"></i><?= __("Received (Bureau)"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="receivedDirect"><i class="fas fa-fw fa-check-circle me-1"></i><?= __("Received (Direct)"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="receivedElectronic"><i class="fas fa-fw fa-check-circle me-1"></i><?= __("Received (Electronic)"); ?></button></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="exportAdif"><i class="fas fa-fw fa-file-export me-1"></i><?= __("Create ADIF"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="printLabel"><i class="fas fa-fw fa-tag me-1"></i><?= __("Print Label"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="qslSlideshow"><i class="fas fa-fw fa-images me-1"></i><?= __("QSL Slideshow"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="printQslCard"><i class="fas fa-fw fa-id-card me-1"></i><?= __("Print QSL Card"); ?></button></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="fixState"><i class="fas fa-fw fa-map-marker-alt me-1"></i><?= __("Fix State"); ?></button></li>
+                            <li><button type="button" class="dropdown-item dropdown-action" id="mergeQsos"><i class="fas fa-fw fa-code-branch me-1"></i><?= __("Merge QSOs"); ?></button></li>
+                            <li><hr class="dropdown-divider"></li>
+                        <?php } ?>
+                        <li><button type="button" class="dropdown-item dropdown-action" id="attachContest"><i class="fas fa-fw fa-link me-1"></i><?= __("Attach to Contest"); ?></button></li>
+                        <li><button type="button" class="dropdown-item dropdown-action" id="detachContest"><i class="fas fa-fw fa-unlink me-1"></i><?= __("Detach from Contest"); ?></button></li>
+                        <li><button type="button" class="dropdown-item dropdown-action" id="lbaExportCsv"><i class="fas fa-fw fa-file-csv me-1"></i><?= __("Export to CSV"); ?></button></li>
+                    </ul>
+                </div>
+                <div id="csv-button-container" style="display:none"></div>
 				<label for="qsoResults" class="me-2" style="white-space: nowrap;"><?= __("# Results"); ?></label>
-				<select id="qsoResults" name="qsoresults" class="form-select form-select-sm me-2 w-auto">
+				<select id="qsoResults" name="qsoresults" class="form-select form-select-sm w-auto me-2" style="height: calc(1.5em + .5rem + 2px) !important;">
 					<option value="250">250</option>
 					<option value="1000">1000</option>
 					<option value="2500">2500</option>
@@ -653,13 +869,13 @@ $options = json_decode($options);
 				</select>
 				<label class="me-2" for="de"><?= __("Location"); ?></label>
 				<select class="form-select form-select-sm w-auto me-2" id="de" name="de" multiple="multiple">
-					<?php foreach ($station_profile->result() as $station) { ?>
+					<?php if($station_profile !== FALSE) { foreach ($station_profile->result() as $station) { ?>
 						<option value="<?php echo $station->station_id; ?>" <?php if ($station->station_id == $active_station_id) {
 							echo " selected =\"selected\""; } ?>>
 							<?= __("Callsign: ") . " " ?>
 							<?php echo str_replace("0", "&Oslash;", strtoupper($station->station_callsign)); ?> (<?php echo $station->station_profile_name; ?>)
 						</option>
-					<?php } ?>
+					<?php } } ?>
 				</select>
 				<button type="submit" class="btn btn-sm btn-success me-1 ld-ext-right flex-grow-0 mb-2" aria-label="<?= __("Search"); ?>" id="searchButton" style="white-space: nowrap;" data-bs-toggle="tooltip" data-bs-placement="top" title="<?= __("Search"); ?>">
 					<i class="fas fa-search"></i><div class="ld ld-ring ld-spin"></div>
@@ -670,7 +886,7 @@ $options = json_decode($options);
 				<button type="button" class="btn btn-sm btn-primary me-1 ld-ext-right flex-grow-0 mb-2" id="invalidButton" style="white-space: nowrap;">
 					<i class="fa fa-exclamation-triangle"></i> <?= __("Invalid"); ?><div class="ld ld-ring ld-spin"></div>
 				</button>
-				<?php if(clubaccess_check(9)) { ?>
+				<?php if(clubaccess_check(3)) { ?>
 				<button type="button" class="btn btn-sm btn-primary me-1 ld-ext-right flex-grow-0 mb-2" id="editButton" style="white-space: nowrap;">
 					<i class="fas fa-edit"></i> <?= __("Edit"); ?><div class="ld ld-ring ld-spin"></div>
 				</button>
@@ -688,6 +904,11 @@ $options = json_decode($options);
 					<button type="options" class="btn btn-sm btn-primary me-1 flex-grow-0 mb-2" id="optionButton" aria-label="<?= __("Options"); ?>" style="white-space: nowrap;" data-bs-toggle="tooltip" data-bs-placement="top" title="<?= __("Options"); ?>">
 						<i class="fas fa-cog"></i>
 					</button>
+					<button type="button" class="btn btn-sm btn-primary me-1 flex-grow-0 mb-2" id="dbtools" style="white-space: nowrap;" aria-label="<?= __("Database Tools"); ?>"  data-bs-toggle="tooltip" data-bs-placement="top" title="<?= __("Database Tools"); ?>">
+						<i class="fas fa-wrench"></i>
+					</button>
+				<?php } ?>
+				<?php if(clubaccess_check(3)) { ?>
 					<button type="button" class="btn btn-sm btn-danger me-1 flex-grow-0 mb-2" id="deleteQsos" style="white-space: nowrap;" aria-label="<?= __("Delete"); ?>"  data-bs-toggle="tooltip" data-bs-placement="top" title="<?= __("Delete"); ?>">
 						<i class="fas fa-trash-alt"></i>
 					</button>
@@ -702,14 +923,20 @@ $options = json_decode($options);
 		</div>
 
         </form>
-        <table style="width:100%" class="table-sm table table-hover table-striped table-bordered table-condensed text-center" id="qsoList">
+        <table style="width:100%" class="table-sm lbatable table table-hover table-striped table-bordered table-condensed text-center" id="qsoList">
             <thead>
                 <tr>
                     <th>
-                        <div class="form-check" style="margin-top: -1.5em"><input class="form-check-input" type="checkbox" id="checkBoxAll" /></div>
+                        <div class="form-check"><input class="form-check-input" type="checkbox" id="checkBoxAll" /></div>
                     </th>
                     <?php if (($options->datetime->show ?? "true") == "true") {
                         echo '<th>' . __("Date/Time") . '</th>';
+                    } ?>
+					 <?php if (($options->duration->show ?? "false") == "true") {
+                        echo '<th>' . __("Duration") . '</th>';
+                    } ?>
+                    <?php if (($options->last_modification->show ?? "false") == "true") {
+                        echo '<th>' . __("Last modified") . '</th>';
                     } ?>
                     <?php if (($options->de->show ?? "true") == "true") {
                         echo '<th>' . __("De") . '</th>';
@@ -729,7 +956,7 @@ $options = json_decode($options);
                     <?php if (($options->band->show ?? "true") == "true") {
                         echo '<th>' . __("Band") . '</th>';
                     } ?>
-					<?php if (($options->frequency->show ?? "true") == "true") {
+                    <?php if (($options->frequency->show ?? "true") == "true") {
                         echo '<th>' . __("Frequency") . '</th>';
                     } ?>
                     <?php if (($options->gridsquare->show ?? "true") == "true") {
@@ -738,7 +965,7 @@ $options = json_decode($options);
                     <?php if (($options->name->show ?? "true") == "true") {
                         echo '<th>' . __("Name") . '</th>';
                     } ?>
-					<?php if (($options->qth->show ?? "true") == "true") {
+                    <?php if (($options->qth->show ?? "true") == "true") {
                         echo '<th>' . __("QTH") . '</th>';
                     } ?>
                     <?php if (($options->qslvia->show ?? "true") == "true") {
@@ -750,16 +977,16 @@ $options = json_decode($options);
                     <?php if (($options->qsl->show ?? "true") == "true") {
                         echo '<th>' . __("QSL") . '</th>';
                     } ?>
-					<?php if (($options->eqsl->show ?? "true") == "true") {
-						echo '<th class="eqslconfirmation">eQSL</th>';
-					} ?>
-					<?php if (($options->lotw->show ?? "true") == "true") {
-						echo '<th class="lotwconfirmation">LoTW</th>';
-					} ?>
+                    <?php if (($options->eqsl->show ?? "true") == "true") {
+                        echo '<th class="eqslconfirmation">eQSL</th>';
+                    } ?>
+                    <?php if (($options->lotw->show ?? "true") == "true") {
+                        echo '<th class="lotwconfirmation">LoTW</th>';
+                    } ?>
                     <?php if (($options->qrz->show ?? "true") == "true") {
                         echo '<th class="qrz">' . __("QRZ") . '</th>';
                     } ?>
-					<?php if (($options->dcl->show ?? "true") == "true") {
+                    <?php if (($options->dcl->show ?? "true") == "true") {
                         echo '<th>' . __("DCL") . '</th>';
                     } ?>
                     <?php if (($options->qslmsgs->show ?? "false") == "true") {
@@ -774,7 +1001,7 @@ $options = json_decode($options);
                     <?php if (($options->state->show ?? "true") == "true") {
                         echo '<th>' . __("State") . '</th>';
                     } ?>
-					<?php if (($options->county->show ?? "true") == "true") {
+                    <?php if (($options->county->show ?? "true") == "true") {
                         echo '<th>' . __("County") . '</th>';
                     } ?>
                     <?php if (($options->cqzone->show ?? "true") == "true") {
@@ -800,6 +1027,9 @@ $options = json_decode($options);
                     } ?>
                     <?php if (($options->sig->show ?? "true") == "true") {
                         echo '<th>SIG</th>';
+                    } ?>
+                    <?php if (($options->sig_info->show ?? "false") == "true") {
+                        echo '<th>' . __("SIG Info") . '</th>';
                     } ?>
                     <?php if (($options->region->show ?? "true") == "true") {
                         echo '<th>' . __("Region") . '</th>';

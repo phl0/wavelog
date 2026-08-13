@@ -1,13 +1,13 @@
 <?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
+use Wavelog\Dxcc\Dxcc;
+
+require_once APPPATH . '../src/Dxcc/Dxcc.php';
 
 class Logbook extends CI_Controller {
 
-	function index()
-	{
-
+	function index() {
 		// Check if users logged in
-		$this->load->model('user_model');
 		if($this->user_model->validate_session() == 0) {
 			// user is not logged in
 			redirect('user/login');
@@ -19,7 +19,7 @@ class Logbook extends CI_Controller {
 		$this->load->library('pagination');
 		$config['base_url'] = base_url().'index.php/logbook/index/';
 		$config['total_rows'] = $this->logbook_model->total_qsos();
-		$config['per_page'] = '25';
+		$config['per_page'] = 25;
 		$config['num_links'] = 6;
 		$config['full_tag_open'] = '';
 		$config['full_tag_close'] = '';
@@ -31,6 +31,7 @@ class Logbook extends CI_Controller {
 		//load the model and get results
 		$data['results'] = $this->logbook_model->get_qsos($config['per_page'],$this->uri->segment(3));
 
+		$data['adif_propmodes'] = $this->config->item('adif_propmodes');
 		$data['user_map_custom'] = $this->optionslib->get_map_custom();
 
 		if(!$data['results']) {
@@ -64,22 +65,26 @@ class Logbook extends CI_Controller {
 	}
 
 	function jsonentity($adif) {
-        $this->load->model('user_model');
-        if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
-        $return['dxcc'] = $this->getentity($adif);
-        header('Content-Type: application/json');
-        echo json_encode($return, JSON_PRETTY_PRINT);
-    }
+		$return['dxcc'] = $this->getentity($adif);
+		header('Content-Type: application/json');
+		echo json_encode($return, JSON_PRETTY_PRINT);
+	}
 
 	function json($tempcallsign, $tempband, $tempmode, $tempstation_id = null, $date = "", $count = 5) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 		session_write_close();
 
 		// Normalize the date only if it's not empty
 		if (!empty($date)) {
+			// Characters '/' and ',' are not URL safe, so we replace
+			// them with  '_' and '%'. Switch them back here.
 			if (strpos($date, '_') !== false) {
-				// Replace slashes with dashes for URL processing
 				$date = str_replace('_', '/', $date);
+			}
+			if (strpos($date, '%') !== false) {
+				$date = str_replace('%', ',', $date);
 			}
 			// Get user-preferred date format
 			if ($this->session->userdata('user_date_format')) {
@@ -103,8 +108,6 @@ class Logbook extends CI_Controller {
 		$station_id = $this->security->xss_clean($tempstation_id);
 		$date = $this->security->xss_clean($date);
 
-		$this->load->model('user_model');
-		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
 		// Convert - in Callsign to / Used for URL processing
 		$callsign = str_replace("-","/",$callsign);
@@ -145,7 +148,8 @@ class Logbook extends CI_Controller {
 
 		$return['dxcc'] = $this->dxcheck($callsign,$date);
 
-		$lookupcall = $this->logbook_model->get_plaincall($callsign);
+		$this->load->library('callbook');
+		$lookupcall = $this->callbook->get_plaincall($callsign);
 
 		$callbook = $this->logbook_model->loadCallBook($callsign, $this->config->item('use_fullname'));
 
@@ -157,21 +161,28 @@ class Logbook extends CI_Controller {
 			$measurement_base = $this->session->userdata('user_measurement_base');
 		}
 
-		$return['callsign_name'] 		= $this->nval($callbook['name'] ?? '', $this->logbook_model->call_name($callsign));
-		$return['callsign_qra'] 		= $this->nval($callbook['gridsquare'] ?? '',  $this->logbook_model->call_qra($callsign));
+		// Get user's lookup priority preference
+		$lookup_priority = $this->get_lookup_priority();
+
+		// Consolidated callsign lookup - reduces queries from 11 to 2
+		$callsign_info = $this->logbook_model->get_callsign_all_info($callsign);
+		$return['callsign_name'] 		= $this->nval($callsign_info['name'], $callbook['name'] ?? '', $lookup_priority);
+		$return['callsign_qra'] 		= $this->nval($callsign_info['qra'], $callbook['gridsquare'] ?? '', $lookup_priority);
 		$return['callsign_geoloc'] 		= $callbook['geoloc'] ?? '';
 		$return['callsign_distance'] 	= $this->distance($return['callsign_qra'], $station_id);
-		$return['callsign_qth'] 		= $this->nval($callbook['city'] ?? '', $this->logbook_model->call_qth($callsign));
-		$return['callsign_iota'] 		= $this->nval($callbook['iota'] ?? '', $this->logbook_model->call_iota($callsign));
-		$return['callsign_email'] 		= $this->nval($callbook['email'] ?? '', $this->logbook_model->call_email($callsign));
-		$return['qsl_manager'] 			= $this->nval($callbook['qslmgr'] ?? '', $this->logbook_model->call_qslvia($callsign));
-		$return['callsign_state'] 		= $this->nval($callbook['state'] ?? '', $this->logbook_model->call_state($callsign));
-		$return['callsign_us_county'] 	= $this->nval($callbook['us_county'] ?? '', $this->logbook_model->call_us_county($callsign));
-		$return['callsign_ituz'] 	= $this->nval($callbook['ituz'] ?? '', $this->logbook_model->call_ituzone($callsign));
-		$return['callsign_cqz'] 	= $this->nval($callbook['cqz'] ?? '', $this->logbook_model->call_cqzone($callsign));
+		$return['callsign_qth'] 		= $this->nval($callsign_info['qth'], $callbook['city'] ?? '', $lookup_priority);
+		$return['callsign_iota'] 		= $this->nval($callsign_info['iota'], $callbook['iota'] ?? '', $lookup_priority);
+		$return['callsign_email'] 		= $this->nval($callsign_info['email'], $callbook['email'] ?? '', $lookup_priority);
+		$return['qsl_manager'] 			= $this->nval($callsign_info['qslvia'], $callbook['qslmgr'] ?? '', $lookup_priority);
+		$return['callsign_state'] 		= $this->nval($callsign_info['state'], $callbook['state'] ?? '', $lookup_priority);
+		$return['callsign_us_county'] 	= $this->nval($callsign_info['us_county'], $callbook['us_county'] ?? '', $lookup_priority);
+		$return['callsign_ituz'] 	= $this->nval($callsign_info['ituz'], $callbook['ituz'] ?? '', $lookup_priority);
+		$return['callsign_cqz'] 	= $this->nval($callsign_info['cqz'], $callbook['cqz'] ?? '', $lookup_priority);
+		// call_darc_dok remains separate due to different query pattern (uses logbooks_relationships)
+		$return['callsign_darc_dok'] 		= $this->nval($this->logbook_model->call_darc_dok($callsign), $callbook['darc_dok'] ?? '', $lookup_priority);
 		$return['workedBefore'] 		= $this->worked_grid_before($return['callsign_qra'], $band, $mode);
-		$return['confirmed'] 		= $this->confirmed_grid_before($return['callsign_qra'], $band, $mode);
-		$return['timesWorked'] 		= $this->logbook_model->times_worked($lookupcall);
+		$return['confirmed'] 			= $this->confirmed_grid_before($return['callsign_qra'], $band, $mode);
+		$return['timesWorked'] 			= $this->logbook_model->times_worked($lookupcall);
 
 		if ($this->session->userdata('user_show_profile_image')) {
 			if (isset($callbook) && isset($callbook['image'])) {
@@ -183,24 +194,72 @@ class Logbook extends CI_Controller {
 			} else {
 				$return['image'] = "n/a";
 			}
+
+			// Additional profile information from QRZ
+			$return['profile_url'] = $callbook['url'] ?? '';
+			$return['profile_class'] = $callbook['class'] ?? '';
+			$return['profile_born'] = $callbook['born'] ?? '';
+			$return['profile_eqsl'] = $callbook['eqsl'] ?? '';
+			$return['profile_lotw'] = $callbook['lotw'] ?? '';
+			$return['profile_mqsl'] = $callbook['mqsl'] ?? '';
+			$return['profile_fname'] = $callbook['fname'] ?? '';
+			$return['profile_name_last'] = $callbook['name_last'] ?? '';
+			$return['profile_nickname'] = $callbook['nickname'] ?? '';
+			$return['profile_aliases'] = $callbook['aliases'] ?? '';
+			$return['profile_p_call'] = $callbook['p_call'] ?? '';
+			$return['profile_addr1'] = $callbook['addr1'] ?? '';
+			$return['profile_addr2'] = $callbook['addr2'] ?? '';
+			$return['profile_state'] = $callbook['state'] ?? '';
+			$return['profile_zip'] = $callbook['zip'] ?? '';
+			$return['profile_country'] = $callbook['country'] ?? '';
+			$return['profile_dxcc'] = $callbook['dxcc'] ?? '';
+			$return['profile_lat'] = $callbook['lat'] ?? '';
+			$return['profile_lon'] = $callbook['lon'] ?? '';
+			$return['profile_efdate'] = $callbook['efdate'] ?? '';
+			$return['profile_expdate'] = $callbook['expdate'] ?? '';
+			$return['profile_GMTOffset'] = $callbook['GMTOffset'] ?? '';
+			$return['profile_qslmgr'] = $callbook['qslmgr'] ?? '';
 		}
 
 		if ($return['callsign_qra'] != "" || $return['callsign_qra'] != null) {
 			$return['latlng'] = $this->qralatlng($return['callsign_qra']);
 			$return['bearing'] = $this->bearing($return['callsign_qra'], $measurement_base, $station_id);
+
+			// numeric counterpart of 'bearing', used to prefill the antenna azimuth while logging
+			if(!$this->load->is_loaded('Qra')) {
+				$this->load->library('Qra');
+			}
+			$mylocator = $this->my_locator($station_id);
+			$bearing_deg = ($mylocator === false) ? false : $this->qra->get_bearing($mylocator, $return['callsign_qra']);
+			$return['bearing_deg'] = ($bearing_deg === false) ? null : (int)$bearing_deg;
 		}
+		$return['callbook_source'] = $callbook['source'] ?? '';
 
 		echo json_encode($return, JSON_PRETTY_PRINT);
 
 		return;
 	}
 
+	// Helper function to get user's lookup priority setting
+	// Returns 1 for database priority, 2 for external lookup priority (default)
+	function get_lookup_priority() {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+		$this->load->model('user_options_model');
+		$priority = $this->user_options_model->get_options('qso_db_search_priority', array('option_name'=>'enable', 'option_key'=>'boolean'))->row();
+		// If setting is 'Y' (Yes), prioritize database (return 1), otherwise prioritize external lookup (return 2)
+		return (isset($priority->option_value) && $priority->option_value == 'Y') ? 1 : 2;
+	}
+
 	// Returns $val2 first if it has value, even if it is null or empty string, if not return $val1.
-	function nval($val1, $val2) {
+	// When $priority is set to 1, returns $val1 first if it has value, if not return $val2.
+	private function nval($val1, $val2, $priority = 2) {
+		if ($priority == 1) {
+			return (($val1 ?? "") === "" ? ($val2 ?? "") : ($val1 ?? ""));
+		}
 		return (($val2 ?? "") === "" ? ($val1 ?? "") : ($val2 ?? ""));
 	}
 
-	function confirmed_grid_before($gridsquare, $band, $mode) {
+	private function confirmed_grid_before($gridsquare, $band, $mode) {
 		if (strlen($gridsquare) < 4)
 			return false;
 
@@ -208,7 +267,7 @@ class Logbook extends CI_Controller {
 		$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
 		$user_default_confirmation = $this->session->userdata('user_default_confirmation');
 
-		if(!empty($logbooks_locations_array)) {
+		if($logbooks_locations_array[0] !== -1) {
 			$extrawhere='';
 			if (isset($user_default_confirmation) && strpos($user_default_confirmation, 'Q') !== false) {
 				$extrawhere="COL_QSL_RCVD='Y'";
@@ -252,7 +311,7 @@ class Logbook extends CI_Controller {
 				$this->load->model('logbook_model');
 				$this->db->where('COL_MODE', $this->logbook_model->get_main_mode_from_mode($mode));
 				$this->db->where('COL_BAND', $band);
-				$this->db->where('COL_PROP_MODE !=','SAT');
+				$this->db->where("(COL_PROP_MODE != 'SAT' OR COL_PROP_MODE IS NULL)");
 				if ($extrawhere != '') {
 					$this->db->where('('.$extrawhere.')');
 				} else {
@@ -276,21 +335,20 @@ class Logbook extends CI_Controller {
 		return false;
 	}
 
-	function worked_grid_before($gridsquare, $band, $mode)
-	{
+	private function worked_grid_before($gridsquare, $band, $mode) {
 		if (strlen($gridsquare) < 4)
 			return false;
 
 		$this->load->model('logbooks_model');
 		$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
 
-		if(!empty($logbooks_locations_array)) {
+		if($logbooks_locations_array[0] !== -1) {
 			if($band == "SAT") {
 				$this->db->where('COL_PROP_MODE', 'SAT');
 			} else {
 				$this->db->where('COL_MODE', $this->logbook_model->get_main_mode_from_mode($mode));
 				$this->db->where('COL_BAND', $band);
-				$this->db->where('COL_PROP_MODE !=','SAT');
+				$this->db->where("(COL_PROP_MODE != 'SAT' OR COL_PROP_MODE IS NULL)");
 
 			}
 			$this->db->where_in('station_id', $logbooks_locations_array);
@@ -318,14 +376,16 @@ class Logbook extends CI_Controller {
 	*
 	*/
 	function jsonlookupgrid($gridsquare, $type, $band, $mode) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
 		session_write_close();
 		$return = [
 			"workedBefore" => false,
 			"confirmed" => false,
 		];
 		$user_default_confirmation = $this->session->userdata('user_default_confirmation');
-        $this->load->model('logbooks_model');
-        $logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+		$this->load->model('logbooks_model');
+		$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
 
 		if($type == "SAT") {
 			$this->db->where('COL_PROP_MODE', 'SAT');
@@ -333,7 +393,7 @@ class Logbook extends CI_Controller {
 			$this->load->model('logbook_model');
 			$this->db->where('COL_MODE', $this->logbook_model->get_main_mode_from_mode($mode));
 			$this->db->where('COL_BAND', $band);
-			$this->db->where('COL_PROP_MODE !=','SAT');
+			$this->db->where("(COL_PROP_MODE != 'SAT' OR COL_PROP_MODE IS NULL)");
 
 		}
 
@@ -382,7 +442,7 @@ class Logbook extends CI_Controller {
 			$this->load->model('logbook_model');
 			$this->db->where('COL_MODE', $this->logbook_model->get_main_mode_from_mode($mode));
 			$this->db->where('COL_BAND', $band);
-			$this->db->where('COL_PROP_MODE !=','SAT');
+			$this->db->where("(COL_PROP_MODE != 'SAT' OR COL_PROP_MODE IS NULL)");
 			if ($extrawhere != '') {
 				$this->db->where('('.$extrawhere.')');
 			} else {
@@ -405,6 +465,7 @@ class Logbook extends CI_Controller {
 	}
 
 	function jsonlookupdxcc($country, $type, $band, $mode) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 		session_write_close();
 
 		$return = [
@@ -417,18 +478,18 @@ class Logbook extends CI_Controller {
 		$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
 		$this->load->model('logbook_model');
 
-		if(!empty($logbooks_locations_array)) {
+		if($logbooks_locations_array[0] !== -1) {
 			if($type == "SAT") {
 				$this->db->where('COL_PROP_MODE', 'SAT');
 			} else {
 				$this->db->where('COL_MODE', $this->logbook_model->get_main_mode_from_mode($mode));
 				$this->db->where('COL_BAND', $band);
-				$this->db->where('COL_PROP_MODE !=','SAT');
+				$this->db->where("(COL_PROP_MODE != 'SAT' OR COL_PROP_MODE IS NULL)");
 
 			}
 
 			$this->db->where_in('station_id', $logbooks_locations_array);
-			$this->db->where('COL_COUNTRY', urldecode($country));
+			$this->db->where('COL_DXCC', urldecode($country));
 
 			$query = $this->db->get($this->config->item('table_name'), 1, 0);
 			foreach ($query->result() as $workedBeforeRow)
@@ -472,7 +533,7 @@ class Logbook extends CI_Controller {
 				$this->load->model('logbook_model');
 				$this->db->where('COL_MODE', $this->logbook_model->get_main_mode_from_mode($mode));
 				$this->db->where('COL_BAND', $band);
-				$this->db->where('COL_PROP_MODE !=','SAT');
+				$this->db->where("(COL_PROP_MODE != 'SAT' OR COL_PROP_MODE IS NULL)");
 				if ($extrawhere != '') {
 					$this->db->where('('.$extrawhere.')');
 				} else {
@@ -481,7 +542,7 @@ class Logbook extends CI_Controller {
 			}
 
 			$this->db->where_in('station_id', $logbooks_locations_array);
-			$this->db->where('COL_COUNTRY', urldecode($country));
+			$this->db->where('COL_DXCC', urldecode($country));
 
 			$query = $this->db->get($this->config->item('table_name'), 1, 0);
 			foreach ($query->result() as $workedBeforeRow) {
@@ -504,6 +565,7 @@ class Logbook extends CI_Controller {
 	}
 
 	function jsonlookupcallsign($callsign, $type, $band, $mode) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 		session_write_close();
 
 		// Convert - in Callsign to / Used for URL processing
@@ -519,13 +581,13 @@ class Logbook extends CI_Controller {
 		$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
 		$this->load->model('logbook_model');
 
-		if(!empty($logbooks_locations_array)) {
+		if($logbooks_locations_array[0] !== -1) {
 			if($type == "SAT") {
 				$this->db->where('COL_PROP_MODE', 'SAT');
 			} else {
 				$this->db->where('COL_MODE', $this->logbook_model->get_main_mode_from_mode($mode));
 				$this->db->where('COL_BAND', $band);
-				$this->db->where('COL_PROP_MODE !=','SAT');
+				$this->db->where("(COL_PROP_MODE != 'SAT' OR COL_PROP_MODE IS NULL)");
 
 			}
 
@@ -574,7 +636,7 @@ class Logbook extends CI_Controller {
 				$this->load->model('logbook_model');
 				$this->db->where('COL_MODE', $this->logbook_model->get_main_mode_from_mode($mode));
 				$this->db->where('COL_BAND', $band);
-				$this->db->where('COL_PROP_MODE !=','SAT');
+				$this->db->where("(COL_PROP_MODE != 'SAT' OR COL_PROP_MODE IS NULL)");
 				if ($extrawhere != '') {
 					$this->db->where('('.$extrawhere.')');
 				} else {
@@ -602,10 +664,9 @@ class Logbook extends CI_Controller {
 	}
 
 	function view($id) {
-		$this->load->library('DxccFlag');
-
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
+		$this->load->library('DxccFlag');
 
 		if(!$this->load->is_loaded('Qra')) {
 			$this->load->library('Qra');
@@ -614,27 +675,35 @@ class Logbook extends CI_Controller {
 
 		$this->load->model('logbook_model');
 		$data['query'] = $this->logbook_model->get_qso($id);
-		$data['dxccFlag'] = $this->dxccflag->get($data['query']->result()[0]->COL_DXCC);
+		if ($data['query']) {	// QSO not found // Skip fetching details
+			$data['dxccFlag'] = $this->dxccflag->get($data['query']->result()[0]->COL_DXCC);
+			$data['adif_propmodes'] = $this->config->item('adif_propmodes');
 
-		if ($this->session->userdata('user_measurement_base') == NULL) {
-			$data['measurement_base'] = $this->config->item('measurement_base');
-		}
-		else {
-			$data['measurement_base'] = $this->session->userdata('user_measurement_base');
-		}
+			// Check for note for this callsign and current user
+			$callsign = $data['query']->result()[0]->COL_CALL;
+			$user_id = $this->session->userdata('user_id');
+			$this->load->model('note');
+			$data['contacts_note_id'] = $this->note->get_note_id_by_category($user_id, 'Contacts', $callsign);
 
-		$this->load->model('Qsl_model');
-		$data['qslimages'] = $this->Qsl_model->getQslForQsoId($id);
-		$data['primary_subdivision'] = $this->subdivisions->get_primary_subdivision_name($data['query']->result()[0]->COL_DXCC);
-		$data['secondary_subdivision'] = $this->subdivisions->get_secondary_subdivision_name($data['query']->result()[0]->COL_DXCC);
-		$data['max_upload'] = ini_get('upload_max_filesize');
+			if ($this->session->userdata('user_measurement_base') == NULL) {
+				$data['measurement_base'] = $this->config->item('measurement_base');
+			}
+			else {
+				$data['measurement_base'] = $this->session->userdata('user_measurement_base');
+			}
+
+			$this->load->model('Qsl_model');
+			$data['qslimages'] = $this->Qsl_model->getQslForQsoId($id);
+			$data['primary_subdivision'] = $this->subdivisions->get_primary_subdivision_name($data['query']->result()[0]->COL_DXCC);
+			$data['secondary_subdivision'] = $this->subdivisions->get_secondary_subdivision_name($data['query']->result()[0]->COL_DXCC);
+			$data['max_upload'] = ini_get('upload_max_filesize');
+		}
 		$this->load->view('interface_assets/mini_header', $data);
 		$this->load->view('view_log/qso');
 		$this->load->view('interface_assets/footer');
 	}
 
 	function partial($lookupcall, $callbook, $callsign, $dxcc, $lotw_days, $band = null, $count = 5) {
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
 		$this->load->model('logbooks_model');
@@ -642,29 +711,66 @@ class Logbook extends CI_Controller {
 
 		$html = "";
 
-		if(!empty($logbooks_locations_array)) {
-			$this->db->select(''.$this->config->item('table_name').'.COL_CALL, '.$this->config->item('table_name').'.COL_BAND, '.$this->config->item('table_name').'.COL_FREQ, '.$this->config->item('table_name').'.COL_TIME_ON, '.$this->config->item('table_name').'.COL_RST_RCVD, '.$this->config->item('table_name').'.COL_RST_SENT, '.$this->config->item('table_name').'.COL_MODE, '.$this->config->item('table_name').'.COL_SUBMODE, '.$this->config->item('table_name').'.COL_PRIMARY_KEY, '.$this->config->item('table_name').'.COL_SAT_NAME, '.$this->config->item('table_name').'.COL_GRIDSQUARE, '.$this->config->item('table_name').'.COL_QSL_RCVD, '.$this->config->item('table_name').'.COL_EQSL_QSL_RCVD, '.$this->config->item('table_name').'.COL_EQSL_QSL_SENT, '.$this->config->item('table_name').'.COL_QSL_SENT, '.$this->config->item('table_name').'.COL_STX, '.$this->config->item('table_name').'.COL_STX_STRING, '.$this->config->item('table_name').'.COL_SRX, '.$this->config->item('table_name').'.COL_SRX_STRING, '.$this->config->item('table_name').'.COL_LOTW_QSL_SENT, '.$this->config->item('table_name').'.COL_LOTW_QSL_RCVD, '.$this->config->item('table_name').'.COL_VUCC_GRIDS, '.$this->config->item('table_name').'.COL_MY_GRIDSQUARE, '.$this->config->item('table_name').'.COL_CONTEST_ID, '.$this->config->item('table_name').'.COL_STATE, '.$this->config->item('table_name').'.COL_QRZCOM_QSO_UPLOAD_STATUS, '.$this->config->item('table_name').'.COL_QRZCOM_QSO_DOWNLOAD_STATUS, '.$this->config->item('table_name').'.COL_CLUBLOG_QSO_UPLOAD_STATUS, '.$this->config->item('table_name').'.COL_CLUBLOG_QSO_DOWNLOAD_STATUS, '.$this->config->item('table_name').'.COL_POTA_REF, '.$this->config->item('table_name').'.COL_IOTA, '.$this->config->item('table_name').'.COL_SOTA_REF, '.$this->config->item('table_name').'.COL_WWFF_REF, '.$this->config->item('table_name').'.COL_OPERATOR, '.$this->config->item('table_name').'.COL_COUNTRY, station_profile.*, satellite.displayname AS sat_displayname');
-			$this->db->from($this->config->item('table_name'));
-
-			$this->db->join('station_profile', 'station_profile.station_id = '.$this->config->item('table_name').'.station_id');
-			$this->db->join('satellite', 'satellite.name = '.$this->config->item('table_name').'.COL_SAT_NAME', 'left outer');
-			$this->db->where_in('station_profile.station_id', $logbooks_locations_array);
-
-			$this->db->group_start();
-			$this->db->where($this->config->item('table_name').'.COL_CALL', $lookupcall);
-			$this->db->or_like($this->config->item('table_name').'.COL_CALL', '/'.$lookupcall,'before');
-			$this->db->or_like($this->config->item('table_name').'.COL_CALL', $lookupcall.'/','after');
-			$this->db->or_like($this->config->item('table_name').'.COL_CALL', '/'.$lookupcall.'/');
-			$this->db->group_end();
-
-			$this->db->order_by($this->config->item('table_name').".COL_TIME_ON", "desc");
-			$this->db->order_by($this->config->item('table_name').".COL_PRIMARY_KEY", "desc");
-			$this->db->limit($count);
-
-			$query = $this->db->get();
+		// Load all satellites once for PHP-side join (much faster than SQL join)
+		$satellites = [];
+		$sat_query = $this->db->query('SELECT name, displayname FROM satellite');
+		foreach ($sat_query->result() as $sat) {
+			$satellites[$sat->name] = $sat->displayname;
 		}
 
-		if (!empty($logbooks_locations_array) && $query->num_rows() > 0) {
+		if($logbooks_locations_array[0] !== -1) {
+			$station_ids = implode(',', array_map(function($id) { return (int)$id; }, $logbooks_locations_array));
+
+			$bindings = [
+				$lookupcall,                    // Exact match: COL_CALL = ?
+				'%/' . $lookupcall,              // Starts with /: COL_CALL LIKE '/ABC'
+				$lookupcall . '/%',              // Ends with /: COL_CALL LIKE 'ABC/'
+				'%/' . $lookupcall . '/%',        // Both sides: COL_CALL LIKE '/ABC/'
+				(int)$count                     // LIMIT
+			];
+
+			$sql = "SELECT
+				qsos.COL_CALL, qsos.COL_BAND, qsos.COL_FREQ, qsos.COL_TIME_ON,
+				qsos.COL_RST_RCVD, qsos.COL_RST_SENT, qsos.COL_MODE, qsos.COL_SUBMODE,
+				qsos.COL_PRIMARY_KEY, qsos.COL_SAT_NAME, qsos.COL_GRIDSQUARE,
+				qsos.COL_QSL_RCVD, qsos.COL_EQSL_QSL_RCVD, qsos.COL_EQSL_QSL_SENT,
+				qsos.COL_QSL_SENT, qsos.COL_STX, qsos.COL_STX_STRING, qsos.COL_SRX,
+				qsos.COL_SRX_STRING, qsos.COL_LOTW_QSL_SENT, qsos.COL_LOTW_QSL_RCVD,
+				qsos.COL_VUCC_GRIDS, qsos.COL_MY_GRIDSQUARE, qsos.COL_CONTEST_ID,
+				qsos.COL_STATE, qsos.COL_QRZCOM_QSO_UPLOAD_STATUS,
+				qsos.COL_QRZCOM_QSO_DOWNLOAD_STATUS, qsos.COL_CLUBLOG_QSO_UPLOAD_STATUS,
+				qsos.COL_CLUBLOG_QSO_DOWNLOAD_STATUS, qsos.COL_POTA_REF, qsos.COL_IOTA,
+				qsos.COL_SOTA_REF, qsos.COL_WWFF_REF, qsos.COL_OPERATOR, qsos.COL_COUNTRY,
+				station_profile.*
+				FROM " . $this->config->item('table_name') . " qsos
+				JOIN station_profile ON station_profile.station_id = qsos.station_id
+				WHERE station_profile.station_id IN ($station_ids)
+				AND (
+					qsos.COL_CALL = ?
+					OR qsos.COL_CALL LIKE ?
+					OR qsos.COL_CALL LIKE ?
+					OR qsos.COL_CALL LIKE ?
+				)
+				ORDER BY qsos.COL_TIME_ON DESC, qsos.COL_PRIMARY_KEY DESC
+				LIMIT ?";
+
+			$query = $this->db->query($sql, $bindings);
+
+			// Add satellite data via PHP-side join
+			$results = $query->result();
+			foreach ($results as &$row) {
+				$row->sat_name = $row->COL_SAT_NAME ?? null;
+				$row->sat_displayname = null;
+				if (!empty($row->COL_SAT_NAME) && isset($satellites[$row->COL_SAT_NAME])) {
+					$row->sat_displayname = $satellites[$row->COL_SAT_NAME];
+				}
+			}
+			unset($row);
+		} else {
+			$results = [];
+		}
+
+		if (!empty($results)) {
 			$html .= "<div class=\"table-responsive\">";
 			$html .= "<table class=\"table table-striped\">";
 				$html .= "<tr>";
@@ -706,7 +812,7 @@ class Logbook extends CI_Controller {
 				$custom_date_format = $this->config->item('qso_date_format');
 			}
 
-			foreach ($query->result() as $row) {
+			foreach ($results as $row) {
 				$timestamp = strtotime($row->COL_TIME_ON ?? '1970-01-01 00:00:00');
 				$html .= "<tr>";
 					$html .= "<td>".date($custom_date_format, $timestamp). date(' H:i',strtotime($row->COL_TIME_ON ?? '1970-01-01 00:00:00')) . "</td>";
@@ -717,19 +823,25 @@ class Logbook extends CI_Controller {
 					$html .= $this->part_table_col($row, $this->session->userdata('user_column4')==""?'Band':$this->session->userdata('user_column4'));
 					if ($this->session->userdata('user_previous_qsl_type') == 1) {
 						$html .= "<td class=\"lotw\">";
-						$html .= "<span class=\"qsl-";
+						$html .= "<span class=\"lotw-";
 						switch ($row->COL_LOTW_QSL_SENT) {
 							case "Y":
 								$html .= "green";
+								break;
+							case "I":
+								$html .= "grey";
 								break;
 							default:
 								$html .= "red";
 						}
 						$html .= "\">&#9650;</span>";
-						$html .= "<span class=\"qsl-";
+						$html .= "<span class=\"lotw-";
 						switch ($row->COL_LOTW_QSL_RCVD) {
 							case "Y":
 								$html .= "green";
+								break;
+							case "I":
+								$html .= "grey";
 								break;
 							default:
 								$html .= "red";
@@ -738,19 +850,25 @@ class Logbook extends CI_Controller {
 						$html .= "</td>";
 					} else if ($this->session->userdata('user_previous_qsl_type') == 2) {
 						$html .= "<td class=\"eqsl\">";
-						$html .= "<span class=\"qsl-";
+						$html .= "<span class=\"eqsl-";
 						switch ($row->COL_EQSL_QSL_SENT) {
 							case "Y":
 								$html .= "green";
+								break;
+							case "I":
+								$html .= "grey";
 								break;
 							default:
 								$html .= "red";
 						}
 						$html .= "\">&#9650;</span>";
-						$html .= "<span class=\"qsl-";
+						$html .= "<span class=\"eqsl-";
 						switch ($row->COL_EQSL_QSL_RCVD) {
 							case "Y":
 								$html .= "green";
+								break;
+							case "I":
+								$html .= "grey";
 								break;
 							default:
 								$html .= "red";
@@ -759,19 +877,25 @@ class Logbook extends CI_Controller {
 						$html .= "</td>";
 					} else if ($this->session->userdata('user_previous_qsl_type') == 4) {
 						$html .= "<td class=\"qrz\">";
-						$html .= "<span class=\"qsl-";
+						$html .= "<span class=\"qrz-";
 						switch ($row->COL_QRZCOM_QSO_UPLOAD_STATUS) {
 							case "Y":
 								$html .= "green";
+								break;
+							case "I":
+								$html .= "grey";
 								break;
 							default:
 								$html .= "red";
 						}
 						$html .= "\">&#9650;</span>";
-						$html .= "<span class=\"qsl-";
+						$html .= "<span class=\"qrz-";
 						switch ($row->COL_QRZCOM_QSO_DOWNLOAD_STATUS) {
 							case "Y":
 								$html .= "green";
+								break;
+							case "I":
+								$html .= "grey";
 								break;
 							default:
 								$html .= "red";
@@ -780,19 +904,25 @@ class Logbook extends CI_Controller {
 						$html .= "</td>";
 					} else if ($this->session->userdata('user_previous_qsl_type') == 8) {
 						$html .= "<td class=\"clublog\">";
-						$html .= "<span class=\"qsl-";
+						$html .= "<span class=\"clublog-";
 						switch ($row->COL_CLUBLOG_QSO_UPLOAD_STATUS) {
 							case "Y":
 								$html .= "green";
+								break;
+							case "I":
+								$html .= "grey";
 								break;
 							default:
 								$html .= "red";
 						}
 						$html .= "\">&#9650;</span>";
-						$html .= "<span class=\"qsl-";
+						$html .= "<span class=\"clublog-";
 						switch ($row->COL_CLUBLOG_QSO_DOWNLOAD_STATUS) {
 							case "Y":
 								$html .= "green";
+								break;
+							case "I":
+								$html .= "grey";
 								break;
 							default:
 								$html .= "red";
@@ -859,9 +989,18 @@ class Logbook extends CI_Controller {
 				$this->load->model('logbook_model');
 				$callsigninfo['grid_worked'] = $this->logbook_model->check_if_grid_worked_in_logbook(strtoupper(substr($callsigninfo['callsign']['gridsquare'],0,4)), null, $band)->num_rows();
 			}
-
-			if (isset($callsigninfo['callsign']['error'])) {
-				$callsigninfo['error'] = $callsigninfo['callsign']['error'];
+			$source_callbooks = $this->config->item('callbook');
+			if (is_array($source_callbooks)) {
+				$callsigninfo['error'] = '<b>'.__('All callbook lookups failed or provided no results.').'</b>';
+				foreach($source_callbooks as $source) {
+					if (isset($callsigninfo['callsign']['error_'.$source]) && isset($callsigninfo['callsign']['error_'.$source.'_name'])) {
+						$callsigninfo['error'] .= "<br />".$callsigninfo['callsign']['error_'.$source.'_name'].': '.$callsigninfo['callsign']['error_'.$source];
+					}
+				}
+			} else {
+				if (isset($callsigninfo['callsign']['error'])) {
+					$callsigninfo['error'] = $callsigninfo['callsign']['error'];
+				}
 			}
 
 			$callsigninfo['lookupcall'] = strtoupper($lookupcall);
@@ -872,13 +1011,12 @@ class Logbook extends CI_Controller {
 	}
 
 	function search_result($id="", $id2="") {
-		$this->load->model('user_model');
-		$this->load->model('logbook_model');
-
 		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
-        	$id = str_replace('Ø', "0", $id);
-        	$id2 = str_replace('Ø', "0", $id2);
+		$this->load->model('logbook_model');
+
+		$id = str_replace('Ø', "0", $id);
+		$id2 = str_replace('Ø', "0", $id2);
 		$fixedid = $id;
 
 		if ($id2 != "") {
@@ -896,6 +1034,7 @@ class Logbook extends CI_Controller {
 
 			if ($query->num_rows() > 0) {
 				$data['results'] = $query;
+					$data['adif_propmodes'] = $this->config->item('adif_propmodes');
 				$this->load->view('view_log/partial/log_ajax.php', $data);
 			} else {
 				$this->load->model('search');
@@ -904,6 +1043,7 @@ class Logbook extends CI_Controller {
 
 				if ($iota_search->num_rows() > 0) {
 					$data['results'] = $iota_search;
+					$data['adif_propmodes'] = $this->config->item('adif_propmodes');
 					$this->load->view('view_log/partial/log_ajax.php', $data);
 				} else {
 					if (!$this->load->is_loaded('callbook')) {
@@ -938,12 +1078,24 @@ class Logbook extends CI_Controller {
 			}
 		} else {
 			$data['results'] = $query;
+			$data['adif_propmodes'] = $this->config->item('adif_propmodes');
 			$this->load->view('view_log/partial/log_ajax.php', $data);
 		}
 	}
 
-	function querydb($id) {
-		$this->db->select('dxcc_entities.adif, lotw_users.callsign, COL_BAND, COL_CALL, COL_CLUBLOG_QSO_DOWNLOAD_DATE, COL_DCL_QSLRDATE, COL_DCL_QSLSDATE, COL_DCL_QSL_SENT, COL_DCL_QSL_RCVD,
+	private function querydb($id) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
+		$stationsactivelogonly_sql = '';
+		if (!empty($this->session->userdata('user_stations_active_log_only'))) {
+			$stationid_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+			$station_id_list = "'" . implode("','", $stationid_array) . "'";
+			$stationsactivelogonly_sql = " AND `station_profile`.`station_id` IN (" . $station_id_list .") ";
+		}
+
+		$binding = array();
+		$sql = "SELECT dxcc_entities.adif, lotw_users.callsign, COL_BAND, COL_CALL, COL_CLUBLOG_QSO_DOWNLOAD_DATE, COL_DCL_QSLRDATE, COL_DCL_QSLSDATE, COL_DCL_QSL_SENT, COL_DCL_QSL_RCVD,
+			COL_PROP_MODE,
 			COL_CLUBLOG_QSO_DOWNLOAD_STATUS, COL_CLUBLOG_QSO_UPLOAD_DATE, COL_CLUBLOG_QSO_UPLOAD_STATUS,
 			COL_CONTEST_ID, COL_DISTANCE, COL_EQSL_QSL_RCVD, COL_EQSL_QSLRDATE, COL_EQSL_QSLSDATE, COL_EQSL_QSL_SENT,
 			COL_FREQ, COL_GRIDSQUARE, COL_IOTA, COL_LOTW_QSL_RCVD, COL_LOTW_QSLRDATE, COL_LOTW_QSLSDATE,
@@ -952,56 +1104,63 @@ class Logbook extends CI_Controller {
 			COL_QRZCOM_QSO_UPLOAD_STATUS, COL_QSL_RCVD, COL_QSL_RCVD_VIA, COL_QSLRDATE, COL_QSLSDATE, COL_QSL_SENT,
 			COL_QSL_SENT_VIA, COL_QSL_VIA, COL_RST_RCVD, COL_RST_SENT, COL_SAT_NAME, COL_SOTA_REF, COL_SRX,
 			COL_SRX_STRING, COL_STATE, COL_STX, COL_STX_STRING, COL_SUBMODE, COL_TIME_ON, COL_VUCC_GRIDS, COL_WWFF_REF,
-			dxcc_entities.end, lotw_users.lastupload, satellite.displayname AS sat_displayname, station_profile.station_callsign,
-			station_profile.station_gridsquare, station_profile.station_profile_name, dxcc_entities.name');
-		$this->db->from($this->config->item('table_name'));
-		$this->db->join('station_profile', 'station_profile.station_id = '.$this->config->item('table_name').'.station_id');
-		$this->db->join('dxcc_entities', 'dxcc_entities.adif = '.$this->config->item('table_name').'.COL_DXCC', 'left outer');
-		$this->db->join('lotw_users', 'lotw_users.callsign = '.$this->config->item('table_name').'.col_call', 'left outer');
-		$this->db->join('satellite', 'satellite.name = '.$this->config->item('table_name').'.COL_SAT_NAME', 'left outer');
-		$this->db->group_start();
-		$this->db->like(''.$this->config->item('table_name').'.COL_CALL', $id);
-		$this->db->or_like(''.$this->config->item('table_name').'.COL_GRIDSQUARE', $id);
-		$this->db->or_like(''.$this->config->item('table_name').'.COL_VUCC_GRIDS', $id);
-		$this->db->group_end();
-		$this->db->where('station_profile.user_id', $this->session->userdata('user_id'));
-		$this->db->order_by(''.$this->config->item('table_name').'.COL_TIME_ON', 'desc');
-		return $this->db->get();
-  }
+			dxcc_entities.end, lotw_users.lastupload, satellite.name AS sat_name, satellite.displayname AS sat_displayname,
+			station_profile.station_callsign, station_profile.station_gridsquare, station_profile.station_profile_name,
+			dxcc_entities.name
+			FROM ".$this->config->item('table_name')." qsos
+			JOIN `station_profile` ON `station_profile`.`station_id` = qsos.`station_id`
+			LEFT OUTER JOIN `dxcc_entities` ON qsos.`col_dxcc` = `dxcc_entities`.`adif`
+			LEFT OUTER JOIN `lotw_users` ON `lotw_users`.`callsign` = qsos.`col_call`
+			LEFT OUTER JOIN satellite ON qsos.col_prop_mode='SAT' and qsos.COL_SAT_NAME = COALESCE(NULLIF(satellite.name, ''), NULLIF(satellite.displayname, ''))
+			WHERE ( qsos.COL_CALL LIKE ? ESCAPE '!' OR qsos.COL_GRIDSQUARE LIKE ? ESCAPE '!' OR qsos.COL_VUCC_GRIDS LIKE ? ESCAPE '!')
+			AND station_profile.user_id = ".$this->session->userdata('user_id')."
+			" . $stationsactivelogonly_sql . "
+			ORDER BY COL_TIME_ON DESC;";
+		$binding[] = '%'.$id.'%';
+		$binding[] = '%'.$id.'%';
+		$binding[] = '%'.$id.'%';
+		return $this->db->query($sql, $binding);
+	}
 
 	function search_lotw_unconfirmed($station_id) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
 		$clean_station_id = $this->security->xss_clean($station_id);
 
 		if (!is_numeric($clean_station_id) && $clean_station_id !== 'All') {
 			show_404();
+			return;
 		}
 
-		$this->load->model('user_model');
-
-		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
-
 		$this->load->model('stations');
-		$logbooks_locations_array = $this->stations->all_of_user();
-
-		$station_ids = array();
-
-		if ($logbooks_locations_array->num_rows() > 0){
-			foreach ($logbooks_locations_array->result() as $row) {
-				array_push($station_ids, $row->station_id);
+		if (!empty($this->session->userdata('user_stations_active_log_only'))) {
+			$station_ids = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+			if ($station_ids == array(-1)) {
+				return null;
 			}
 		} else {
-			return null;
+			$logbooks_locations_array = $this->stations->all_of_user();
+
+			$station_ids = array();
+
+			if ($logbooks_locations_array->num_rows() > 0){
+				foreach ($logbooks_locations_array->result() as $row) {
+					array_push($station_ids, $row->station_id);
+				}
+			} else {
+				return null;
+			}
 		}
 
 		$location_list = "'".implode("','",$station_ids)."'";
 
 		$sql = 'select COL_CALL, COL_MODE, COL_SUBMODE, station_callsign, COL_SAT_NAME, COL_BAND, COL_TIME_ON, lotw_users.lastupload from ' . $this->config->item('table_name') .
-		' join station_profile on ' . $this->config->item('table_name') . '.station_id = station_profile.station_id
-		join lotw_users on ' . $this->config->item('table_name') . '.col_call = lotw_users.callsign
-		where ' . $this->config->item('table_name') .'.station_id in ('. $location_list . ')';
+			' join station_profile on ' . $this->config->item('table_name') . '.station_id = station_profile.station_id
+			join lotw_users on ' . $this->config->item('table_name') . '.col_call = lotw_users.callsign
+			where ' . $this->config->item('table_name') .'.station_id in ('. $location_list . ')';
 
-		if ($station_id != 'All') {
-			$sql .= ' and station_profile.station_id = ' . $station_id;
+		if ($clean_station_id != 'All') {
+			$sql .= ' and station_profile.station_id = ' . $clean_station_id;
 		}
 
 		$sql .= " and COL_LOTW_QSL_RCVD <> 'Y' and " . $this->config->item('table_name') . ".COL_TIME_ON < lotw_users.lastupload";
@@ -1015,15 +1174,13 @@ class Logbook extends CI_Controller {
 	}
 
 	function search_incorrect_cq_zones($station_id) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
 		$clean_station_id = $this->security->xss_clean($station_id);
 
 		if (!is_numeric($clean_station_id) && $clean_station_id !== 'All') {
 			show_404();
 		}
-
-		$this->load->model('user_model');
-
-		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
 		$this->load->model('stations');
 		$logbooks_locations_array = $this->stations->all_of_user();
@@ -1063,15 +1220,13 @@ class Logbook extends CI_Controller {
 	}
 
 	function search_incorrect_itu_zones($station_id) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
 		$clean_station_id = $this->security->xss_clean($station_id);
 
 		if (!is_numeric($clean_station_id) && $clean_station_id !== 'All') {
 			show_404();
 		}
-
-		$this->load->model('user_model');
-
-		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
 		$this->load->model('stations');
 		$logbooks_locations_array = $this->stations->all_of_user();
@@ -1113,51 +1268,71 @@ class Logbook extends CI_Controller {
 	/*
 	 * Provide a dxcc search, returning results json encoded
 	 */
-	function dxcheck($call = "", $date = "") {
-		$this->load->model("logbook_model");
+	private function dxcheck($call = "", $date = "") {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
 		if ($date == ''){
 			$date = date("Y-m-d");
 		}
-		$ans = $this->logbook_model->dxcc_lookup($call, $date);
+		$dxccobj = new Dxcc();
+
+		$ans = $dxccobj->dxcc_lookup($call, $date);
 		return $ans;
 	}
 
-    function getentity($adif) {
-        $this->load->model("logbook_model");
+	private function getentity($adif) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+		$this->load->model("logbook_model");
 
-        $entity = $this->logbook_model->get_entity($adif);
-        return $entity;
-    }
+		$entity = $this->logbook_model->get_entity($adif);
+		return $entity;
+	}
 
 
-	/* return station bearing */
+	/*
+	 * Resolve the operator's own locator.
+	 * Returns FALSE if a station profile was given which isn't accessible to the user.
+	 */
+	private function my_locator($station_id = null) {
+		if (isset($station_id)) {
+			// be sure that station belongs to user
+			$this->load->model('Stations');
+			if (!$this->Stations->check_station_is_accessible($station_id)) {
+				return false;
+			}
+
+			// get locator from station profile
+			return $this->Stations->profile_clean($station_id)->station_gridsquare;
+		}
+
+		if($this->session->userdata('user_locator') != null){
+			return $this->session->userdata('user_locator');
+		}
+		return $this->config->item('locator');
+	}
+
+	/*
+	 * Bearing to a grid, as JSON:
+	 *   bearing     => int degrees (long path already applied), NULL if not calculable
+	 *   distance_km => distance in km, regardless of the user's measurement base
+	 *   text        => ready-to-display string in the user's measurement base
+	 */
 	function searchbearing() {
-			$locator = xss_clean($this->input->post('grid'));
-			$ant_path = xss_clean($this->input->post('ant_path')) == '' ? NULL : xss_clean($this->input->post('ant_path'));
-			$station_id = xss_clean($this->input->post('stationProfile'));
-			if(!$this->load->is_loaded('Qra')) {
-			    $this->load->library('Qra');
-		    }
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
-			if($locator != null) {
-				if (isset($station_id)) {
-					// be sure that station belongs to user
-					$this->load->model('Stations');
-					if (!$this->Stations->check_station_is_accessible($station_id)) {
-						return "";
-					}
+		$locator = xss_clean($this->input->post('grid'));
+		$ant_path = xss_clean($this->input->post('ant_path')) == '' ? NULL : xss_clean($this->input->post('ant_path'));
+		$station_id = xss_clean($this->input->post('stationProfile'));
+		if(!$this->load->is_loaded('Qra')) {
+			$this->load->library('Qra');
+		}
 
-					// get station profile
-					$station_profile = $this->Stations->profile_clean($station_id);
+		$payload = array('bearing' => null, 'distance_km' => null, 'text' => '');
 
-					// get locator
-					$mylocator = $station_profile->station_gridsquare;
-				} else if($this->session->userdata('user_locator') != null){
-					$mylocator = $this->session->userdata('user_locator');
-				} else {
-					$mylocator = $this->config->item('locator');
-				}
+		if($locator != null) {
+			$mylocator = $this->my_locator($station_id);
 
+			if ($mylocator !== false) {
 				if ($this->session->userdata('user_measurement_base') == NULL) {
 					$measurement_base = $this->config->item('measurement_base');
 				}
@@ -1165,71 +1340,56 @@ class Logbook extends CI_Controller {
 					$measurement_base = $this->session->userdata('user_measurement_base');
 				}
 
-				$bearing = $this->qra->bearing($mylocator, $locator, $measurement_base, $ant_path);
+				$bearing = $this->qra->get_bearing($mylocator, $locator, $ant_path);
+				$text = $this->qra->bearing($mylocator, $locator, $measurement_base, $ant_path);
 
-				echo $bearing;
+				$payload = array(
+					'bearing' => ($bearing === false) ? null : (int)$bearing,
+					'distance_km' => $this->qra->distance($mylocator, $locator, 'K', $ant_path),
+					'text' => ($text === false) ? '' : $text,
+				);
 			}
-			return "";
+		}
+
+		$this->output->set_content_type('application/json')->set_output(json_encode($payload));
 	}
 
 	/* return distance */
 	function searchdistance() {
-			$locator = xss_clean($this->input->post('grid'));
-			$ant_path = xss_clean($this->input->post('ant_path')) == '' ? NULL : xss_clean($this->input->post('ant_path'));
-			$station_id = xss_clean($this->input->post('stationProfile'));
-			if(!$this->load->is_loaded('Qra')) {
-			    $this->load->library('Qra');
-		    }
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
-			if($locator != null) {
-				if (isset($station_id)) {
-					// be sure that station belongs to user
-					$this->load->model('Stations');
-					if (!$this->Stations->check_station_is_accessible($station_id)) {
-						return 0;
-					}
-
-					// get station profile
-					$station_profile = $this->Stations->profile_clean($station_id);
-
-					// get locator
-					$mylocator = $station_profile->station_gridsquare;
-				} else if($this->session->userdata('user_locator') != null){
-					$mylocator = $this->session->userdata('user_locator');
-				} else {
-					$mylocator = $this->config->item('locator');
-				}
-
-				$distance = $this->qra->distance($mylocator, $locator, 'K', $ant_path);
-
-				echo $distance;
-			}
-			return 0;
-	}
-
-	/* return station bearing */
-	function bearing($locator, $unit = 'M', $station_id = null, $ant_path = null) {
+		$locator = xss_clean($this->input->post('grid'));
+		$ant_path = xss_clean($this->input->post('ant_path')) == '' ? NULL : xss_clean($this->input->post('ant_path'));
+		$station_id = xss_clean($this->input->post('stationProfile'));
 		if(!$this->load->is_loaded('Qra')) {
 			$this->load->library('Qra');
 		}
 
 		if($locator != null) {
-			if (isset($station_id)) {
-				// be sure that station belongs to user
-				$this->load->model('Stations');
-				if (!$this->Stations->check_station_is_accessible($station_id)) {
-					return "";
-				}
+			$mylocator = $this->my_locator($station_id);
+			if ($mylocator === false) {
+				return 0;
+			}
 
-				// get station profile
-				$station_profile = $this->Stations->profile_clean($station_id);
+			$distance = $this->qra->distance($mylocator, $locator, 'K', $ant_path);
 
-				// get locator
-				$mylocator = $station_profile->station_gridsquare;
-			} else if($this->session->userdata('user_locator') != null){
-				$mylocator = $this->session->userdata('user_locator');
-			} else {
-				$mylocator = $this->config->item('locator');
+			echo $distance;
+		}
+		return 0;
+	}
+
+	/* return station bearing */
+	function bearing($locator, $unit = 'M', $station_id = null, $ant_path = null) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
+		if(!$this->load->is_loaded('Qra')) {
+			$this->load->library('Qra');
+		}
+
+		if($locator != null) {
+			$mylocator = $this->my_locator($station_id);
+			if ($mylocator === false) {
+				return "";
 			}
 
 			$bearing = $this->qra->bearing($mylocator, $locator, $unit, $ant_path);
@@ -1241,65 +1401,45 @@ class Logbook extends CI_Controller {
 
 	/* return distance */
 	function distance($locator, $station_id = null, $ant_path = null) {
-			$distance = 0;
-			if(!$this->load->is_loaded('Qra')) {
-			    $this->load->library('Qra');
-		    }
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
 
-			if($locator != null) {
-				if (isset($station_id)) {
-					// be sure that station belongs to user
-					$this->load->model('Stations');
-					if (!$this->Stations->check_station_is_accessible($station_id)) {
-						return 0;
-					}
+		$distance = 0;
+		if(!$this->load->is_loaded('Qra')) {
+			$this->load->library('Qra');
+		}
 
-					// get station profile
-					$station_profile = $this->Stations->profile_clean($station_id);
-
-					// get locator
-					$mylocator = $station_profile->station_gridsquare;
-				} else if($this->session->userdata('user_locator') != null){
-					$mylocator = $this->session->userdata('user_locator');
-				} else {
-					$mylocator = $this->config->item('locator');
-				}
-
-				$distance = $this->qra->distance($mylocator, $locator, 'K', $ant_path);
-
+		if($locator != null) {
+			$mylocator = $this->my_locator($station_id);
+			if ($mylocator === false) {
+				return 0;
 			}
-			return $distance;
+
+			$distance = $this->qra->distance($mylocator, $locator, 'K', $ant_path);
+
+		}
+		return $distance;
 	}
 
 	function qralatlng($qra) {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
 		if(!$this->load->is_loaded('Qra')) {
-			    $this->load->library('Qra');
-		    }
+			$this->load->library('Qra');
+		}
 		$latlng = $this->qra->qra2latlong($qra);
 		return $latlng;
 	}
 
 	function qralatlngjson() {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) { return; }
+
 		$qra = xss_clean($this->input->post('qra'));
 		if(!$this->load->is_loaded('Qra')) {
-			    $this->load->library('Qra');
-		    }
+			$this->load->library('Qra');
+		}
 		$latlng = $this->qra->qra2latlong($qra);
 		print json_encode($latlng);
 	}
-
-    function get_qsos($num, $offset) {
-        $this->db->select(''.$this->config->item('table_name').'.COL_CALL, '.$this->config->item('table_name').'.COL_BAND, '.$this->config->item('table_name').'.COL_TIME_ON, '.$this->config->item('table_name').'.COL_RST_RCVD, '.$this->config->item('table_name').'.COL_RST_SENT, '.$this->config->item('table_name').'.COL_MODE, '.$this->config->item('table_name').'.COL_SUBMODE, '.$this->config->item('table_name').'.COL_NAME, '.$this->config->item('table_name').'.COL_COUNTRY, '.$this->config->item('table_name').'.COL_PRIMARY_KEY, '.$this->config->item('table_name').'.COL_SAT_NAME, '.$this->config->item('table_name').'.COL_GRIDSQUARE, '.$this->config->item('table_name').'.COL_QSL_RCVD, '.$this->config->item('table_name').'.COL_EQSL_QSL_RCVD, '.$this->config->item('table_name').'.COL_EQSL_QSL_SENT, '.$this->config->item('table_name').'.COL_QSL_SENT, '.$this->config->item('table_name').'.COL_STX, '.$this->config->item('table_name').'.COL_STX_STRING, '.$this->config->item('table_name').'.COL_SRX, '.$this->config->item('table_name').'.COL_SRX_STRING, '.$this->config->item('table_name').'.COL_LOTW_QSL_SENT, '.$this->config->item('table_name').'.COL_LOTW_QSL_RCVD, '.$this->config->item('table_name').'.COL_VUCC_GRIDS, station_profile.*');
-        $this->db->from($this->config->item('table_name'));
-
-        $this->db->join('station_profile', 'station_profile.station_id = '.$this->config->item('table_name').'.station_id');
-        $this->db->order_by(''.$this->config->item('table_name').'.COL_TIME_ON', "desc");
-
-        $this->db->limit($num);
-        $this->db->offset($offset);
-
-        return $this->db->get();
-    }
 
 	function part_table_header_col($ctx, $name) {
 		$ret='';

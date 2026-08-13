@@ -25,7 +25,6 @@ class AdifHelper {
 			'CONT',
 			'CONTACTED_OP',
 			'CONTEST_ID',
-			'COUNTRY',
 			'CQZ',
 			'CREDIT_GRANTED',
 			'CREDIT_SUBMITTED',
@@ -37,6 +36,7 @@ class AdifHelper {
 			'EQSL_QSL_RCVD',
 			'EQSL_QSL_SENT',
 			'EQSL_STATUS',
+			'EQSL_AG',
 			'FISTS',
 			'FISTS_CC',
 			'FORCE_INIT',
@@ -65,6 +65,7 @@ class AdifHelper {
 			'PUBLIC_KEY',
 			'HRDLOG_QSO_UPLOAD_STATUS',
 			'QRZCOM_QSO_UPLOAD_STATUS',
+			'QRZCOM_QSO_DOWNLOAD_STATUS',
 			'QSLMSG',
 			'QSL_RCVD',
 			'QSL_RCVD_VIA',
@@ -103,9 +104,13 @@ class AdifHelper {
 			'CNTY_ALT',
 			'MY_CNTY_ALT',
 			'MY_DARC_DOK',
+			'MY_ANTENNA',
+			'MY_ANTENNA_INTL',
 			'MORSE_KEY_INFO',
 			'MORSE_KEY_TYPE',
 			'QSLMSG_RCVD',
+			'DCL_QSL_RCVD',
+			'DCL_QSL_SENT'
 		);
 
 		$dateFields = array(
@@ -118,8 +123,9 @@ class AdifHelper {
 			'CLUBLOG_QSO_UPLOAD_DATE',
 			'HRDLOG_QSO_UPLOAD_DATE',
 			'QRZCOM_QSO_UPLOAD_DATE',
+			'QRZCOM_QSO_DOWNLOAD_DATE',
 			'DCL_QSLRDATE',
-			'DCL_QSLSDATE',
+			'DCL_QSLSDATE'
 		);
 
 	/**
@@ -149,6 +155,10 @@ class AdifHelper {
 				$date = date('Ymd', $date);
 				$line .= $this->getAdifFieldLine($field, $date);
 			}
+		}
+
+		if ($qso->COL_DXCC != 0) {
+			$line .= $this->getAdifFieldLine("COUNTRY", $qso->COL_COUNTRY);
 		}
 
 		if ($qso->COL_FREQ != 0) {
@@ -236,20 +246,20 @@ class AdifHelper {
 
 		$line .= $this->getAdifFieldLine("MY_SIG", $qso->station_sig);
 		$line .= $this->getAdifFieldLine("MY_SIG_INFO", $qso->station_sig_info);
+		$line .= $this->getAdifFieldLine("MY_RIG", $qso->{'COL_MY_RIG'} ?? '');
+		$line .= $this->getAdifFieldLine("MY_RIG_INTL", $qso->{'COL_MY_RIG_INTL'} ?? '');
 
 		$line .= $this->getAdifFieldLine("SIG", $qso->{'COL_SIG'});
 		$line .= $this->getAdifFieldLine("SIG_INFO", $qso->{'COL_SIG_INFO'});
 
 	/*
 	    Missing:
-	    MY_ANTENNA
 	    MY_FISTS
 	    MY_IOTA_ISLAND_ID
 	    MY_LAT
 	    MY_LON
 	    MY_NAME
 	    MY_POSTAL_CODE
-	    MY_RIG
 	    MY_STREET
 	    MY_USACA_COUNTIES
 	 */
@@ -257,6 +267,15 @@ class AdifHelper {
 		$line .= "<EOR>\r\n\r\n";
 
 		return $line;
+	}
+
+	function getAdifHeader($app_name,$version, $adif_version) {
+		$adif_header = "Wavelog ADIF export\n";
+		$adif_header .= "<ADIF_VER:".strlen($adif_version).">".$adif_version."\n";
+		$adif_header .= "<PROGRAMID:".strlen($app_name).">".$app_name."\r\n";
+		$adif_header .= "<PROGRAMVERSION:".strlen($version).">".$version."\r\n";
+		$adif_header .= "<EOH>\n\n";
+		return $adif_header;
 	}
 
     function getAdifFieldLine($adifcolumn, $dbvalue) {

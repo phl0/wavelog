@@ -84,6 +84,21 @@ class Stations extends CI_Model {
 		return $row;
 	}
 
+	/**
+	 * Fetch a station profile by its UUID, scoped to the owner. Used by the
+	 * REST API after an insert to resolve the freshly created row (save_location
+	 * only reports success, not the new id), since the UUID is unique per row.
+	 *
+	 * @param string $uuid    station_uuid to look up.
+	 * @param int    $user_id Owner.
+	 * @return object|null The station_profile row, or null when not found.
+	 */
+	function profile_by_uuid($uuid, $user_id) {
+		$this->db->where('station_uuid', $this->security->xss_clean($uuid));
+		$this->db->where('user_id', $user_id);
+		return $this->db->get('station_profile')->row();
+	}
+
 	/*
 	*	Function: add
 	*	Adds post material into the station profile table.
@@ -136,10 +151,10 @@ class Stations extends CI_Model {
 			'station_iota' =>  xss_clean(strtoupper($this->input->post('iota', true))),
 			'station_sota' =>  xss_clean(strtoupper($this->input->post('sota', true))),
 			'station_wwff' =>  xss_clean(strtoupper($this->input->post('wwff', true))),
-			'station_pota' =>  xss_clean(strtoupper($this->input->post('pota', true))),
+			'station_pota' =>  preg_replace('/\s+/','', xss_clean(strtoupper($this->input->post('pota', true)))),
 			'station_sig' =>  xss_clean(strtoupper($this->input->post('sig', true))),
 			'station_sig_info' =>  xss_clean(strtoupper($this->input->post('sig_info', true))),
-			'station_callsign' =>  trim(xss_clean(strtoupper($this->input->post('station_callsign', true)))),
+			'station_callsign' =>  str_replace('Ø', '0', trim(xss_clean(strtoupper($this->input->post('station_callsign', true))))),
 			'station_power' => is_numeric(xss_clean($this->input->post('station_power', true))) ? xss_clean($this->input->post('station_power', true)) : NULL,
 			'station_dxcc' =>  xss_clean($this->input->post('dxcc', true)),
 			'station_cnty' =>  $county,
@@ -152,7 +167,7 @@ class Stations extends CI_Model {
 			'hrdlogrealtime' => xss_clean($this->input->post('hrdlogrealtime', true)),
 			'clublogignore' => xss_clean($this->input->post('clublogignore', true)),
 			'clublogrealtime' => xss_clean($this->input->post('clublogrealtime', true)),
-			'qrzapikey' => xss_clean($this->input->post('qrzapikey', true)),
+			'qrzapikey' => trim(xss_clean($this->input->post('qrzapikey', true))),
 			'qrzrealtime' => xss_clean($this->input->post('qrzrealtime', true)),
 			'oqrs' => xss_clean($this->input->post('oqrs', true) ?? '0'),
 			'oqrs_email' => xss_clean($this->input->post('oqrsemail', true) ?? '0'),
@@ -160,6 +175,7 @@ class Stations extends CI_Model {
 			'webadifapikey' => xss_clean($this->input->post('webadifapikey', true)),
 			'webadifapiurl' => 'https://qo100dx.club/api',
 			'webadifrealtime' => xss_clean($this->input->post('webadifrealtime', true)),
+			'station_uuid' => $this->db->query("SELECT UUID() as uuid")->row()->uuid,
 		);
 
 		// Insert Records & return insert id //
@@ -215,10 +231,10 @@ class Stations extends CI_Model {
 			'station_iota' => xss_clean(strtoupper($this->input->post('iota', true))),
 			'station_sota' => xss_clean(strtoupper($this->input->post('sota', true))),
 			'station_wwff' => xss_clean(strtoupper($this->input->post('wwff', true))),
-			'station_pota' => xss_clean(strtoupper($this->input->post('pota', true))),
+			'station_pota' => preg_replace('/\s+/','', xss_clean(strtoupper($this->input->post('pota', true)))),
 			'station_sig' => xss_clean(strtoupper($this->input->post('sig', true))),
 			'station_sig_info' => xss_clean(strtoupper($this->input->post('sig_info', true))),
-			'station_callsign' => trim(xss_clean(strtoupper($this->input->post('station_callsign', true)))),
+			'station_callsign' => str_replace('Ø', '0', trim(xss_clean(strtoupper($this->input->post('station_callsign', true))))),
 			'station_power' => is_numeric(xss_clean($this->input->post('station_power', true))) ? xss_clean($this->input->post('station_power', true)) : NULL,
 			'station_dxcc' => xss_clean($this->input->post('dxcc', true)),
 			'station_cnty' =>  $county,
@@ -231,7 +247,7 @@ class Stations extends CI_Model {
 			'hrdlogrealtime' => xss_clean($this->input->post('hrdlogrealtime', true)),
 			'clublogignore' => xss_clean($this->input->post('clublogignore', true)),
 			'clublogrealtime' => xss_clean($this->input->post('clublogrealtime', true)),
-			'qrzapikey' => xss_clean($this->input->post('qrzapikey', true)),
+			'qrzapikey' => trim(xss_clean($this->input->post('qrzapikey', true))),
 			'qrzrealtime' => xss_clean($this->input->post('qrzrealtime', true)),
 			'oqrs' => xss_clean($this->input->post('oqrs', true) ?? '0'),
 			'oqrs_email' => xss_clean($this->input->post('oqrsemail', true) ?? '0'),
@@ -322,6 +338,8 @@ class Stations extends CI_Model {
 		$this->db->where('user_id', $this->session->userdata('user_id'));
 		$this->db->where('station_id', $clean_new);
 		$this->db->update('station_profile', $newdefault);
+
+		$this->session->set_userdata('station_profile_id', $clean_new);
 	}
 
 	function edit_favourite($id) {
@@ -335,8 +353,11 @@ class Stations extends CI_Model {
 		}
 	}
 
-	public function find_active() {
-		$this->db->where('user_id', $this->session->userdata('user_id'));
+	public function find_active($user_id = null) {
+		if ($user_id == null) {
+			$user_id = $this->session->userdata('user_id');
+		}
+		$this->db->where('user_id', $user_id);
 		$this->db->where('station_active', 1);
 		$query = $this->db->get('station_profile');
 
@@ -449,15 +470,6 @@ class Stations extends CI_Model {
 
 		$str = $this->db->last_query();
 
-    }
-
-    function profile_exists() {
-	    $query = $this->db->get('station_profile');
-		if($query->num_rows() >= 1) {
-	    	return 1;
-	    } else {
-	    	return 0;
-	    }
     }
 
     function stations_with_hrdlog_code() {
@@ -578,15 +590,16 @@ class Stations extends CI_Model {
 	}
 
 	public function get_station_power($id) {
-		$this->db->select('station_power');
+		$this->db->select('station_power, station_callsign');
 		$this->db->where('user_id', $this->session->userdata('user_id'));
 		$this->db->where('station_id', $id);
 		$query = $this->db->get('station_profile');
 		if($query->num_rows() >= 1) {
-			foreach ($query->result() as $row)
-			{
-				return $row->station_power;
-			}
+			$row = $query->row(); // only one result expected
+			return [
+				'station_power' => $row->station_power,
+				'station_callsign' => $row->station_callsign
+			];
 		} else {
 			return null;
 		}
@@ -605,17 +618,6 @@ class Stations extends CI_Model {
 	public function check_station_against_user($stationid, $userid) {
 		$this->db->select('station_id');
 		$this->db->where('user_id', $userid);
-		$this->db->where('station_id', $stationid);
-		$query = $this->db->get('station_profile');
-		if ($query->num_rows() == 1) {
-			return true;
-		}
-		return false;
-	}
-
-	public function check_station_against_callsign($stationid, $callsign) {
-		$this->db->select('station_id');
-		$this->db->where('station_callsign', $callsign);
 		$this->db->where('station_id', $stationid);
 		$query = $this->db->get('station_profile');
 		if ($query->num_rows() == 1) {

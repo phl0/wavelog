@@ -8,7 +8,6 @@ class Qsl extends CI_Controller {
 
     function __construct() {
         parent::__construct();
-        $this->load->model('user_model');
         if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		if(($this->config->item('disable_qsl') ?? false)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); exit; }
     }
@@ -18,7 +17,7 @@ class Qsl extends CI_Controller {
 
         $this->load->model('qsl_model');
         $this->load->library('Genfunctions');
-        $folder_name = $this->qsl_model->get_imagePath('p');
+        $folder_name = $this->paths->getUserdataPath('qsl_card', 'p');
         $data['storage_used'] = $this->genfunctions->sizeFormat($this->genfunctions->folderSize($folder_name));
 
         // Render Page
@@ -27,7 +26,7 @@ class Qsl extends CI_Controller {
 
 		$footerData = [];
 		$footerData['scripts'] = [
-			'assets/js/sections/qsl.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/qsl.js")),
+			'assets/js/sections/qsl.js',
 		];
 
         $this->load->view('interface_assets/header', $data);
@@ -45,7 +44,6 @@ class Qsl extends CI_Controller {
 
     // Deletes QSL Card
     public function delete() {
-        $this->load->model('user_model');
         if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
         $id = $this->input->post('id');
         $this->load->model('Qsl_model');
@@ -53,7 +51,6 @@ class Qsl extends CI_Controller {
     }
 
     public function uploadqsl() {
-        $this->load->model('user_model');
         if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
         $qsoid = $this->input->post('qsoid');
@@ -78,11 +75,23 @@ class Qsl extends CI_Controller {
 
     function uploadQslCardFront($qsoid) {
         $this->load->model('Qsl_model');
-        $config['upload_path']          = $this->Qsl_model->get_imagePath('p');
+        $this->load->model('logbook_model');
+        $this->load->library('upload_guard');
+
+        if (!$this->logbook_model->check_qso_is_accessible($qsoid)) {
+            return array('error' => __("You're not allowed to do that!"));
+        }
+
+        $config['upload_path']          = $this->paths->getUserdataPath('qsl_card', 'p');
         $config['allowed_types']        = 'jpg|gif|png|jpeg|JPG|PNG';
         $array = explode(".", $_FILES['qslcardfront']['name']);
         $ext = end($array);
-        $config['file_name'] = $qsoid . '_' . time() . '.' . $ext;
+        $config['file_name'] = $qsoid . '_' . time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+
+        // Refuse the upload if it would leave the storage volume too full
+        if (!$this->upload_guard->has_free_space($config['upload_path'], $_FILES['qslcardfront']['size'])) {
+            return array('error' => __("Not enough free disk space to store the QSL card."));
+        }
 
         $this->load->library('upload', $config);
 
@@ -95,6 +104,11 @@ class Qsl extends CI_Controller {
         else {
             //Upload of QSL card was successful
             $data = $this->upload->data();
+
+            if (!$this->upload_guard->is_real_image($data['full_path'])) {
+                unlink($data['full_path']);
+                return array('error' => __("The uploaded file is not a valid image."));
+            }
 
             // Now we need to insert info into database about file
             $filename = $data['file_name'];
@@ -109,11 +123,22 @@ class Qsl extends CI_Controller {
 
     function uploadQslCardBack($qsoid) {
         $this->load->model('Qsl_model');
-        $config['upload_path']          = $this->Qsl_model->get_imagePath('p');
+        $this->load->model('logbook_model');
+        $this->load->library('upload_guard');
+
+        if (!$this->logbook_model->check_qso_is_accessible($qsoid)) {
+            return array('error' => __("You're not allowed to do that!"));
+        }
+
+        $config['upload_path']          = $this->paths->getUserdataPath('qsl_card', 'p');
         $config['allowed_types']        = 'jpg|gif|png|jpeg|JPG|PNG';
         $array = explode(".", $_FILES['qslcardback']['name']);
         $ext = end($array);
-        $config['file_name'] = $qsoid . '_' . time() . '.' . $ext;
+        $config['file_name'] = $qsoid . '_' . time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+
+        if (!$this->upload_guard->has_free_space($config['upload_path'], $_FILES['qslcardback']['size'])) {
+            return array('error' => __("Not enough free disk space to store the QSL card."));
+        }
 
         $this->load->library('upload', $config);
 
@@ -126,6 +151,11 @@ class Qsl extends CI_Controller {
         else {
             //Upload of QSL card was successful
             $data = $this->upload->data();
+
+            if (!$this->upload_guard->is_real_image($data['full_path'])) {
+                unlink($data['full_path']);
+                return array('error' => __("The uploaded file is not a valid image."));
+            }
 
             // Now we need to insert info into database about file
             $filename = $data['file_name'];
@@ -153,8 +183,8 @@ class Qsl extends CI_Controller {
 	}
 
 	function addQsoToQsl() {
-		$qsoid = $this->input->post('qsoid');
-		$filename = $this->input->post('filename');
+		$qsoid = $this->input->post('qsoid', TRUE);
+		$filename = $this->input->post('filename', TRUE);
 
 		$this->load->model('Qsl_model');
 		$insertid = $this->Qsl_model->addQsotoQsl($qsoid, $filename);

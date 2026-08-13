@@ -2,32 +2,37 @@
 
 class SimpleFLE extends CI_Controller {
 
-    public function index() {
-        $this->load->model('user_model');
+	function __construct() {
+		parent::__construct();
 		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
+	}
 
-
+    public function index() {
 		$this->load->model('stations');
 		$this->load->model('logbook_model');
 		$this->load->model('modes');
 		$this->load->model('bands');
-		$this->load->model('contesting_model');
+		$this->load->model('contest_admin_model');
 
-		$data['contests']=$this->contesting_model->getActivecontests();
-		$data['station_profile'] = $this->stations->all_of_user();			// Used in the view for station location select
+		$data['contests']=$this->contest_admin_model->getActiveContests();
+		if (!empty($this->session->userdata('user_stations_active_log_only'))) {
+			$data['station_profile'] = $this->logbooks_model->list_logbooks_linked($this->session->userdata('active_station_logbook'));
+		} else {
+			$data['station_profile'] = $this->stations->all_of_user();		// Used in the view for station location select
+		}
 		$data['bands'] = $this->bands->get_all_bands();						// Fetching Bands for SFLE
 		$data['modes'] = $this->modes_array();								// Fetching Modes for SFLE
 		$data['active_station_profile'] = $this->stations->find_active();	// Prepopulate active Station in Station Location Selector
 		$data['sat_active'] = array_search("SAT", $this->bands->get_user_bands(), true);
 
 
-		$data['page_title'] = "Simple Fast Log Entry";
+		$data['page_title'] = __("Simple Fast Log Entry");
 
 		$footerData = [];
 		$footerData['scripts'] = [
 			'assets/js/moment.min.js',
 			'assets/js/datetime-moment.js',
-			'assets/js/sections/simplefle.js?' . filemtime(realpath(__DIR__ . "/../../assets/js/sections/simplefle.js"))
+			'assets/js/sections/simplefle.js'
 		];
 
 		$this->load->view('interface_assets/header', $data);
@@ -82,7 +87,7 @@ class SimpleFLE extends CI_Controller {
 		$this->load->model('logbook_model');
 
 		$qsos = json_decode($qsos, true);
-		$station_id = $qsos[0]['station_id']; // we can trust this value
+		$station_id = $qsos[0]['station_id']; // we can trust this value, but only because it's checked at bulk-import!
 
 		$result = $this->logbook_model->import_bulk($qsos, $station_id);
 		$bulk_result = $result['errormessage'];

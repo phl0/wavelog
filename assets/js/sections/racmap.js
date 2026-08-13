@@ -1,9 +1,22 @@
-var osmUrl = tileUrl;
-var province;
-var geojson;
-var map;
-var info;
-var clickmarkers = [];
+let osmUrl = tileUrl;
+let province;
+let geojson;
+let map;
+let info;
+let clickmarkers = [];
+
+let confirmedColor = 'rgba(144,238,144)';
+if (typeof(user_map_custom.qsoconfirm) !== 'undefined') {
+      confirmedColor = user_map_custom.qsoconfirm.color;
+}
+let workedColor = 'rgba(229, 165, 10)';
+if (typeof(user_map_custom.qso) !== 'undefined') {
+      workedColor = user_map_custom.qso.color;
+}
+let unworkedColor = 'rgba(204, 55, 45)';
+if (typeof(user_map_custom.unworked) !== 'undefined') {
+   unworkedColor = user_map_custom.unworked.color;
+}
 
 const states = 'AB,BC,MB,NB,NL,NT,NS,NU,ON,PE,QC,SK,YT';
 
@@ -78,69 +91,72 @@ function load_rac_map2(data) {
 	  }
   ).addTo(map);
 
-  var notworked = mapcoordinates.features.length;
-  var confirmed = 0;
-  var workednotconfirmed = 0;
+  // Load GeoJSON from external file
+  $.getJSON(base_url + 'assets/json/geojson/states_1.geojson', function(mapcoordinates) {
+    var notworked = mapcoordinates.features.length;
+	var confirmed = 0;
+	var workednotconfirmed = 0;
 
-	for(var k in data) {
-		var mapColor = 'red';
+		for(var k in data) {
+			var mapColor = unworkedColor;
 
-		if (data[k] == 'C') {
-			mapColor = 'green';
-			confirmed++;
+			if (data[k] == 'C') {
+				mapColor = confirmedColor;
+				confirmed++;
+				notworked--;
+			}
+			if (data[k] == 'W') {
+			mapColor = workedColor;
+			workednotconfirmed++;
 			notworked--;
+			}
 		}
-		if (data[k] == 'W') {
-		mapColor = 'orange';
-		workednotconfirmed++;
-		notworked--;
-		}
-	}
 
 
-  /*Legend specific*/
-  var legend = L.control({ position: "topright" });
+	/*Legend specific*/
+	var legend = L.control({ position: "topright" });
 
-  legend.onAdd = function(map) {
-	  var div = L.DomUtil.create("div", "legend");
-	  div.innerHTML += "<h4>" + lang_general_word_colors + "</h4>";
-	  div.innerHTML += "<i style='background: green'></i><span>" + lang_general_word_confirmed + " (" + confirmed + ")</span><br>";
-	  div.innerHTML += "<i style='background: orange'></i><span>" + lang_general_word_worked_not_confirmed + " (" + workednotconfirmed + ")</span><br>";
-	  div.innerHTML += "<i style='background: red'></i><span>" + lang_general_word_not_worked + " (" + notworked + ")</span><br>";
-	  return div;
-  };
+	legend.onAdd = function(map) {
+		var div = L.DomUtil.create("div", "legend");
+		div.innerHTML += "<h4>" + lang_general_word_colors + "</h4>";
+		div.innerHTML += "<i style='background: " + confirmedColor + "'></i><span>" + lang_general_word_confirmed + " (" + confirmed + ")</span><br>";
+		div.innerHTML += "<i style='background: " + workedColor + "'></i><span>" + lang_general_word_worked_not_confirmed + " (" + workednotconfirmed + ")</span><br>";
+		div.innerHTML += "<i style='background: " + unworkedColor + "'></i><span>" + lang_general_word_not_worked + " (" + notworked + ")</span><br>";
+		return div;
+	};
 
-  legend.addTo(map);
+	legend.addTo(map);
 
-  info = L.control();
+	info = L.control();
 
-info.onAdd = function (map) {
-    this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
-    this.update();
-    return this._div;
-};
+	info.onAdd = function (map) {
+		this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+		this.update();
+		return this._div;
+	};
 
-// method that we will use to update the control based on feature properties passed
-info.update = function (props) {
-    this._div.innerHTML = '<h4>' + lang_canada_province + '</h4>' +  (props ?
-        '<b>' + props.id.substring(3,5) + ' - ' + props.name + '</b><br />' : lang_hover_over_a_province);
-};
+	// method that we will use to update the control based on feature properties passed
+	info.update = function (props) {
+		this._div.innerHTML = '<h4>' + lang_canada_province + '</h4>' +  (props ?
+			'<b>' + props.code + ' - ' + props.name + '</b><br />' : lang_hover_over_a_province);
+	};
 
-info.addTo(map);
+	info.addTo(map);
 
-  geojson = L.geoJson(mapcoordinates, {style: style, onEachFeature: onEachFeature}).addTo(map);
+	geojson = L.geoJson(mapcoordinates, {style: style, onEachFeature: onEachFeature}).addTo(map);
 
-  map.setView([70, -100], 3);
+	map.setView([70, -100], 3);
 
-  addMarkers();
+	addMarkers();
 
-  map.on('zoomed', function() {
-    clearMarkers();
-    addMarkers();
-  });
+	map.on('zoomed', function() {
+		clearMarkers();
+		addMarkers();
+	});
 
-  var layerControl = new L.Control.Layers(null, { [lang_general_gridsquares]: maidenhead = L.maidenhead() }).addTo(map);
-  maidenhead.addTo(map);
+	var layerControl = new L.Control.Layers(null, { [lang_general_gridsquares]: maidenhead = L.maidenhead() }).addTo(map);
+	maidenhead.addTo(map);
+  }); // end $.getJSON
 }
 
 function clearMarkers() {
@@ -171,9 +187,9 @@ function createMarker(i) {
   }
 
 function getColor(d) {
-    return 	province[d] == 'C' ? 'green'  :
-			province[d] == 'W' ? 'orange' :
-									  'red';
+    return 	province[d] == 'C' ? confirmedColor  :
+			province[d] == 'W' ? workedColor :
+									  unworkedColor;
 }
 
 function highlightFeature(e) {
@@ -209,7 +225,7 @@ function resetHighlight(e) {
 
 function style(feature) {
     return {
-        fillColor: getColor(feature.id),
+        fillColor: getColor(feature.properties.code),
         weight: 1,
         opacity: 1,
         color: 'white',
@@ -221,7 +237,7 @@ function style(feature) {
 function onClick(e) {
   zoomToFeature(e);
   var marker = e.target;
-  displayContactsOnMap($("#racmap"),marker.feature.id, $('#band2').val(), 'All', 'All', $('#mode').val(), 'RAC');
+  displayContactsOnMap($("#racmap"),marker.feature.properties.code, $('#band2').val(), 'All', 'All', $('#mode').val(), 'RAC');
 }
 
 function onClick2(e) {

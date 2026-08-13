@@ -15,6 +15,7 @@ if ($qsos->result() != NULL) {
 	<th style=\'text-align: center\'>' . __("Profile name") . '</th>
 	<th style=\'text-align: center\'>' . __("QSL") . ' ' . __("Via") . '</th>
 	<th style=\'text-align: center\'>' . __("Send Method") . '</th>
+	<th style=\'text-align: center; white-space: nowrap;\'>' . __("Previous QSL") . '</th>
 	<th style=\'text-align: center\'>' . __("QSL") . '</th>';
 	if ($this->session->userdata('user_eqsl_name') != "") {
 		echo '<th style=\'text-align: center\'>' . __("eQSL") . '</th>';
@@ -41,14 +42,35 @@ if ($qsos->result() != NULL) {
 		echo '<td style=\'text-align: center\'>'; $timestamp = strtotime($qsl->COL_TIME_ON); echo date($custom_date_format, $timestamp); echo '</td>';
 		echo '<td style=\'text-align: center\'>'; $timestamp = strtotime($qsl->COL_TIME_ON); echo date('H:i', $timestamp); echo '</td>';
 		echo '<td style=\'text-align: center\'>'; echo $qsl->COL_SUBMODE==null?$qsl->COL_MODE:$qsl->COL_SUBMODE; echo '</td>';
-		echo '<td style=\'text-align: center\'>'; if($qsl->COL_SAT_NAME != null) { echo __("SAT") . ' ' . $qsl->COL_SAT_NAME . ' '. strtolower($qsl->COL_BAND) . '/' . strtolower($qsl->COL_BAND_RX); } else { echo strtolower($qsl->COL_BAND); }; echo '</td>';
-		echo '<td style=\'text-align: center\'>'; if($qsl->COL_SAT_NAME != null) { echo __("SAT") . ' ' . $qsl->COL_SAT_NAME . ' ' . $this->frequency->qrg_conversion($qsl->COL_FREQ) . '/' . $this->frequency->qrg_conversion($qsl->COL_FREQ_RX); } else { echo $this->frequency->qrg_conversion($qsl->COL_FREQ); }; echo '</td>';
+		echo '<td style=\'text-align: center\'>'; if($qsl->COL_SAT_NAME != null) {
+			$band_rx = strtolower($qsl->COL_BAND_RX ?? '');
+			$band = strtolower($qsl->COL_BAND);
+			if ($band_rx && $band && $band_rx != $band) {
+				echo __("SAT") . ' ' . $qsl->COL_SAT_NAME . ' ' . $band . '/' . $band_rx;
+			} else {
+				echo __("SAT") . ' ' . $qsl->COL_SAT_NAME . ' ' . $band;
+			}
+		} else { echo strtolower($qsl->COL_BAND); }; echo '</td>';
+		echo '<td style=\'text-align: center\'>'; if($qsl->COL_SAT_NAME != null) {
+			$freq_rx = $qsl->COL_FREQ_RX ?? 0;
+			$freq = $qsl->COL_FREQ ?? 0;
+			if ($freq_rx && $freq && !$this->frequency->frequencies_are_equal($freq, $freq_rx)) {
+				echo __("SAT") . ' ' . $qsl->COL_SAT_NAME . ' ' . $this->frequency->qrg_conversion($freq) . '/' . $this->frequency->qrg_conversion($freq_rx);
+			} else {
+				echo __("SAT") . ' ' . $qsl->COL_SAT_NAME . ' ' . $this->frequency->qrg_conversion($freq);
+			}
+		} else { echo $this->frequency->qrg_conversion($qsl->COL_FREQ); }; echo '</td>';
 		echo '<td style=\'text-align: center\'>' . $qsl->COL_RST_SENT . '</td>';
 		echo '<td style=\'text-align: center\'>' . $qsl->COL_RST_RCVD . '</td>';
 		echo '<td style=\'text-align: center\'><span class="badge text-bg-light">' . $qsl->station_callsign . '</span></td>';
 		echo '<td style=\'text-align: center\'>' . $qsl->station_profile_name . '</span></td>';
 		echo '<td style=\'text-align: center\'>' . $qsl->COL_QSL_VIA . '</td>';
 		echo '<td style=\'text-align: center\'>'; echo_qsl_sent_via($qsl->COL_QSL_SENT_VIA); echo '</td>';
+		echo '<td style=\'text-align: center; white-space: nowrap;\'>';
+		echo '<span class="badge ' . ($qsl->previous_qsl > 0 ? 'bg-warning' : 'bg-success') . '" data-bs-toggle="tooltip" data-bs-title="' . __("Previous QSL sent (same band/mode)") . '">' . $qsl->previous_qsl . '</span> / ';
+		echo '<span class="badge bg-info" data-bs-toggle="tooltip" data-bs-title="' . __("QSL sent to callsign (total)") . '">' . $qsl->qsl_sent_to_call . '</span> / ';
+		echo '<span class="badge bg-info" data-bs-toggle="tooltip" data-bs-title="' . __("QSL received from callsign (total)") . '">' . $qsl->qsl_rcvd_from_call . '</span>';
+		echo '</td>';
 		echo '<td style=\'text-align: center\' class="qsl">';
 		echo '<span ';
 		if ($qsl->COL_QSL_SENT != "N") {

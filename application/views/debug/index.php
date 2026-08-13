@@ -1,3 +1,12 @@
+<script>
+    var lang_cache_clean_confirm = "<?= __("Are you sure you want to clear the cache?"); ?>";
+    var lang_cache_clear_failure = "<?= __("Failed to clear cache!"); ?>";
+    var lang_git_last_version_check = "<?= __("Last version check: %s"); ?>";
+    var lang_git_is_uptodate = "<?= __("Wavelog is up to date!"); ?>";
+    var lang_git_new_update_available = "<?= __("There is a newer version available: %s"); ?>";
+    var lang_git_remote_doesnt_know_branch = "<?= __("The Remote Repository doesn't know your branch."); ?>";
+</script>
+
 <div class="container debug_main mb-4">
     <br>
     <?php if ($this->session->flashdata('success')) { ?>
@@ -38,6 +47,11 @@
                         </tr>
                         <?php } ?>
                         <tr>
+                            <td><?= __("ADIF Version"); ?></td>
+                            <td><?php echo $this->optionslib->get_option('adif_version'); ?>
+                            </td>
+                        </tr>
+                        <tr>
                             <td><?= __("Language"); ?></td>
                             <td><?= __(ucfirst($this->config->item('language'))) . "\n"; ?></td>
                         </tr>
@@ -54,7 +68,7 @@
                             <div class="alert alert-danger mt-3 mb-3">
                                 <h5><?= __("Migration is outdated and locked!"); ?></h5>
                                 <p><?= sprintf(__("The current migration is not the version it is supposed to be. Reload this page after %s seconds. If this warning persists, your migration is likely locked due to a previously failed process. Delete the file %s to force the migration to run again."), $miglock_lifetime, $migration_lockfile); ?></p>
-                                <p><?= sprintf(__("Check this wiki article %shere%s for more information."), '<u><a href="https://github.com/wavelog/wavelog/wiki/Migration-is-locked" target="_blank">', '</a></u>'); ?></p>
+                                <p><?= sprintf(__("Check this wiki article %shere%s for more information."), '<u><a href="https://docs.wavelog.org/troubleshooting/migration-locked/" target="_blank">', '</a></u>'); ?></p>
                                 <p><?= sprintf(__("Current migration is %s"), $migration_version); ?><br>
                                     <?= sprintf(__("Migration should be %s"), $migration_config); ?></p>
                             </div>
@@ -110,11 +124,50 @@
                             <td><?= __("MySQL Version"); ?></td>
                             <td><?php echo $this->db->version(); ?></td>
                         </tr>
+
+                        <tr>
+                            <td><?= __("OpenSSL Version"); ?></td>
+                            <td><?php echo OPENSSL_VERSION_TEXT ?? __("not found"); ?></td>
+                        </tr>
                         <tr>
                             <td><?= __("Codeigniter Version"); ?></td>
                             <td><?php echo CI_VERSION; ?></td>
                         </tr>
                     </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><?= __("Wavelog Worker Backend"); ?></div>
+                <div class="card-body">
+                    <div id="worker-status" style="display: none;">
+                        <table class="table table-sm mb-0">
+                            <thead><tr>
+                                <th><?= __("Worker"); ?></th>
+                                <th><?= __("Topics"); ?></th>
+                                <th><?= __("Clients"); ?></th>
+                                <th><?= __("Version"); ?></th>
+                                <th id="ws-cluster-head" style="display: none;"><?= __("Cluster nodes"); ?></th>
+                                <th><?= __("Uptime"); ?></th>
+                            </tr></thead>
+                            <tbody><tr>
+                                <td>
+                                    <span id="ws-badge" class="badge rounded-pill text-bg-success">
+                                        <i id="ws-live-dot" class="fas fa-circle fa-fade" style="display: none; font-size: 0.6em; vertical-align: middle;"></i> <span id="ws-state"><?= __("Online"); ?></span>
+                                    </span>&nbsp;&nbsp;<span id="ws-url"></span>
+                                </td>
+                                <td id="ws-topics">—</td>
+                                <td id="ws-clients">—</td>
+                                <td id="ws-version">—</td>
+                                <td id="ws-cluster" style="display: none;">—</td>
+                                <td id="ws-uptime" style="white-space: nowrap;">—</td>
+                            </tr></tbody>
+                        </table>
+                    </div>
+                    <div id="worker-status-container">
+                        <span class="spinner-border spinner-border-sm text-muted align-middle" role="status" aria-hidden="true"></span>
+                        <span class="text-muted align-middle"><?= __("Loading..."); ?></span>
+                    </div>
                 </div>
             </div>
 
@@ -306,6 +359,45 @@
                                         <?php } ?>
                                     </td>
                                 </tr>
+
+                                <?php if ($cache_adapter == 'apcu' || $cache_backup == 'apcu') { ?>
+                                <tr>
+                                    <td>php-apcu</td>
+                                    <td>
+                                        <?php if (in_array('apcu', get_loaded_extensions())) { ?>
+                                            <span class="badge text-bg-success"><?= __("Installed"); ?></span>
+                                        <?php } else { ?>
+                                            <span class="badge text-bg-danger"><?= __("Not Installed"); ?></span>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+                                <?php } ?>
+
+                                <?php if ($cache_adapter == 'redis' || $cache_backup == 'redis') { ?>
+                                <tr>
+                                    <td>php-redis</td>
+                                    <td>
+                                        <?php if (in_array('redis', get_loaded_extensions())) { ?>
+                                            <span class="badge text-bg-success"><?= __("Installed"); ?></span>
+                                        <?php } else { ?>
+                                            <span class="badge text-bg-danger"><?= __("Not Installed"); ?></span>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+                                <?php } ?>
+
+                                <?php if ($cache_adapter == 'memcached' || $cache_backup == 'memcached') { ?>
+                                <tr>
+                                    <td>php-memcached</td>
+                                    <td>
+                                        <?php if (in_array('memcached', get_loaded_extensions())) { ?>
+                                            <span class="badge text-bg-success"><?= __("Installed"); ?></span>
+                                        <?php } else { ?>
+                                            <span class="badge text-bg-danger"><?= __("Not Installed"); ?></span>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+                                <?php } ?>
                             </table>
                         </div>
                         <div class="col">
@@ -399,6 +491,107 @@
                     </div>
                 </div>
             </div>
+            <!-- Cache Information Card -->
+            <div class="card">
+                <div class="card-header"><?= __("Cache Information"); ?></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><u><?= __("Current Configuration"); ?></u></p>
+                            <table width="100%">
+                                <tr>
+                                    <td><?= _pgettext("Cache Adapter","Primary adapter"); ?></td>
+                                    <td>
+                                        <span class="badge text-bg-primary"><?php echo $cache_adapter; ?></span>
+                                        <?php if ($cache_adapter == $active_adapter) { ?>
+                                            <span class="badge text-bg-success"><?= __("Active"); ?></span>
+                                        <?php } else { ?>
+                                            <span class="badge text-bg-danger"><?= __("Failed"); ?></span>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><?= _pgettext("Cache Backup Adapter (Fallback)","Backup adapter"); ?></td>
+                                    <td>
+                                        <span class="badge text-bg-primary"><?php echo $cache_backup; ?></span>
+                                        <?php if ($cache_backup == $active_adapter) { ?>
+                                            <span class="badge text-bg-success"><?= __("Active"); ?></span>
+                                        <?php } else if ($active_adapter == 'dummy') { ?>
+                                            <span class="badge text-bg-danger"><?= __("Failed"); ?></span>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><?= sprintf(_pgettext("Cache Path","Path for %s adapter"), "'file'"); ?></td>
+                                    <td><code><?php echo $cache_path; ?></code></td>
+                                </tr>
+                                <tr>
+                                    <td><?= _pgettext("Cache Key Prefix","Key Prefix"); ?></td>
+                                    <td><code><?php echo $cache_key_prefix; ?></code></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <p><u><?= __("Cache Details"); ?></u></p>
+                            <table width="100%">
+                                <tr>
+                                    <td><?= _pgettext("Cache Details","Total Size"); ?></td>
+                                    <td>
+                                        <span class="badge text-bg-primary"><?php echo $details_cache_size; ?></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><?= _pgettext("Cache Key","Number of Keys"); ?></td>
+                                    <td>
+                                        <span class="badge text-bg-primary"><?php echo $details_cache_keys_count; ?></span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="ms-2 me-2">
+                            <?php if (!$using_backup) { ?>
+                                <div class="alert alert-success mt-2 mb-0" role="alert">
+                                    <?= __("Cache is working properly. Everything okay!"); ?>
+                                </div>
+                            <?php } else if ($active_adapter !== 'dummy') { ?>
+                                <div class="alert alert-danger mt-2 mb-0" role="alert">
+                                    <?= __("Cache is currently using the backup adapter because the primary is unavailable. Check your file permissions, PHP extensions, and/or your network connection to the services (if using redis/memcached)."); ?>
+                                </div>
+                            <?php } else { ?>
+                                <div class="alert alert-danger mt-2 mb-0" role="alert">
+                                    <?= sprintf(__("Cache does not work! Currently the system is using a %s adapter. Check your file permissions, PHP extensions and/or your network connection to the services (if using redis/memcached). You can continue using Wavelog, but no values will be cached (which is bad)."), "'dummy'"); ?>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    </div>
+                    <div class="border-top pt-3 mt-3">
+                        <div class="row">
+                            <div class="col">
+                                <p><u><?= __("Available Adapters"); ?></u></p>
+                                <div>
+                                    <?php foreach ($cache_available_adapters as $adapter => $supported) { ?>
+                                        <?php // Special case: Files adapter requires writable cache folder
+                                         if ($adapter == 'file' && $cache_path == 'application/cache' && $cache_folder == false) {
+                                            $supported = false;
+                                        } ?>
+                                        <?php if ($supported) { ?>
+                                            <span class="badge text-bg-success"><?php echo ucfirst($adapter); ?></span>
+                                        <?php } else { ?>
+                                            <span class="badge text-bg-secondary" style="opacity: 0.5;"><?php echo ucfirst($adapter); ?></span>
+                                        <?php } ?>
+                                    <?php } ?>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center">
+                                <button type="button" id="clear_cache_button" class="btn btn-sm btn-secondary">
+                                    <?= __("Clear Cache"); ?>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- HIER -->
             <?php if (file_exists(realpath(APPPATH . '../') . '/.git') && function_usable('exec')) { ?>
                 <?php
                 //Below is a failsafe where git commands fail
@@ -412,6 +605,7 @@
                         $commitDate = trim(exec('git log --pretty="%ci" -n1 HEAD'));
                         $line = trim(exec('git log -n 1 --pretty=%D HEAD'));
                         $pieces = explode(', ', $line);
+                        $pieceCount = count($pieces);
                         $lastFetch = trim(exec('stat -c %Y ' . realpath(APPPATH . '../') . '/.git/FETCH_HEAD'));
                         //Below is a failsafe for systems without the stat command
                         try {
@@ -419,8 +613,8 @@
                         } catch (Exception $e) {
                             $dt = new DateTime(date("Y-m-d H:i:s"));
                         }
-                        if (isset($pieces[1])) {
-                            $remote = substr($pieces[1], 0, strpos($pieces[1], '/'));
+                        if (isset($pieces[$pieceCount - 1])) {
+                            $remote = substr($pieces[$pieceCount - 1], 0, strpos($pieces[$pieceCount - 1], '/'));
                             $branch = trim(exec('git rev-parse --abbrev-ref HEAD')); // Get ONLY Name of the Branch we're on
                             $url = trim(exec('git remote get-url ' . $remote));
                             if (strpos($url, 'https://github.com') !== false) {
@@ -472,7 +666,7 @@
                                     <td><?= __("Tag"); ?></td>
                                     <td>
                                         <?php if ($commitHash != "") { ?>
-                                            <a target="_blank" href="https://github.com/wavelog/wavelog/releases/tag/<?php echo substr($tag, 0, strpos($tag, '-')); ?>"><span class="badge text-bg-success"><?php echo $tag; ?></span></a>
+                                            <a target="_blank" href="https://github.com/wavelog/wavelog/releases/tag/<?php echo strpos($tag, '-') ? substr($tag, 0, strpos($tag, '-')) : $tag; ?>"><span class="badge text-bg-success"><?php echo $tag; ?></span></a>
                                         <?php } else { ?>
                                             <span class="badge text-bg-danger"><?= __("n/a"); ?></span>
                                         <?php } ?>
@@ -520,49 +714,70 @@
                         </thead>
                         <tr>
                             <td><?= __("DXCC update from Club Log"); ?></td>
-                            <td><?php echo $dxcc_update->last_run ?? __("never"); ?></td>
+                            <?php $timestamp = strtotime($dxcc_update->last_run ?? ''); ?>
+                            <td><?php echo $dxcc_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
                             <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update'); ?>"><?= __("Update"); ?></a></td>
 
                         </tr>
                         <tr>
                             <td><?= __("DOK file download"); ?></td>
-                            <td><?php echo $dok_update->last_run ?? __("never"); ?></td>
+                            <?php $timestamp = strtotime($dok_update->last_run ?? ''); ?>
+                            <td><?php echo $dok_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
                             <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_dok'); ?>"><?= __("Update"); ?></a></td>
                         </tr>
                         <tr>
                             <td><?= __("LoTW users download"); ?></td>
-                            <td><?php echo $lotw_user_update->last_run ?? __("never"); ?></td>
+                            <?php $timestamp = strtotime($lotw_user_update->last_run ?? ''); ?>
+                            <td><?php echo $lotw_user_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
                             <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/lotw_users'); ?>"><?= __("Update"); ?></a></td>
                         </tr>
                         <tr>
                             <td><?= __("POTA file download"); ?></td>
-                            <td><?php echo $pota_update->last_run ?? __("never"); ?></td>
+                            <?php $timestamp = strtotime($pota_update->last_run ?? ''); ?>
+                            <td><?php echo $pota_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
                             <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_pota'); ?>"><?= __("Update"); ?></a></td>
                         </tr>
                         <tr>
                             <td><?= __("SCP file download"); ?></td>
-                            <td><?php echo $scp_update->last_run ?? __("never"); ?></td>
+                            <?php $timestamp = strtotime($scp_update->last_run ?? ''); ?>
+                            <td><?php echo $scp_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
                             <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_clublog_scp'); ?>"><?= __("Update"); ?></a></td>
                         </tr>
                         <tr>
                             <td><?= __("SOTA file download"); ?></td>
-                            <td><?php echo $sota_update->last_run ?? __("never"); ?></td>
+                            <?php $timestamp = strtotime($sota_update->last_run ?? ''); ?>
+                            <td><?php echo $sota_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
                             <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_sota'); ?>"><?= __("Update"); ?></a></td>
                         </tr>
                         <tr>
                             <td><?= __("WWFF file download"); ?></td>
-                            <td><?php echo $wwff_update->last_run ?? __("never"); ?></td>
+                            <?php $timestamp = strtotime($wwff_update->last_run ?? ''); ?>
+                            <td><?php echo $wwff_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
                             <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_wwff'); ?>"><?= __("Update"); ?></a></td>
                         </tr>
-			<tr>
+                        <tr>
                             <td><?= __("TLE update"); ?></td>
-                            <td><?php echo $tle_update->last_run ?? __("never"); ?></td>
+                            <?php $timestamp = strtotime($tle_update->last_run ?? ''); ?>
+                            <td><?php echo $tle_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
                             <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_tle'); ?>"><?= __("Update"); ?></a></td>
                         </tr>
-			<tr>
+                        <tr>
                             <td><?= __("Hams Of Note update"); ?></td>
-                            <td><?php echo $hon_update->last_run ?? __("never"); ?></td>
+                            <?php $timestamp = strtotime($hon_update->last_run ?? ''); ?>
+                            <td><?php echo $hon_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
                             <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_hamsofnote'); ?>"><?= __("Update"); ?></a></td>
+                        </tr>
+                        <tr>
+                            <td><?= __("HAMqsl"); ?></td>
+                            <?php $timestamp = strtotime($hamqsl_update->last_run ?? ''); ?>
+                            <td><?php echo $hamqsl_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
+                            <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_hamqsl'); ?>"><?= __("Update"); ?></a></td>
+                        </tr>
+                        <tr>
+                            <td><?= __("VUCC Grids"); ?></td>
+                            <?php $timestamp = strtotime($vucc_grids_update->last_run ?? ''); ?>
+                            <td><?php echo $vucc_grids_update->last_run ? date($custom_date_format, $timestamp).' '.date('H:i:s', $timestamp) : __("never"); ?></td>
+                            <td><a class="btn btn-sm btn-primary" href="<?php echo site_url('update/update_vucc_grids'); ?>"><?= __("Update"); ?></a></td>
                         </tr>
                     </table>
                 </div>
@@ -650,6 +865,21 @@
 </div>
 
 <script>
+    window.workerStatusLive = <?php echo json_encode([
+        'enabled'     => (bool)($worker_enabled ?? false),
+        'topic'       => $worker_status_topic ?? '',
+        'token'       => $worker_status_token ?? '',
+        'nodesTotal'  => (int)($worker_nodes_total ?? 0),
+        'snapshotUrl' => site_url('debug/worker_status'),
+        'msg'         => [
+            'online'      => __("Online"),
+            'degraded'    => __("Degraded"),
+            'disabled'    => '<span class="badge rounded-pill text-bg-secondary">' . __("Disabled") . '</span> ' . __("Worker backend is not configured."),
+            'unreachable' => '<span class="badge rounded-pill text-bg-danger">' . __("Unreachable") . '</span> ' . __("Worker is configured but did not respond."),
+            'update'      => '<span class="badge rounded-pill text-bg-warning">' . __("Outdated") . '</span> ' . __("Please update your Wavelog Worker to version 0.2.0 or newer to see the status."),
+        ],
+    ]); ?>;
+
     <?php if (file_exists(realpath(APPPATH . '../') . '/.git')) { ?>
         var local_branch = '<?php echo $branch; ?>';
     <?php } else { ?>
@@ -687,6 +917,7 @@
     <?= __("Montenegrin"); ?>
     <?= __("Polish"); ?>
     <?= __("Portuguese"); ?>
+    <?= __("Romanian"); ?>
     <?= __("Russian"); ?>
     <?= __("Serbian"); ?>
     <?= __("Slovak"); ?>
@@ -694,4 +925,5 @@
     <?= __("Spanish"); ?>
     <?= __("Swedish"); ?>
     <?= __("Turkish"); ?>
+    <?= __("Ukrainian"); ?>
 </div>

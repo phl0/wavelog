@@ -10,21 +10,13 @@ class Options extends CI_Controller {
 		parent::__construct();
 		$this->load->helper(array('form', 'url'));
 
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
 
-	// Default /options view just gives some text to explain the options area
+	// Default /options redirects to the appearance tab
 	function index() {
-		//echo $this->config->item('option_theme');
-		//echo $this->optionslib->get_option('theme');
-
-		$data['page_title'] = __("Wavelog Options");
-
-		$this->load->view('interface_assets/header', $data);
-		$this->load->view('options/index');
-		$this->load->view('interface_assets/footer');
+		redirect('options/appearance');
 	}
 
 	// function used to display the /appearance url
@@ -32,6 +24,7 @@ class Options extends CI_Controller {
 
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("Appearance");
+		$data['active_tab'] = 'appearance';
 
 		$this->load->model('Themes_model');
 
@@ -47,6 +40,7 @@ class Options extends CI_Controller {
 
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("Appearance");
+		$data['active_tab'] = 'appearance';
 
 		$this->load->helper(array('form', 'url'));
 
@@ -64,14 +58,6 @@ class Options extends CI_Controller {
 
 			// If theme update is complete set a flashsession with a success note
 			if($theme_update_status == TRUE) {
-				$this->session->set_flashdata('success', __("Options saved"));
-			}
-
-			// Update theme choice within the options system
-			$search_update_status = $this->optionslib->update('global_search', $this->input->post('globalSearch'));
-
-			// If theme update is complete set a flashsession with a success note
-			if($search_update_status == TRUE) {
 				$this->session->set_flashdata('success', __("Options saved"));
 			}
 
@@ -116,6 +102,7 @@ class Options extends CI_Controller {
 	function hon() {
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("Hams Of Note");
+		$data['active_tab'] = 'hon';
 
 		$this->load->view('interface_assets/header', $data);
 		$this->load->view('options/hon');
@@ -127,6 +114,7 @@ class Options extends CI_Controller {
 
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("Hams Of Note");
+		$data['active_tab'] = 'hon';
 
 		$this->load->helper(array('form', 'url'));
 
@@ -150,6 +138,7 @@ class Options extends CI_Controller {
 	function dxcluster() {
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("DXCluster");
+		$data['active_tab'] = 'dxcluster';
 
 		$this->load->view('interface_assets/header', $data);
 		$this->load->view('options/dxcluster');
@@ -161,6 +150,7 @@ class Options extends CI_Controller {
 
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("DXCluster");
+		$data['active_tab'] = 'dxcluster';
 
 		$this->load->helper(array('form', 'url'));
 
@@ -198,6 +188,7 @@ class Options extends CI_Controller {
 
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("Radio Settings");
+		$data['active_tab'] = 'radio';
 
 		$this->load->view('interface_assets/header', $data);
 		$this->load->view('options/radios');
@@ -209,6 +200,7 @@ class Options extends CI_Controller {
 
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("Radio Settings");
+		$data['active_tab'] = 'radio';
 
 		$this->load->helper(array('form', 'url'));
 
@@ -242,6 +234,7 @@ class Options extends CI_Controller {
 
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("Email");
+		$data['active_tab'] = 'email';
 
 		$this->load->view('interface_assets/header', $data);
 		$this->load->view('options/email');
@@ -253,6 +246,7 @@ class Options extends CI_Controller {
 
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("Email");
+		$data['active_tab'] = 'email';
 
 		$this->load->helper(array('form', 'url'));
 
@@ -320,8 +314,6 @@ class Options extends CI_Controller {
 	}
 
 	function sendTestMail() {
-		$this->load->model('user_model');
-
 		$id = $this->session->userdata('user_id');
 
 		$email = $this->user_model->get_user_email_by_id($id);
@@ -368,6 +360,7 @@ class Options extends CI_Controller {
 	function maptiles() {
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("Maptiles Server");
+		$data['active_tab'] = 'maptiles';
 
 		$data['maptile_server_url'] = $this->optionslib->get_option('map_tile_server') ?? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 		$data['maptile_server_url_dark'] = $this->optionslib->get_option('map_tile_server_dark') ?? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -463,6 +456,7 @@ class Options extends CI_Controller {
 
 		$data['page_title'] = __("Wavelog Options");
 		$data['sub_heading'] = __("Version Info Settings");
+		$data['active_tab'] = 'version_dialog';
 
 		$this->load->view('interface_assets/header', $data);
 		$this->load->view('options/version_dialog');

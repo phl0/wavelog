@@ -1,17 +1,75 @@
 $(document).ready(function () {
-    // Update the Radio Interfaces every 2 seconds
-    $.get(base_url + 'index.php/radio/status/', function (result) {
+    const loadStatus = () => $.get(base_url + 'index.php/radio/status/', function (result) {
         $('.status').html(result);
-    });
-    $('#radioResultsLoading').hide();
-    setInterval(function () {
-        // Update the Radio Interfaces every 2 seconds
-        $.get(base_url + 'index.php/radio/status/', function (result) {
-            $('.status').html(result);
-        });
         $('#radioResultsLoading').hide();
-    }, 2000);
+    });
+    loadStatus();
+    // Exposed so the global set/release default handlers can refresh the table.
+    window.reloadRadioStatus = loadStatus;
 
+    // Reload the whole status table at most once per second — only used to add a
+    // radio row that isn't shown yet and on reconnect; live freq/mode changes are
+    // patched into the existing cells (see below), not re-fetched.
+    var pending = null, missed = false;
+    function throttleLoadStatus() {
+        if (pending) { missed = true; return; }
+        loadStatus();
+        pending = setTimeout(function () {
+            pending = null;
+            if (missed) { missed = false; throttleLoadStatus(); }
+        }, 1000);
+    }
+
+    var rw = window.radiosUserWorker;
+    if (rw && window.WavelogWorker && WavelogWorker.isAvailable()) {
+        // Slow safety-net reload keeps "last updated", timestamp, new radios and
+        // deletions in sync; freq/mode update live from the stream in between.
+        setInterval(loadStatus, 60000);
+        WavelogWorker.subscribe({
+            topic: rw.topic,
+            token: rw.token,
+            onMessage: function (frame) {
+                if (frame.type !== 'push' || !frame.payload || frame.payload.type !== 'radio_updated' || !frame.payload.radio_status) {
+                    return;
+                }
+                var row = $('.status tr[data-radio-id="' + frame.payload.radio_id + '"]');
+                if (!row.length) {
+                    throttleLoadStatus(); // radio not in the table yet — reload to add it
+                    return;
+                }
+                // Patch freq/mode cells straight from the payload (split-aware),
+                // matching what the server would render.
+                var s = frame.payload.radio_status;
+                var freqText;
+                if (!s.frequency) {
+                    freqText = '- / -';
+                } else if (!s.frequency_rx || s.frequency_rx == s.frequency) {
+                    freqText = s.frequency_formatted;
+                } else {
+                    freqText = s.frequency_rx_formatted + ' / ' + s.frequency_formatted;
+                }
+                row.find('.radio-freq').text(freqText);
+
+                var modeText;
+                if (!s.mode) {
+                    modeText = 'N/A';
+                } else if (!s.mode_rx) {
+                    modeText = s.mode;
+                } else {
+                    modeText = s.mode_rx + ' / ' + s.mode;
+                }
+                row.find('.radio-mode').text(modeText);
+
+                // Move the "last updated" marker to the radio that just updated.
+                $('.status .radio-lastupdated').empty();
+                row.find('.radio-lastupdated').append($('<i>').text(lang_radio_last_updated));
+            },
+            onReconnect: function () { throttleLoadStatus(); }
+        });
+    } else {
+        // Fallback: original fixed 2s poll when the worker is unavailable.
+        setInterval(loadStatus, 2000);
+    }
 });
 
 $(document).on('click', '.editCatSettings', async function (e) {	// Dynamic binding, since element doesn't exists when loading this JS
@@ -83,6 +141,8 @@ function set_default_radio(radio_id) {
         data: {
             radio_id: radio_id
         },
+        // Reload so all default/release buttons reflect the new default.
+        success: function () { if (window.reloadRadioStatus) { window.reloadRadioStatus(); } }
     });
 }
 
@@ -94,5 +154,6 @@ function release_default_radio(radio_id) {
         data: {
             radio_id: radio_id
         },
+        success: function () { if (window.reloadRadioStatus) { window.reloadRadioStatus(); } }
     });
 }

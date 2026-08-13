@@ -6,7 +6,6 @@ class Update_model extends CI_Model {
     function clublog_scp() {
         // set the last run in cron table for the correct cron id
         $this->load->model('cron_model');
-        $this->load->library('Paths');
 
         $this->cron_model->set_last_run($this->router->class . '_' . $this->router->method);
 
@@ -91,39 +90,76 @@ class Update_model extends CI_Model {
         }
     }
 
-    function sota() {
+	function sota() {
         // set the last run in cron table for the correct cron id
         $this->load->model('cron_model');
         $this->cron_model->set_last_run($this->router->class . '_' . $this->router->method);
 
-        $csvfile = 'https://www.sotadata.org.uk/summitslist.csv';
+        $csvfile = 'https://storage.sota.org.uk/summitslist.csv';
 
-        $sotafile = './updates/sota.txt';
-
-        $csvhandle = fopen($csvfile, "r");
-        if ($csvhandle === FALSE) {
-            return  "Something went wrong with fetching the SOTA file";
+		$ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $csvfile);
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog Updater');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+        $csv = curl_exec($ch);
+        if ($csv === FALSE) {
+            return "Something went wrong with fetching the SOTA file";
         }
 
-        $data = fgetcsv($csvhandle, 1000, ",", '"', '\\'); // Skip line we are not interested in
-        $data = fgetcsv($csvhandle, 1000, ",", '"', '\\'); // Skip line we are not interested in
-        $data = fgetcsv($csvhandle, 1000, ",", '"', '\\');
-        $sotafilehandle = fopen($sotafile, 'w');
-
-        if ($sotafilehandle === FALSE) {
-            return "FAILED: Could not write to sota.txt file";
+        $stream = fopen('php://temp', 'r+');
+        if ($stream === FALSE) {
+            return "FAILED: Could not open temp stream";
         }
+        fwrite($stream, $csv);
+        rewind($stream);
 
         $nCount = 0;
-        do {
-            if ($data[0]) {
-                fwrite($sotafilehandle, $data[0] . PHP_EOL);
-                $nCount++;
-            }
-        } while ($data = fgetcsv($csvhandle, 1000, ",", '"', '\\'));
+        $batch = [];
+        $first = true;
+		$second = true;
 
-        fclose($csvhandle);
-        fclose($sotafilehandle);
+        $this->db->trans_start();
+        $this->db->empty_table('sota_directory');
+
+        while (($cols = fgetcsv($stream, 0, ",", '"', '\\')) !== FALSE) {
+            if ($first) {
+                $first = false;
+                continue;
+            }
+
+			if ($second) {
+                $second = false;
+                continue;
+            }
+
+            $batch[] = [
+                'reference' => isset($cols[0]) ? trim($cols[0]) : null,
+                'name'      => isset($cols[3]) ? trim($cols[3]) : null,
+                'altitude'  => isset($cols[4]) ? trim($cols[4]) : null,
+                'lat'       => $this->_wwff_coord($cols[9] ?? null),
+                'lon'       => $this->_wwff_coord($cols[8] ?? null),
+            ];
+            $nCount++;
+
+            if (count($batch) >= 1000) {
+                $this->_sota_upsert_batch($batch);
+                $batch = [];
+            }
+        }
+
+        fclose($stream);
+
+        if (!empty($batch)) {
+            $this->_sota_upsert_batch($batch);
+        }
+
+        $this->db->trans_complete();
+        if ($this->db->trans_status() === FALSE) {
+            return "FAILED: import rolled back";
+        }
 
         if ($nCount > 0) {
             return "DONE: " . number_format($nCount) . " SOTA's saved";
@@ -133,42 +169,71 @@ class Update_model extends CI_Model {
     }
 
     function wwff() {
-        // set the last run in cron table for the correct cron id
         $this->load->model('cron_model');
         $this->cron_model->set_last_run($this->router->class . '_' . $this->router->method);
 
         $csvfile = 'https://wwff.co/wwff-data/wwff_directory.csv';
-
-        $wwfffile = './updates/wwff.txt';
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $csvfile);
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog Updater');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
         $csv = curl_exec($ch);
-        curl_close($ch);
         if ($csv === FALSE) {
             return "Something went wrong with fetching the WWFF file";
         }
 
-        $wwfffilehandle = fopen($wwfffile, 'w');
-        if ($wwfffilehandle === FALSE) {
-            return "FAILED: Could not write to wwff.txt file";
+        $stream = fopen('php://temp', 'r+');
+        if ($stream === FALSE) {
+            return "FAILED: Could not open temp stream";
         }
+        fwrite($stream, $csv);
+        rewind($stream);
 
-        $data = str_getcsv($csv, "\n", '"', '\\');
         $nCount = 0;
-        foreach ($data as $idx => $row) {
-            if ($idx == 0) continue; // Skip line we are not interested in
-            $row = str_getcsv($row, ',', '"', '\\');
-            if ($row[0]) {
-                fwrite($wwfffilehandle, $row[0] . PHP_EOL);
-                $nCount++;
+        $batch = [];
+        $first = true;
+
+        $this->db->trans_start();
+        $this->db->empty_table('wwff_directory');
+
+        while (($cols = fgetcsv($stream, 0, ",", '"', '\\')) !== FALSE) {
+            if ($first) {
+                $first = false;
+                continue;
+            }
+            $ref = strtoupper(trim($cols[0] ?? ''));
+            if ($ref === '') {
+                continue;
+            }
+
+            $batch[] = [
+                'reference' => $ref,
+                'name'      => isset($cols[2]) ? trim($cols[2]) : null,
+                'lat'       => $this->_wwff_coord($cols[10] ?? null),
+                'lon'       => $this->_wwff_coord($cols[11] ?? null),
+            ];
+            $nCount++;
+
+            if (count($batch) >= 1000) {
+                $this->_wwff_upsert_batch($batch);
+                $batch = [];
             }
         }
 
-        fclose($wwfffilehandle);
+        fclose($stream);
+
+        if (!empty($batch)) {
+            $this->_wwff_upsert_batch($batch);
+        }
+
+        $this->db->trans_complete();
+        if ($this->db->trans_status() === FALSE) {
+            return "FAILED: import rolled back";
+        }
 
         if ($nCount > 0) {
             return "DONE: " . number_format($nCount) . " WWFF's saved";
@@ -177,42 +242,160 @@ class Update_model extends CI_Model {
         }
     }
 
-    function pota() {
+    private function _wwff_coord($val) {
+        if ($val === null) {
+            return null;
+        }
+        $val = trim($val);
+        if ($val === '' || !is_numeric($val)) {
+            return null;
+        }
+        $f = (float) $val;
+        return $f == 0 ? null : $f;
+    }
+
+	private function _pota_upsert_batch($batch) {
+        $placeholders = [];
+        $bindings = [];
+        foreach ($batch as $b) {
+            $placeholders[] = '(?, ?, ?, ?, ?, ?, ?, ?)';
+            array_push($bindings, $b['reference'], $b['name'], $b['active'], $b['entityid'], $b['locationdesc'], $b['lat'], $b['lon'], $b['gridsquare']);
+        }
+
+        $sql = 'INSERT IGNORE INTO pota_directory (reference, name, active, entityid, locationdesc, lat, lon, gridsquare) VALUES '
+            . implode(', ', $placeholders);
+
+        $this->db->query($sql, $bindings);
+    }
+
+    private function _wwff_upsert_batch($batch) {
+        $placeholders = [];
+        $bindings = [];
+        foreach ($batch as $b) {
+            $placeholders[] = '(?, ?, ?, ?)';
+            array_push($bindings, $b['reference'], $b['name'], $b['lat'], $b['lon']);
+        }
+
+        $sql = 'INSERT IGNORE INTO wwff_directory (reference, name, lat, lon) VALUES '
+            . implode(', ', $placeholders);
+
+        $this->db->query($sql, $bindings);
+    }
+
+	private function _sota_upsert_batch($batch) {
+        $placeholders = [];
+        $bindings = [];
+        foreach ($batch as $b) {
+            $placeholders[] = '(?, ?, ?, ?, ?)';
+            array_push($bindings, $b['reference'], $b['name'], $b['altitude'], $b['lat'], $b['lon']);
+        }
+
+        $sql = 'INSERT IGNORE INTO sota_directory (reference, name, altitude, lat, lon) VALUES '
+            . implode(', ', $placeholders);
+
+        $this->db->query($sql, $bindings);
+    }
+
+    function hamqsl(){
+	    // This downloads and stores hamqsl propagation data XML file
+	    $this->load->model('cron_model');
+	    $this->cron_model->set_last_run($this->router->class . '_' . $this->router->method);
+
+	    $url = 'https://www.hamqsl.com/solarxml.php';
+	    $ch = curl_init();
+	    curl_setopt($ch, CURLOPT_URL, $url);
+	    curl_setopt($ch, CURLOPT_HEADER, false);
+	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	    curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog Updater');
+	    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+	    $contents = curl_exec($ch);
+	    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+	    if ($contents === FALSE || $http_code != 200) {
+		    return "Something went wrong with fetching the solarxml.xml file from HAMqsl website.";
+	    } else {
+		    $file = './updates/solarxml.xml';
+
+		    if (file_put_contents($file, $contents) !== FALSE) {     // Save our content to the file.
+			    $nCount = count(file($file));
+			    if ($nCount > 0) {
+				    return  "DONE: solarxml.xml downloaded from HAMqsl website.";
+			    } else {
+				    return "FAILED: Empty file received from HAMqsl website.";
+			    }
+		    } else {
+			    return "FAILED: Could not write solarxml.xml file from HAMqsl website.";
+		    }
+	    }
+    }
+
+	function pota() {
         // set the last run in cron table for the correct cron id
         $this->load->model('cron_model');
         $this->cron_model->set_last_run($this->router->class . '_' . $this->router->method);
 
-        $csvfile = 'https://pota.app/all_parks.csv';
-
-        $potafile = './updates/pota.txt';
+        $csvfile = 'https://pota.app/all_parks_ext.csv';
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $csvfile);
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog Updater');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
         $csv = curl_exec($ch);
-        curl_close($ch);
         if ($csv === FALSE) {
             return "Something went wrong with fetching the POTA file";
         }
 
-        $potafilehandle = fopen($potafile, 'w');
-        if ($potafilehandle === FALSE) {
-            return "FAILED: Could not write to pota.txt file";
+        $stream = fopen('php://temp', 'r+');
+        if ($stream === FALSE) {
+            return "FAILED: Could not open temp stream";
         }
-        $data = str_getcsv($csv, "\n", '"', '\\');
+        fwrite($stream, $csv);
+        rewind($stream);
+
         $nCount = 0;
-        foreach ($data as $idx => $row) {
-            if ($idx == 0) continue; // Skip line we are not interested in
-            $row = str_getcsv($row, ',', '"', '\\');
-            if ($row[0]) {
-                fwrite($potafilehandle, $row[0] . PHP_EOL);
-                $nCount++;
+        $batch = [];
+        $first = true;
+
+        $this->db->trans_start();
+        $this->db->empty_table('pota_directory');
+
+        while (($cols = fgetcsv($stream, 0, ",", '"', '\\')) !== FALSE) {
+            if ($first) {
+                $first = false;
+                continue;
+            }
+
+            $batch[] = [
+                'reference'    => isset($cols[0]) ? trim($cols[0]) : null,
+                'name'         => isset($cols[1]) ? trim($cols[1]) : null,
+				'active'       => isset($cols[2]) ? trim($cols[2]) : null,
+				'entityid'     => isset($cols[3]) ? trim($cols[3]) : null,
+				'locationdesc' => isset($cols[4]) ? trim($cols[4]) : null,
+				'lat'          => $this->_wwff_coord($cols[5] ?? null),
+                'lon'          => $this->_wwff_coord($cols[6] ?? null),
+                'gridsquare'   => isset($cols[7]) ? trim($cols[7]) : null,
+            ];
+            $nCount++;
+
+            if (count($batch) >= 1000) {
+                $this->_pota_upsert_batch($batch);
+                $batch = [];
             }
         }
 
-        fclose($potafilehandle);
+        fclose($stream);
+
+        if (!empty($batch)) {
+            $this->_pota_upsert_batch($batch);
+        }
+
+        $this->db->trans_complete();
+        if ($this->db->trans_status() === FALSE) {
+            return "FAILED: import rolled back";
+        }
 
         if ($nCount > 0) {
             return "DONE: " . number_format($nCount) . " POTA's saved";
@@ -253,8 +436,7 @@ class Update_model extends CI_Model {
         }
 
         rewind($f);
-        $this->db->empty_table("lotw_users");
-        $this->db->query("ALTER TABLE lotw_users AUTO_INCREMENT 1");
+ 		$this->db->query("TRUNCATE TABLE lotw_users");
         $i = 0;
         $data = fgetcsv($f, 1000, ",", '"', '\\');
         do {
@@ -270,7 +452,9 @@ class Update_model extends CI_Model {
         } while ($data = fgetcsv($f, 1000, ",", '"', '\\'));
         fclose($f);
 
-        $this->db->insert_batch('lotw_users', $lotwdata);
+		if (isset($lotwdata) && count($lotwdata) > 0) {
+        	$this->db->insert_batch('lotw_users', $lotwdata);
+		}
 
         $mtime = microtime();
         $mtime = explode(" ", $mtime);
@@ -288,7 +472,6 @@ class Update_model extends CI_Model {
         curl_setopt($ch, CURLOPT_USERAGENT, 'Wavelog Updater');
         curl_setopt($ch, CURLOPT_URL,$url);
         $result=curl_exec($ch);
-        curl_close($ch);
         $json = json_decode($result, true);
         $latest_tag = $json[0]['tag_name'] ?? 'Unknown';
         return $latest_tag;
@@ -336,6 +519,7 @@ class Update_model extends CI_Model {
 		$starttime = $mtime;
 
 		$this->update_norad_ids();
+
 		$url = 'https://www.amsat.org/tle/dailytle.txt';
 		$curl = curl_init($url);
 
@@ -344,47 +528,109 @@ class Update_model extends CI_Model {
 
 		$response = curl_exec($curl);
 
-		$count = 0;
+		if (strlen($response) >= 140) {
 
-		if ($response === false) {
-			return 'Error: ' . curl_error($curl);
-		} else {
-			// Split the response into an array of lines
-			$lines = explode("\n", $response);
+			// Clear all TLE so that reentered birds disappear from planner and path prediction
+			$sql = "UPDATE `tle` LEFT JOIN `satellite` ON `tle`.`satelliteid` = `satellite`.`id` SET `tle` = NULL WHERE `satellite`.`name` != '' AND `satellite`.`name` IS NOT NULL;";
+			$this->db->query($sql);
 
-			$satname = '';
-			$tleline1 = '';
-			$tleline2 = '';
-			// Process each line
-			for ($i = 0; $i < count($lines); $i += 3) {
-				$count++;
-				// Check if there are at least three lines remaining
-				if (isset($lines[$i], $lines[$i + 1], $lines[$i + 2])) {
-					// Get the three lines
-					$satname = substr($lines[$i+1], 2, 5);
-					$tleline1 = $lines[$i + 1];
-					$tleline2 = $lines[$i + 2];
-					$sql = "
-					INSERT INTO tle (satelliteid, tle)
-					SELECT id, ?
-					FROM satellite
-					WHERE norad_id = ?
-					ON DUPLICATE KEY UPDATE
-					tle = VALUES(tle), updated = now()
-				";
-				$this->db->query($sql, array($tleline1 . "\n" . $tleline2, $satname));
+			$amsat_count = 0;
+
+			if ($response === false) {
+				return 'Error: ' . curl_error($curl);
+			} else {
+				// Split the response into an array of lines
+				$lines = explode("\n", $response);
+
+				$satname = '';
+				$tleline1 = '';
+				$tleline2 = '';
+				// Process each line
+				for ($i = 0; $i < count($lines); $i += 3) {
+					// Check if there are at least three lines remaining
+					if (isset($lines[$i], $lines[$i + 1], $lines[$i + 2])) {
+						// Get the three lines
+						$satname = substr($lines[$i+1], 2, 5);
+						$tleline1 = $lines[$i + 1];
+						$tleline2 = $lines[$i + 2];
+						$sql = "
+						INSERT INTO tle (satelliteid, tle)
+						SELECT id, ?
+						FROM satellite
+						WHERE norad_id = ?
+						ON DUPLICATE KEY UPDATE
+						tle = VALUES(tle), updated = now()
+					";
+					$this->db->query($sql, array($tleline1 . "\n" . $tleline2, $satname));
+					if ($this->db->affected_rows() > 0) {
+						$amsat_count++;
+					}
+					}
 				}
 			}
-		}
 
+			// Gap-fill NULL rows from CelesTrak OMM (covers 6+ digit NORAD IDs AMSAT can't encode).
+			$omm_count = $this->update_tle_from_celestrak_omm();
+
+
+			$mtime = microtime();
+			$mtime = explode(" ",$mtime);
+			$mtime = $mtime[1] + $mtime[0];
+			$endtime = $mtime;
+			$totaltime = ($endtime - $starttime);
+			return "This page was created in ".$totaltime." seconds <br />AMSAT TLE: ".$amsat_count." updated, OMM: ".$omm_count." updated";
+
+		} else {
+			return "Error: Received file was empty";
+		}
+	}
+
+	/**
+	 * Gap-fill from CelesTrak OMM JSON. Only fills NULL rows so AMSAT stays primary.
+	 * @return int records applied
+	 */
+	private function update_tle_from_celestrak_omm() {
+		$url = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=JSON';
+		$curl = curl_init($url);
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+		curl_setopt($curl, CURLOPT_USERAGENT, 'Wavelog TLE Updater');
+		curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+		$response = curl_exec($curl);
+		$err  = curl_error($curl);
+		$http = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 		curl_close($curl);
 
-		$mtime = microtime();
-		$mtime = explode(" ",$mtime);
-		$mtime = $mtime[1] + $mtime[0];
-		$endtime = $mtime;
-		$totaltime = ($endtime - $starttime);
-		return "This page was created in ".$totaltime." seconds <br />Records inserted: " . $count;
+		if ($response === false || $http !== 200) {
+			log_message('error', 'CelesTrak OMM fetch failed (HTTP ' . $http . '): ' . $err);
+			return 0;
+		}
+
+		$omm = json_decode($response, true);
+		if (!is_array($omm)) {
+			return 0;
+		}
+
+		$count = 0;
+		// Only fill still-NULL rows; AMSAT stays authoritative.
+		$sql = "INSERT INTO tle (satelliteid, tle)
+			SELECT s.id, ?
+			FROM satellite s
+			WHERE s.norad_id = ?
+			ON DUPLICATE KEY UPDATE
+			tle = IF(tle IS NULL, VALUES(tle), tle),
+			updated = IF(tle IS NULL, now(), updated)";
+		foreach ($omm as $obj) {
+			if (!isset($obj['NORAD_CAT_ID'])) { continue; }
+			$cat = (int) $obj['NORAD_CAT_ID'];
+			if ($cat <= 0) { continue; }
+			$this->db->query($sql, array(json_encode($obj), $cat));
+			// Counts only newly filled rows.
+			if ($this->db->affected_rows() > 0) {
+				$count++;
+			}
+		}
+		return $count;
 	}
 
 	 function lotw_sats() {
@@ -394,7 +640,6 @@ class Update_model extends CI_Model {
 		curl_setopt($curl, CURLOPT_FAILONERROR, true);
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-		curl_setopt($curl, CURLOPT_BINARYTRANSFER,true);
 		curl_setopt($curl, CURLOPT_TIMEOUT, 10);
 
 		$response = curl_exec($curl);
@@ -402,7 +647,6 @@ class Update_model extends CI_Model {
 			log_message('error', __('cURL error:').' '.curl_error($curl).' ('.curl_errno($curl).')');
 			return;
 		}
-		curl_close($curl);
 		$xmlstring = gzdecode($response);
 		if ($xmlstring === false) {
 			return;
@@ -499,6 +743,7 @@ class Update_model extends CI_Model {
 		return;
 	}
 
+
 	function update_hams_of_note() {
 		if (($this->optionslib->get_option('hon_url') ?? '') == '') {
 			$file = 'https://api.ham2k.net/data/ham2k/hams-of-note.txt';
@@ -514,12 +759,10 @@ class Update_model extends CI_Model {
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		$response = curl_exec($ch);
 		$http_result = curl_getinfo($ch);
-		curl_close($ch);
 		if ($http_result['http_code'] == "200") {
 			$lines = explode("\n", $response);
 			if (count($lines) > 0) {	// Check if there was data, otherwise skip parsing / truncating the table and preserve whats there
-				$this->db->empty_table("hams_of_note");
-				$this->db->query("ALTER TABLE hams_of_note AUTO_INCREMENT 1");
+				$this->db->query("TRUNCATE TABLE hams_of_note");
 				$i = 0;
 				foreach($lines as $data) {
 					$line = trim($data);
@@ -569,7 +812,7 @@ class Update_model extends CI_Model {
 						}
 					}
 				}
-				if ($i>0) {	// Leftovers?
+				if ($i>0 && isset($hon)) {	// Leftovers?
 					$this->db->insert_batch('hams_of_note', $hon);
 				}
 			} else {
@@ -579,6 +822,94 @@ class Update_model extends CI_Model {
 			$result=null;
 		}
 		return $result;
+	}
+
+	function update_vucc_grids() {
+		// set the last run in cron table for the correct cron id
+		$this->load->model('cron_model');
+		$this->cron_model->set_last_run('vucc_grid_file');
+		$mtime = microtime();
+		$mtime = explode(" ",$mtime);
+		$mtime = $mtime[1] + $mtime[0];
+		$starttime = $mtime;
+
+		$url = 'https://raw.githubusercontent.com/wavelog/dxcc_data/refs/heads/master/vuccgrids.dat';
+		$curl = curl_init($url);
+
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+
+		$response = curl_exec($curl);
+
+		$xml = @simplexml_load_string($response);
+
+		if ($xml === false) {
+			log_message('error', 'vuccgrids.dat update from primary location failed.');
+
+			// Try our own mirror in case upstream fails
+			$url = 'https://sourceforges.net/p/trustedqsl/tqsl/ci/master/tree/apps/vuccgrids.dat?format=raw';
+			$curl = curl_init($url);
+			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+			$response = curl_exec($curl);
+			$xml = @simplexml_load_string($response);
+			if ($xml === false) {
+				log_message('error', 'vuccgrids.dat update from backup location failed.');
+				return "Failed to parse TQSL VUCC grid file XML.";
+			}
+		}
+
+		// Truncate the table first
+		$this->db->query("TRUNCATE TABLE vuccgrids;");
+
+		// Loop through <vucc> elements
+		$batchSize = 2000;
+		$vuccdata = [];
+		$total_inserted  = 0;
+		foreach ($xml->vucc as $vucc) {
+			$adif = (int)$vucc['entity']; // assuming "entity" attribute is ADIF
+			$grid = strtoupper(trim((string)$vucc['grid']));
+
+			if ($adif > 0 && $grid !== '') {
+				$key = $adif . '-' . $grid;
+
+				// Only add if not already in array
+				if (!isset($vuccdata[$key])) {
+					$vuccdata[$key] = [
+						'adif' => $adif,
+						'gridsquare' => $grid
+					];
+				}
+
+                if (count($vuccdata) >= $batchSize) {
+					$rows = $this->db->insert_batch('vuccgrids', array_values($vuccdata));
+					if ($rows !== false) {
+						$total_inserted += $rows;
+					}
+					$vuccdata = []; // clear after insert
+				}
+			}
+		}
+
+		// insert any remaining rows
+		if (!empty($vuccdata)) {
+			$rows = $this->db->insert_batch('vuccgrids', array_values($vuccdata));
+			if ($rows !== false) {
+				$total_inserted += $rows;
+			}
+		}
+
+		$mtime = microtime();
+		$mtime = explode(" ",$mtime);
+		$mtime = $mtime[1] + $mtime[0];
+		$endtime = $mtime;
+		$totaltime = ($endtime - $starttime);
+
+		if ($total_inserted > 0) {
+            return "DONE: This page was created in ".$totaltime." seconds.<br />" . number_format($total_inserted ) . " Grids saved";
+        } else {
+            return "FAILED: Empty file";
+        }
 	}
 
 }

@@ -34,7 +34,7 @@ class API_Model extends CI_Model {
 		return $this->db->query($sql, $binding);
 	}
 
-	function key_description($key) {
+	function key_description($key = '') {
 		$this->db->where('user_id', $this->session->userdata('user_id'));
 		$this->db->where('key', $key);
 		$query = $this->db->get('api');
@@ -42,14 +42,14 @@ class API_Model extends CI_Model {
 		return $query->result_array()[0];
 	}
 
-	function key_userid($key) {
+	function key_userid($key = '') {
 		$this->db->where('key', $key);
 		$query = $this->db->get('api');
 
 		return $query->result_array()[0]['user_id'];
 	}
 
-	function key_created_by($key) {
+	function key_created_by($key = '') {
 		$this->db->where('key', $key);
 		$query = $this->db->get('api');
 
@@ -68,7 +68,7 @@ class API_Model extends CI_Model {
 	}
 
 
-	function delete_key($key) {
+	function delete_key($key = '') {
 		$this->db->where('user_id', $this->session->userdata('user_id'));
 		$this->db->where('key', xss_clean($key));
 		$this->db->delete('api');
@@ -95,10 +95,10 @@ class API_Model extends CI_Model {
 		}
 	}
 
-	function access($key) {
+	function access($key = '') {
 
 		// No key = no access, mate
-		if (!$key) {
+		if ((!$key) || ($key == '')) {
 			return $status = "No Key Found";
 		}
 
@@ -119,7 +119,7 @@ class API_Model extends CI_Model {
 		}
 	}
 
-	function authorize($key) {
+	function authorize($key = '') {
 		$r = $this->access($key);
 		if ($r == "rw") {
 			return 2;
@@ -138,7 +138,6 @@ class API_Model extends CI_Model {
 		// Also update last_seen in user table
 		$user_id = $this->key_userid($key);
 
-		$this->load->model('user_model');
 		$this->user_model->set_last_seen($user_id);
 	}
 
@@ -178,5 +177,76 @@ class API_Model extends CI_Model {
 		";
 
 		return $this->db->query($sql, $binding);
+
+	}
+
+	// $operator: optional COL_OPERATOR restriction. Used by the REST API v2 so a
+	// clubstation member below officer level only sees grids it worked itself.
+	// Defaults to '' = no restriction (v1 behaviour).
+	function get_grids_worked_in_logbook($StationLocationsArray = null, $band = null, $cnfm = null, $operator = '') {
+		$grid_array = [];
+		if ($StationLocationsArray == null) {
+			$this->load->model('logbooks_model');
+			$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+		} else {
+			$logbooks_locations_array = $StationLocationsArray;
+		}
+
+		$bindings = [];
+		$subsql = '';
+		$band = ($band == 'All') ? null : $band;
+		if ($band != null && $band != 'SAT') {
+			$subsql .= ' AND COL_BAND = ? AND (COL_PROP_MODE != "SAT" OR COL_PROP_MODE IS NULL)';
+			$bindings[] = $band;
+		} else if ($band == 'SAT') {
+			$subsql .= ' AND COL_SAT_NAME != ""';
+		}
+		switch ($cnfm) {
+			case 'qsl':
+				$subsql .= ' AND COL_QSL_RCVD = "Y"';
+				break;
+			case 'lotw':
+				$subsql .= ' AND COL_LOTW_QSL_RCVD = "Y"';
+				break;
+			case 'eqsl':
+				$subsql .= ' AND COL_EQSL_QSL_RCVD = "Y"';
+				break;
+		}
+
+		if ($operator !== null && $operator !== '') {
+			$subsql .= ' AND upper(COL_OPERATOR) = ?';
+			$bindings[] = strtoupper($operator);
+		}
+
+		$ids = array_map('intval', $logbooks_locations_array);
+		$sql = 'SELECT DISTINCT UPPER(SUBSTR(COL_GRIDSQUARE, 1, 4)) AS gridsquare FROM ' . $this->config->item('table_name') . ' thcv ';
+		$sql .= ' WHERE COL_GRIDSQUARE <> "" AND CHAR_LENGTH(COL_GRIDSQUARE) >= 4';
+		$sql .= ' AND station_id IN (' . implode(',', $ids) . ')';
+		$sql .= $subsql;
+		$sql .= ' ORDER BY gridsquare ASC;';
+		$query = $this->db->query($sql,$bindings);
+		foreach($query->result() as $line) {
+			$grid_array[] = $line->gridsquare;
+		}
+		// Get and add VUCC grids
+		$sql = 'SELECT DISTINCT UPPER(COL_VUCC_GRIDS) AS vuccgrids FROM ' . $this->config->item('table_name') . ' thcv ';
+		$sql .= ' WHERE COL_VUCC_GRIDS <> ""';
+		$sql .= ' AND station_id IN (' . implode(',', $ids) . ')';
+		$sql .= $subsql;
+		$sql .= ' ORDER BY vuccgrids ASC;';
+		$query = $this->db->query($sql,$bindings);
+		foreach($query->result() as $line) {
+			$vucc_grids = explode(',', $line->vuccgrids);
+			foreach ($vucc_grids as $vucc_grid) {
+				if (strlen($vucc_grid) >= 4) {
+					$grid = substr($vucc_grid, 0, 4);
+					if (! in_array($grid, $grid_array)) {
+						$grid_array[] = $grid;
+					}
+				}
+			}
+		}
+		sort ($grid_array);
+		return $grid_array;
 	}
 }

@@ -23,16 +23,20 @@ L.MaidenheadActivators = L.LayerGroup.extend({
 	onAdd: function (map) {
 		this._map = map;
 		var grid = this.redraw(map);
-		this._map.on('viewreset '+ this.options.redraw, function () {
+		// Store the event handler function so we can remove it later
+		this._onViewChange = function () {
 			grid.redraw(map);
-		});
+		};
+		this._map.on('viewreset '+ this.options.redraw, this._onViewChange);
 
 		this.eachLayer(map.addLayer, map);
 	},
 
 	onRemove: function (map) {
 		// remove layer listeners and elements
-		map.off('viewreset '+ this.options.redraw, this.map);
+		if (this._onViewChange) {
+			map.off('viewreset '+ this.options.redraw, this._onViewChange);
+		}
 		this.eachLayer(this.removeLayer, this);
 	},
 
@@ -72,21 +76,21 @@ L.MaidenheadActivators = L.LayerGroup.extend({
 				var bounds = [[lat,lon],[lat+unit,lon+(unit*2)]];
 
 				if(grid_two.includes(this._getLocator(lon,lat,map))) {
-					this.addLayer(L.rectangle(bounds, {className: 'grid-rectangle grid-confirmed', color: 'rgba(144,238,144, 0.6)', weight: 1, fillOpacity: 1, fill:true, interactive: false}));
+					this.addLayer(L.rectangle(bounds, {className: 'grid-rectangle grid-confirmed', color: grid_color, weight: 1, fillOpacity: 1, fill:true, interactive: false}));
 				}
 
 				if(grid_four.includes(this._getLocator(lon,lat,map))) {
-					this.addLayer(L.rectangle(bounds, {className: 'grid-rectangle grid-confirmed', color: 'rgba(144,238,144, 0.6)', weight: 1, fillOpacity: 1, fill:true, interactive: false}));
+					this.addLayer(L.rectangle(bounds, {className: 'grid-rectangle grid-confirmed', color: grid_color, weight: 1, fillOpacity: 1, fill:true, interactive: false}));
 				}
 
 				if (zoom < 2 || zoom > 4) {
 					this.addLayer(this._getLabel(lon+unit-(unit/lcor),lat+(unit/2)+(unit/lcor*c), map));
 				}
 				if (zoom < 3 ) {
-					this.addLayer(L.rectangle(bounds, {className: 'grid-rectangle', color: this.options.color, weight: 1, fill:false, interactive: false}));
+					this.addLayer(L.rectangle(bounds, {className: 'grid-rectangle', color: grid_color, weight: 1, fill:false, interactive: false}));
 				}
 				if (zoom < 3 || zoom > 5) {
-					this.addLayer(L.rectangle(bounds, {className: 'grid-rectangle', color: this.options.color, weight: 1, fill:false, interactive: false}));
+					this.addLayer(L.rectangle(bounds, {className: 'grid-rectangle', color: grid_color, weight: 1, fill:false, interactive: false}));
 				}
 
 				if (zoom < 3 || zoom > 5) {

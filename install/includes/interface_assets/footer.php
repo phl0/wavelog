@@ -4,7 +4,6 @@
 		$('#install_form input').each(function() {
 			var inputId = $(this).attr('id');
 			if (inputId !== 'directory' && inputId !== 'websiteurl') { // do not restore directory and websiteurl for legacy reasons
-				console.log('Updated inputId: ', inputId);
 				if (localStorage.getItem(inputId)) {
 					$(this).val(localStorage.getItem(inputId));
 				}
@@ -17,11 +16,14 @@
 			}
 		});
 
-		// save data in the localstorage
+		// save data in the localstorage (password fields are excluded)
+		var _sensitiveFields = ['db_password', 'password', 'cnfm_password', 'callbook_password'];
 		$('#install_form input').on('input', function() {
 			var inputId = $(this).attr('id');
 			var inputValue = $(this).val();
-			localStorage.setItem(inputId, inputValue);
+			if (!_sensitiveFields.includes(inputId)) {
+				localStorage.setItem(inputId, inputValue);
+			}
 		});
 		$('#install_form select').on('input', function() {
 			var inputId = $(this).attr('id');
@@ -76,6 +78,7 @@
 		<?= __("Montenegrin"); ?>
 		<?= __("Polish"); ?>
 		<?= __("Portuguese"); ?>
+		<?= __("Romanian"); ?>
 		<?= __("Russian"); ?>
 		<?= __("Serbian"); ?>
 		<?= __("Slovak"); ?>
@@ -83,5 +86,6 @@
 		<?= __("Spanish"); ?>
 		<?= __("Swedish"); ?>
 		<?= __("Turkish"); ?>
+    	<?= __("Ukrainian"); ?>
 	</div>
 </footer>

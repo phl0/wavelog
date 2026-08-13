@@ -29,7 +29,7 @@ class DOK extends CI_Model {
 				$dokBand = $this->getDokWorked($location_list, $band, $postdata);
 				foreach ($dokBand as $line) {
 					if (array_key_exists($line->COL_DARC_DOK, $bandDok)) {   /* For now ignore DOKs which are logged but not existing in the official lists any more */
-						$bandDok[$line->COL_DARC_DOK][$band] = '<div class="bg-danger awardsBgDanger"><a href=\'javascript:displayContacts("' . $line->COL_DARC_DOK . '","' . $band . '","All","All","' . $postdata['mode'] . '","DOK", "")\'>W</a></div>';
+						$bandDok[$line->COL_DARC_DOK][$band] = '<div class="bg-danger awardsBgWarning"><a href=\'javascript:displayContacts("' . $line->COL_DARC_DOK . '","' . $band . '","All","All","' . $postdata['mode'] . '","DOK", "")\'>W</a></div>';
 						$doks[$line->COL_DARC_DOK]['count']++;
 					}
 				}
@@ -164,7 +164,7 @@ class DOK extends CI_Model {
 			$bandslots_list = "'".implode("','",$bandslots)."'";
 			$sql .= " AND thcv.COL_BAND in (" . $bandslots_list . ")";
 		} else {
-			$sql .= " AND thcv.COL_PROP_MODE !='SAT'";
+			$sql .= " AND (thcv.COL_PROP_MODE != 'SAT' OR thcv.COL_PROP_MODE IS NULL)";
 			$sql .= " AND thcv.COL_BAND = ?";
 			$bindings[]=$band;
 		}
@@ -190,7 +190,7 @@ class DOK extends CI_Model {
 			$bandslots_list = "'".implode("','",$bandslots)."'";
 			$sql .= " AND thcv.COL_BAND in (" . $bandslots_list . ")";
 		} else {
-			$sql .= " AND thcv.COL_PROP_MODE !='SAT'";
+			$sql .= " AND (thcv.COL_PROP_MODE != 'SAT' OR thcv.COL_PROP_MODE IS NULL)";
 			$sql .= " AND thcv.COL_BAND = ?";
 			$bindings[]=$band;
 		}

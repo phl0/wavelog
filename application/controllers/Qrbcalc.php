@@ -9,7 +9,6 @@ class Qrbcalc extends CI_Controller {
 	function __construct() {
 		parent::__construct();
 
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
@@ -57,6 +56,9 @@ class Qrbcalc extends CI_Controller {
 				$var_dist = sprintf(_ngettext("The distance between %s and %s is %s nautical mile.", "The distance between %s and %s is %s nautical miles.", intval($distance)), $locator1, $locator2, $distance);
 				break;
 			case 'K':
+				$var_dist = sprintf(_ngettext("The distance between %s and %s is %s kilometer.", "The distance between %s and %s is %s kilometers.", intval($distance)), $locator1, $locator2, $distance);
+				break;
+			default:
 				$var_dist = sprintf(_ngettext("The distance between %s and %s is %s kilometer.", "The distance between %s and %s is %s kilometers.", intval($distance)), $locator1, $locator2, $distance);
 				break;
 		}

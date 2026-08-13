@@ -3,8 +3,6 @@
 class Csv extends CI_Controller {
 
 	public function index()	{
-		$this->load->model('user_model');
-
 		if(!$this->user_model->authorize(2) || !clubaccess_check(9)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$this->load->model('modes');
@@ -16,6 +14,7 @@ class Csv extends CI_Controller {
 		$data['worked_bands'] = $this->bands->get_worked_bands(); 	// Used in the view for band select
 		$data['modes'] = $this->modes->active(); 					// Used in the view for mode select
 		$data['dxcc'] = $this->logbook_model->fetchDxcc(); 			// Used in the view for dxcc select
+		$data['adif_propmodes'] = $this->config->item('adif_propmodes');
 
 		$data['page_title'] = __("SOTA CSV Export");
 
@@ -26,8 +25,6 @@ class Csv extends CI_Controller {
 	}
 
 	public function export()  {
-		$this->load->model('user_model');
-
 		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$this->load->model('csv_model');

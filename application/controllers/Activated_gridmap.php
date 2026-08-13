@@ -4,6 +4,8 @@ class Activated_gridmap extends CI_Controller {
 
 	function __construct() {
 		parent::__construct();
+
+		if(!$this->user_model->authorize(2)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 	}
 
 	public function index() {
@@ -38,11 +40,14 @@ class Activated_gridmap extends CI_Controller {
 		$data['gridsquares_fields_not_confirmed'] 	= __("Fields not confirmed");
 		$data['gridsquares_fields_total_worked'] 	= __("Total fields worked");
 
+		$data['user_map_custom'] = $this->optionslib->get_map_custom();
+
 		$footerData = [];
 		$footerData['scripts'] = [
 			'assets/js/leaflet/geocoding.js',
 			'assets/js/leaflet/L.MaidenheadColouredGridMap.js',
-			'assets/js/sections/gridmap.js?'
+			'assets/js/sections/gridmap.js',
+			'assets/js/bootstrap-multiselect.js',
 		];
 
 		$this->load->view('interface_assets/header', $data);
@@ -194,6 +199,7 @@ class Activated_gridmap extends CI_Controller {
 		$data['grid_2char'] = ($array_grid_2char);
 		$data['grid_4char'] = ($array_grid_4char);
 		$data['grid_6char'] = ($array_grid_6char);
+		$data['grids'] = array();
 
 		header('Content-Type: application/json');
 		echo json_encode($data);

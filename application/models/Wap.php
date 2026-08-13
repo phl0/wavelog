@@ -14,7 +14,7 @@ class wap extends CI_Model {
 		$CI->load->model('logbooks_model');
 		$logbooks_locations_array = $CI->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
 
-		if (!$logbooks_locations_array) {
+		if ($logbooks_locations_array[0] === -1) {
 			return null;
 		}
 
@@ -39,7 +39,7 @@ class wap extends CI_Model {
 			if ($postdata['worked'] != NULL) {
 				$wapBand = $this->getwapWorked($location_list, $band, $postdata);
 				foreach ($wapBand as $line) {
-					$bandwap[$line->col_state][$band] = '<div class="bg-danger awardsBgDanger"><a href=\'javascript:displayContacts("' . $line->col_state . '","' . $band . '","All","All","'. $postdata['mode'] . '","WAP", "")\'>W</a></div>';
+					$bandwap[$line->col_state][$band] = '<div class="bg-danger awardsBgWarning"><a href=\'javascript:displayContacts("' . $line->col_state . '","' . $band . '","All","All","'. $postdata['mode'] . '","WAP", "")\'>W</a></div>';
 					$states[$line->col_state]['count']++;
 				}
 			}
@@ -91,7 +91,7 @@ class wap extends CI_Model {
 		$this->load->model('logbooks_model');
 		$logbooks_locations_array = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
 
-		if (!$logbooks_locations_array) {
+		if ($logbooks_locations_array[0] === -1) {
 			return null;
 		}
 
@@ -130,9 +130,9 @@ class wap extends CI_Model {
 			$bandslots_list = "'".implode("','",$bandslots)."'";
 
 			$sql .= " and thcv.col_band in (" . $bandslots_list . ")" .
-				" and thcv.col_prop_mode !='SAT'";
+				" and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 		} else {
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 			$sql .= " and thcv.col_band = ?";
 			$bindings[]=$band;
 		}
@@ -167,9 +167,9 @@ class wap extends CI_Model {
 			$bandslots_list = "'".implode("','",$bandslots)."'";
 
 			$sql .= " and thcv.col_band in (" . $bandslots_list . ")" .
-				" and thcv.col_prop_mode !='SAT'";
+				" and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 		} else {
-			$sql .= " and thcv.col_prop_mode !='SAT'";
+			$sql .= " and (thcv.col_prop_mode !='SAT' or thcv.col_prop_mode is NULL)";
 			$sql .= " and thcv.col_band = ?";
 			$bindings[]=$band;
 		}
@@ -259,7 +259,7 @@ class wap extends CI_Model {
 
 	function addStateToQuery() {
 		$sql = '';
-		$sql .= " and COL_DXCC = 263";
+		$sql .= " and COL_DXCC in ('263')";
 		$sql .= " and COL_STATE in ('DR','FL','FR','GD','GR','LB','NB','NH','OV','UT','ZH','ZL')";
 
 		return $sql;

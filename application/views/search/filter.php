@@ -23,18 +23,12 @@
 	        <a class="nav-link active" href="<?php echo site_url('search/filter'); ?>"><?= __("Advanced Search"); ?></a>
 	      </li>
 		  <li class="nav-item">
-	        <a class="nav-link" href="<?php echo site_url('search/incorrect_cq_zones'); ?>"><?= __("Incorrect CQ Zones"); ?></a>
-	      </li>
-		  <li class="nav-item">
-	        <a class="nav-link" href="<?php echo site_url('search/incorrect_itu_zones'); ?>"><?= __("Incorrect ITU Zones"); ?></a>
-	      </li>
-		  <li class="nav-item">
 	        <a class="nav-link" href="<?php echo site_url('search/lotw_unconfirmed'); ?>"><?= __("QSOs unconfirmed on LoTW"); ?></a>
 	      </li>
 	    </ul>
 	  </div>
 	  <div class="card-body main">
-
+		<?php if ($stations_active_log_only) { ?><p class="card-text"><span class="badge text-bg-info"><i class="fa-solid fa-info"></i></span> <?= __("Search is limited to station locations linked to active logbook") ?></p><?php } ?>
 		<div class="card-text col-md-4" id="builder"></div>
 
 		<p class="card-text">
@@ -69,7 +63,7 @@
 		  }
 		  ?>
 
-	    	<div style="display:none;"><span  class="badge text-bg-info"><?= __("Info"); ?></span> <?= sprintf(__("You can find out how to use the %s in the wiki."), '<a href="https://github.com/wavelog/wavelog/wiki/Search----Filter" target="_blank">' . __("search filter functions") . '</a>'); ?></div>
+	    	<div style="display:none;"><span  class="badge text-bg-info"><?= __("Info"); ?></span> <?= sprintf(__("You can find out how to use the %s in the wiki."), '<a href="https://docs.wavelog.org/user-guide/features/search/" target="_blank">' . __("search filter functions") . '</a>'); ?></div>
 
 	  </div>
 	</div>

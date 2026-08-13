@@ -100,7 +100,6 @@ class Curl {
 		// Add the filepath
 		$url .= $file_path;
 
-		$this->option(CURLOPT_BINARYTRANSFER, TRUE);
 		$this->option(CURLOPT_VERBOSE, TRUE);
 
 		return $this->execute();
@@ -304,7 +303,6 @@ class Curl {
 			$this->error_code = curl_errno($this->session);
 			$this->error_string = curl_error($this->session);
 
-			curl_close($this->session);
 			$this->set_defaults();
 
 			return FALSE;
@@ -313,7 +311,6 @@ class Curl {
 		// Request successful
 		else
 		{
-			curl_close($this->session);
 			$response = $this->response;
 			$this->set_defaults();
 			return $response;

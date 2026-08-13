@@ -160,6 +160,10 @@ class Frequency {
 
 		$result = $db->get()->row();
 
+		if ($result === null) {
+			return null;
+		}
+
 		$mode = strtolower($mode);
 
 		return $result->$mode;
@@ -171,7 +175,7 @@ class Frequency {
 			$Band = "160m";
 		} else if ($Frequency > 3000000 && $Frequency < 4000000) {
 			$Band = "80m";
-		} else if ($Frequency > 5350000 && $Frequency < 5367000) {
+		} else if ($Frequency >= 5330000 && $Frequency < 5405000) {
 			$Band = "60m";
 		} else if ($Frequency > 6000000 && $Frequency < 8000000) {
 			$Band = "40m";
@@ -195,7 +199,7 @@ class Frequency {
 			$Band = "2m";
 		} else if ($Frequency > 218000000 && $Frequency < 226000000) {
 			$Band = "1.25m";
-		} else if ($Frequency > 420000000 && $Frequency < 450000000) {
+		} else if ($Frequency >= 420000000 && $Frequency < 450000000) {
 			$Band = "70cm";
 		} else if ($Frequency > 900000000 && $Frequency < 930000000) {
 			$Band = "33cm";
@@ -246,7 +250,7 @@ class Frequency {
 	 *                            		Possible values: 'Hz', 'kHz', 'MHz', 'GHz'. 
 	 *                            		If not provided, the unit is determined based on session data (function qrg_unit()).
 	 *
-	 * @return string 	The converted frequency in the specified format.
+	 * @return string|null 	The converted frequency in the specified format, or null.
 	 * 
 	 * To change the number of decimals shown per unit, add in your config.php
 	 * 
@@ -290,6 +294,7 @@ class Frequency {
 		}
 	
 		// Convert the frequency to the target unit
+		$decimals = 0; // fallback for unknown units
 		switch ($target_unit) {
 			case 'Hz':
 				$decimals = $CI->config->item('qrg_hz_dec') ?? 0;
@@ -336,6 +341,26 @@ class Frequency {
 			}
 		}
 		return $unit;
+	}
+
+	/**
+	 * Check if two frequencies are equal (handles different formats and empty values)
+	 *
+	 * @param mixed $freq1 First frequency (TX)
+	 * @param mixed $freq2 Second frequency (RX)
+	 * @return bool True if frequencies are equal or if one is empty/zero
+	 */
+	function frequencies_are_equal($freq1, $freq2) {
+		// Treat empty, null, or zero as "not set"
+		if (empty($freq1) || $freq1 === '0' || $freq1 === 0) {
+			return true;
+		}
+		if (empty($freq2) || $freq2 === '0' || $freq2 === 0) {
+			return true;
+		}
+
+		// Compare as floats to handle different string representations
+		return (float)$freq1 === (float)$freq2;
 	}
 }
 /* End of file Frequency.php */

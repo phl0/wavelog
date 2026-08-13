@@ -1,6 +1,4 @@
-<div class="container">
-
-    <br>
+<div class="container px-3 px-lg-4 mt-3 mb-3">
 
     <h2><?= __("eQSL Cards"); ?></h2>
 
@@ -10,6 +8,12 @@
             <?= sprintf(__("You are using %s of disk space to store eQSL Card assets"), $storage_used ); ?>
         </div>
     <?php } ?>
+
+    <div class="card">
+		<div class="card-header">
+			<?= __("View eQSL Cards"); ?>
+		</div>
+		<div class="card-body">
 
     <?php
 
@@ -21,8 +25,8 @@
       $custom_date_format = $this->config->item('qso_date_format');
    }
 
-    if (is_array($qslarray->result())) {
-        echo '<table style="width:100%" class="eqsltable table table-sm table-bordered table-hover table-striped table-condensed">
+    if (isset($qslarray) && $qslarray->num_rows() > 0) {
+        echo '<table class="eqsltable table table-sm table-bordered table-hover table-striped table-condensed">
         <thead>
         <tr>
         <th style=\'text-align: center\'>'.__("Callsign").'</th>
@@ -61,12 +65,47 @@
          echo '<td style=\'text-align: center\'>';
          if ($qsl->COL_EQSL_QSLRDATE) { $timestamp = strtotime($qsl->COL_EQSL_QSLRDATE); echo date($custom_date_format, $timestamp); }
          echo '</td>';
-            echo '<td style=\'text-align: center\'><a href=\''.site_url('eqsl/image/'.$qsl->COL_PRIMARY_KEY).'\' data-fancybox=\'images\' data-width=\'528\' data-height=\'336\' class=\'btn btn-sm btn-success\'>' . __("View") . '</a></td>';
+            echo '<td style=\'text-align: center\'><a href=\''.site_url('eqsl/image/'.$qsl->COL_PRIMARY_KEY).'\' data-fancybox=\'images\' data-width=\'528\' data-height=\'336\' class=\'btn btn-sm btn-success\'>' . __("View") . '<img loading=\'lazy\' src=\''.site_url('eqsl/image/'.$qsl->COL_PRIMARY_KEY).'/160\' height="100px"></a></td>';
             echo '</tr>';
         }
 
         echo '</tbody></table>';
     }
     ?>
+
+    <?php if (isset($this->pagination)){ ?>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+    	<?php
+	$config['full_tag_open'] = '<ul class="pagination">';
+	$config['full_tag_close'] = '</ul>';
+	$config['attributes'] = ['class' => 'page-link'];
+	$config['first_link'] = false;
+	$config['last_link'] = false;
+	$config['first_tag_open'] = '<li class="page-item">';
+	$config['first_tag_close'] = '</li>';
+	$config['prev_link'] = '&laquo';
+	$config['prev_tag_open'] = '<li class="page-item">';
+	$config['prev_tag_close'] = '</li>';
+	$config['next_link'] = '&raquo';
+	$config['next_tag_open'] = '<li class="page-item">';
+	$config['next_tag_close'] = '</li>';
+	$config['last_tag_open'] = '<li class="page-item">';
+	$config['last_tag_close'] = '</li>';
+	$config['cur_tag_open'] = '<li class="page-item active"><a href="#" class="page-link">';
+	$config['cur_tag_close'] = '<span class="visually-hidden">(current)</span></a></li>';
+	$config['num_tag_open'] = '<li class="page-item">';
+	$config['num_tag_close'] = '</li>';
+    	$this->pagination->initialize($config);
+    	?>
+
+		<?php echo $this->pagination->create_links(); ?>
+            <?php if (isset($result_range)){ ?>
+                <span><?= $result_range; ?></span>
+            <?php } ?>
+        </div>
+	<?php } ?>
+
+      </div>
+    </div>
 
 </div>

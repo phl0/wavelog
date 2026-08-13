@@ -31,8 +31,13 @@
 	background-color: #d4edda !important;
 }
 
-.qso_icons {
-	float: right;
+#qsoList_wrapper th {
+	text-align: left !important;
+	white-space: nowrap;
+}
+#qsoList_wrapper td {
+	text-align: left !important;
+	white-space: nowrap;
 }
 
 TD.qrz {
@@ -87,12 +92,64 @@ span.grid-text-worked > font {
 	font-weight: 400 !important;
 }
 
-path.grid-confirmed {
-	fill: rgba(20, 109, 20, 0.7) !important;
-	stroke: rgba(20, 255, 144, 0.7) !important;
+::-webkit-scrollbar {
+	width: 12px;
 }
 
-path.grid-worked {
-	fill: rgba(172, 40, 40, 0.7) !important;
-	stroke: rgba(248, 96, 129, 0.7) !important;
+::-webkit-scrollbar-track {
+	-webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+	border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+	border-radius: 10px;
+	-webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+/* Contest Logger */
+:root {
+	--cl-contest-loading-bg: linear-gradient(135deg, #e0e0e0 0%, #f0f0f0 100%);
+	--cl-contest-workspace-bg: linear-gradient(135deg, #e8e8e8 0%, #f8f9fa 100%);
+	--cl-contest-window-header-bg: #e9ecef;
+	--cl-contest-btn-hover-bg: #dee2e6;
+	--cl-contest-scrollbar: #c0c0c0;
+	--cl-contest-scrollbar-hover: #a0a0a0;
+	--cl-contest-scp-border: rgba(0, 0, 0, 0.08);
+	--cl-contest-scp-hover-bg: rgba(0, 0, 0, 0.05);
+	--cl-contest-scp-active-bg: rgba(0, 0, 0, 0.10);
+	--cl-contest-border: var(--bs-border-color);
+}
+
+/* Override CAT frequency gradient */
+.cat-frequency-gradient,
+.cat-frequency-gradient td,
+.cat-frequency-gradient td:hover,
+.cat-frequency-gradient td:focus {
+	background-color: rgba(82, 81, 81, 0.7) !important;
+	--bs-table-bg: rgba(82, 81, 81, 0.7) !important;
+	--bs-table-accent-bg: rgba(82, 81, 81, 0.7) !important;
+}
+
+/* Only set text color to white for direct text content, not spans with text classes */
+.cat-frequency-gradient td,
+.cat-frequency-gradient th,
+tr[data-gradient-color] td,
+tr[data-gradient-color] th {
+	color: #fff !important;
+}
+
+.cat-frequency-gradient > td > a > .text-success {
+	color: #08ff42 !important;
+}
+
+.cat-frequency-gradient > td > .text-success > a {
+	color: #08ff42 !important;
+}
+
+.cat-frequency-gradient > td > .text-danger > a {
+	color: #ffc4c4 !important;
+}
+
+.cat-frequency-gradient > td > a > .text-danger {
+	color: #ffc4c4 !important;
 }

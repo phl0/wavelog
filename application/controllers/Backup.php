@@ -5,11 +5,10 @@ class Backup extends CI_Controller {
 	{
 		parent::__construct();
 	}
-	
+
 	/* User Facing Links to Backup URLs */
 	public function index()
 	{
-		$this->load->model('user_model');
 		if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 
 		$data['page_title'] = __("Backup");
@@ -20,46 +19,52 @@ class Backup extends CI_Controller {
 	}
 
 	/* Gets all QSOs and Dumps them to logbook.adi */
-	public function adif($key = null){ 
+	public function adif($key = null){
 		if ($key == null) {
-			$this->load->model('user_model');
 			if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		}
 
 		$clean_key = $this->security->xss_clean($key);
 
 		$this->load->helper('file');
+		$this->load->library('AdifHelper');
 		// Set memory limit to unlimited to allow heavy usage
 		ini_set('memory_limit', '-1');
-		
+
 		$this->load->model('adif_data');
+		$filename = 'backup/logbook'. date('_Y_m_d_H_i_s') .'.adi';
 
-		$data['qsos'] = $this->adif_data->export_all($clean_key);
+		header('Content-Type: text/plain; charset=utf-8');
+		header('Content-Disposition: attachment; filename="'.$filename.'"');
 
-		$data['filename'] = 'backup/logbook'. date('_Y_m_d_H_i_s') .'.adi';
-		
-		if ( ! write_file($data['filename'], $this->load->view('backup/exportall', $data, true)))
-		{
-			$data['status'] = false;
-		}
-		else
-		{
-			$data['status'] = true;
-		}
+		// Output ADIF header // No chance to use exportall-view any longer, because of chunking logic
+		echo $this->adifhelper->getAdifHeader($this->config->item('app_name'),$this->optionslib->get_option('version'), $this->optionslib->get_option('adif_version'));
 
-		$data['page_title'] = __("ADIF - Backup");
-		
+		// Stream QSOs in 5K chunks
+		$offset = 0;
+		$chunk_size = 5000;
 
-		$this->load->view('interface_assets/header', $data);
-		$this->load->view('backup/adif_view');
-		$this->load->view('interface_assets/footer');
+		do {
+			$qsos = $this->adif_data->export_all_chunked($clean_key, null, null, false, null, $offset, $chunk_size, true);
 
+			if ($qsos->num_rows() > 0) {
+				foreach ($qsos->result() as $qso) {
+					echo $this->adifhelper->getAdifLine($qso);
+				}
+
+				// Free memory
+				$qsos->free_result();
+			}
+
+			$offset += $chunk_size;
+		} while ($qsos->num_rows() > 0);
+
+		exit;
 	}
 
 	/* Export the notes to XML */
 	public function notes($key = null) {
 		if ($key == null) {
-			$this->load->model('user_model');
 			if(!$this->user_model->authorize(99)) { $this->session->set_flashdata('error', __("You're not allowed to do that!")); redirect('dashboard'); }
 		}
 
