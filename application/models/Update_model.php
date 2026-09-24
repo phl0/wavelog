@@ -1102,4 +1102,44 @@ class Update_model extends CI_Model {
         }
 	}
 
+	function update_most_wanted_grids() {
+		// set the last run in cron table for the correct cron id
+		$this->load->model('cron_model');
+		$this->cron_model->set_last_run('most_wanted_grids_file');
+		$mtime = microtime();
+		$mtime = explode(" ",$mtime);
+		$mtime = $mtime[1] + $mtime[0];
+		$starttime = $mtime;
+
+		$url = 'https://www.df2et.de/cqrlog/mostwanted_grids.json';
+		$curl = curl_init($url);
+
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+
+		$response = curl_exec($curl);
+		$json = json_decode($response);
+		$grids = array();
+		foreach($json as $key => $value) {
+			$grids[] = [
+				'grid' => $key,
+				'perc' => $value,
+			];
+		}
+
+		// Truncate the table first
+		$this->db->query("TRUNCATE TABLE most_wanted_grids;");
+		$rows = $this->db->insert_batch('most_wanted_grids', array_values($grids));
+
+		$mtime = microtime();
+		$mtime = explode(" ",$mtime);
+		$mtime = $mtime[1] + $mtime[0];
+		$endtime = $mtime;
+		$totaltime = ($endtime - $starttime);
+
+		if ($rows > 0) {
+			return "DONE: This page was created in ".$totaltime." seconds.<br />" . number_format($rows ) . " Grids saved";
+		} else {
+			return "FAILED: Empty file";
+		}
+	}
 }
