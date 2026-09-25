@@ -1,20 +1,4 @@
 <style>
-	/* Force left alignment for Bootstrap Multiselect button */
-	.multiselect.dropdown-toggle {
-		text-align: left !important;
-	}
-
-	.dropdown-filters-responsive {
-		width: 900px;
-	}
-
-	@media (max-width: 992px) {
-		.dropdown-filters-responsive {
-			width: 90vw;
-			max-width: none;
-		}
-	}
-
 	.perc-slider {
 		position: relative;
 		height: 1.5rem;

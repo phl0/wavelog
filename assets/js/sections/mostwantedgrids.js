@@ -1,15 +1,6 @@
 var modalloading=false;
 var maxPerc = 0;
 
-let confirmedColor = 'rgba(144,238,144)';
-if (typeof(user_map_custom.qsoconfirm) !== 'undefined') {
-      confirmedColor = user_map_custom.qsoconfirm.color;
-}
-let workedColor = 'rgba(229, 165, 10)';
-if (typeof(user_map_custom.qso) !== 'undefined') {
-      workedColor = user_map_custom.qso.color;
-}
-
 document.addEventListener("DOMContentLoaded", function() {
   document.querySelectorAll('.dropdown').forEach(dd => {
 		dd.addEventListener('hide.bs.dropdown', function (e) {
@@ -24,8 +15,6 @@ var map;
 var maidenhead;
 var percFilterMin = 0;
 var percFilterMax = 100;
-var grid_four = '';
-var grid_four_confirmed = '';
 
 function gridPlot(form) {
     // If map is already initialized
@@ -150,24 +139,6 @@ function spawnGridsquareModal(loc_4char) {
 			}
 		});
 	}
-}
-
-function hexToRgba(hex, alpha = 1) {
-	if (!hex) return null;
-	// Remove the leading "#"
-	hex = hex.replace(/^#/, '');
-
-	// Expand short form (#f0a → #ff00aa)
-	if (hex.length === 3) {
-		hex = hex.split('').map(c => c + c).join('');
-	}
-
-	const num = parseInt(hex, 16);
-	const r = (num >> 16) & 255;
-	const g = (num >> 8) & 255;
-	const b = num & 255;
-
-	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 function colorGradient(color1, color2, percent) {
