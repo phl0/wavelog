@@ -1115,9 +1115,17 @@ class Update_model extends CI_Model {
 		$curl = curl_init($url);
 
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 15);
+		curl_setopt($curl, CURLOPT_TIMEOUT, 60);
 
 		$response = curl_exec($curl);
 		$json = json_decode($response);
+
+		if (!is_object($json) || count((array)$json) == 0) {
+			log_message('error', 'mostwanted_grids.json update failed: empty or invalid response from provider');
+			return "FAILED: Empty or invalid file";
+		}
+
 		$grids = array();
 		foreach($json as $key => $value) {
 			$grids[] = [
