@@ -30,10 +30,34 @@ class Migration_add_most_wanted_grids_table extends CI_Migration {
             $this->dbforge->add_key('id', TRUE);
             $this->dbforge->create_table('most_wanted_grids');
         }
+
+        // Add cron job for Most Wanted Grids update
+        if ($this->db->table_exists('cron')) {
+            $this->db->where('id', 'most_wanted_grids_file');
+            $query = $this->db->get('cron');
+
+            if ($query->num_rows() == 0) {
+                $this->db->insert_batch('cron', array(
+                    array(
+                        'id' => 'most_wanted_grids_file',
+                        'enabled' => '1',
+                        'status' => 'pending',
+                        'description' => 'Download Most Wanted Grids (Satellite) from df2et.de',
+                        'function' => 'index.php/update/update_most_wanted_grids',
+                        'expression' => '0 0 1 * *',
+                        'last_run' => null,
+                        'next_run' => null
+                    )
+                ));
+            }
+        }
     }
 
     public function down()
     {
+        $this->db->where('id', 'most_wanted_grids_file');
+        $this->db->delete('cron');
+
         $this->dbforge->drop_table('most_wanted_grids');
     }
 

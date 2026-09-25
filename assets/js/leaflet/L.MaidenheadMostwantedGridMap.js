@@ -76,10 +76,11 @@ L.Maidenhead = L.LayerGroup.extend({
 					// use the center of the rectangle to avoid edge/boundary rounding errors
 					var locator = this._getLocator(lon + unit, lat + (unit / 2));
 
-					if(mwgrids[locator] !== undefined) {
+				var perc = mwgrids[locator];
+				if(perc !== undefined && perc >= percFilterMin && perc <= percFilterMax) {
 
-						//var rectWorked = L.rectangle(bounds, {className: 'grid-rectangle grid-worked', color: colorGradient(this.options.workedColor, this.options.confirmedColor, mwgrids[locator]),  weight: 1, fillOpacity: 1, fill:true, interactive: false});
-						var rectWorked = L.rectangle(bounds, {className: 'grid-rectangle grid-worked', color: colorGradient('rgba(255, 0, 0, 0.5)', this.options.confirmedColor, mwgrids[locator]),  weight: 1, fillOpacity: 1, fill:true, interactive: false});
+					//var rectWorked = L.rectangle(bounds, {className: 'grid-rectangle grid-worked', color: colorGradient(this.options.workedColor, this.options.confirmedColor, mwgrids[locator]),  weight: 1, fillOpacity: 1, fill:true, interactive: false});
+					var rectWorked = L.rectangle(bounds, {className: 'grid-rectangle grid-worked', color: colorGradient('rgba(255, 0, 0, 0.5)', this.options.confirmedColor, perc),  weight: 1, fillOpacity: 1, fill:true, interactive: false});
 						this.addLayer(rectWorked);
 						this.addLayer(this._getLabel(lon+unit-(unit/lcor),lat+(unit/2)+(unit/lcor*c)));
 					}

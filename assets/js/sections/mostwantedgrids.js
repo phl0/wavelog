@@ -1,15 +1,6 @@
 var modalloading=false;
 var maxPerc = 0;
 
-let confirmedColor = 'rgba(144,238,144)';
-if (typeof(user_map_custom.qsoconfirm) !== 'undefined') {
-      confirmedColor = user_map_custom.qsoconfirm.color;
-}
-let workedColor = 'rgba(229, 165, 10)';
-if (typeof(user_map_custom.qso) !== 'undefined') {
-      workedColor = user_map_custom.qso.color;
-}
-
 document.addEventListener("DOMContentLoaded", function() {
   document.querySelectorAll('.dropdown').forEach(dd => {
 		dd.addEventListener('hide.bs.dropdown', function (e) {
@@ -21,8 +12,9 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 var map;
-var grid_four = '';
-var grid_four_confirmed = '';
+var maidenhead;
+var percFilterMin = 0;
+var percFilterMax = 100;
 
 function gridPlot(form) {
     // If map is already initialized
@@ -72,7 +64,7 @@ function plot() {
                 },
             });
 
-            var maidenhead = L.maidenhead().addTo(map);
+            maidenhead = L.maidenhead().addTo(map);
             map.on('mousemove', onMapMove);
             map.on('click', onMapClick);
 }
@@ -149,26 +141,9 @@ function spawnGridsquareModal(loc_4char) {
 	}
 }
 
-function hexToRgba(hex, alpha = 1) {
-	if (!hex) return null;
-	// Remove the leading "#"
-	hex = hex.replace(/^#/, '');
-
-	// Expand short form (#f0a → #ff00aa)
-	if (hex.length === 3) {
-		hex = hex.split('').map(c => c + c).join('');
-	}
-
-	const num = parseInt(hex, 16);
-	const r = (num >> 16) & 255;
-	const g = (num >> 8) & 255;
-	const b = num & 255;
-
-	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 function colorGradient(color1, color2, percent) {
-	const f = Math.max(0, Math.min(maxPerc, percent)) / maxPerc;
+	const scaleMax = Math.min(percFilterMax, maxPerc);
+	const f = scaleMax > percFilterMin ? Math.max(0, Math.min(1, (percent - percFilterMin) / (scaleMax - percFilterMin))) : 0;
 
 	function parseToRgba(colorStr) {
 		const match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
@@ -197,5 +172,30 @@ $(document).ready(function(){
 	gridPlot(this.form);
 	$(window).resize(function () {
 		set_map_height();
+	});
+	['perc_min', 'perc_max'].forEach(function(id) {
+		document.getElementById(id).addEventListener('input', function() {
+			var min = parseInt(document.getElementById('perc_min').value, 10);
+			var max = parseInt(document.getElementById('perc_max').value, 10);
+			if (min > max) {
+				if (this.id === 'perc_min') {
+					max = min;
+					document.getElementById('perc_max').value = max;
+				} else {
+					min = max;
+					document.getElementById('perc_min').value = min;
+				}
+			}
+			percFilterMin = min;
+			percFilterMax = max;
+			document.getElementById('perc_min_val').textContent = min + '%';
+			document.getElementById('perc_max_val').textContent = max + '%';
+			var fill = document.getElementById('perc_fill');
+			fill.style.left = min + '%';
+			fill.style.right = (100 - max) + '%';
+			if (maidenhead) {
+				maidenhead.redraw();
+			}
+		});
 	});
 });

@@ -1,18 +1,52 @@
 <style>
-	/* Force left alignment for Bootstrap Multiselect button */
-	.multiselect.dropdown-toggle {
-		text-align: left !important;
+	.perc-slider {
+		position: relative;
+		height: 1.5rem;
 	}
 
-	.dropdown-filters-responsive {
-		width: 900px;
+	.perc-slider input[type="range"] {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		pointer-events: none;
+		background: transparent;
 	}
 
-	@media (max-width: 992px) {
-		.dropdown-filters-responsive {
-			width: 90vw;
-			max-width: none;
-		}
+	.perc-slider input[type="range"]::-webkit-slider-thumb {
+		pointer-events: auto;
+	}
+
+	.perc-slider input[type="range"]::-moz-range-thumb {
+		pointer-events: auto;
+	}
+
+	.perc-slider input[type="range"]::-webkit-slider-runnable-track {
+		background: transparent;
+	}
+
+	.perc-slider input[type="range"]::-moz-range-track {
+		background: transparent;
+	}
+
+	.perc-slider-track {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		left: 0;
+		right: 0;
+		height: 0.4rem;
+		border-radius: 1rem;
+		background: var(--bs-secondary-bg, #dee2e6);
+	}
+
+	.perc-slider-fill {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		height: 0.4rem;
+		border-radius: 1rem;
+		background: var(--bs-success);
 	}
 </style>
 <script>
@@ -35,6 +69,17 @@
 			<?php } ?>
 
 		</div> <!-- /card-body -->
+
+		<div class="d-flex align-items-center gap-2 px-3 pb-2" id="perc_filter">
+			<span class="text-nowrap"><?= __("Min"); ?> <span id="perc_min_val" class="fw-bold text-success">0%</span></span>
+			<div class="perc-slider flex-grow-1">
+				<div class="perc-slider-track"></div>
+				<div class="perc-slider-fill" id="perc_fill" style="left: 0; right: 0;"></div>
+				<input type="range" class="form-range" id="perc_min" min="0" max="100" step="1" value="0">
+				<input type="range" class="form-range" id="perc_max" min="0" max="100" step="1" value="100">
+			</div>
+			<span class="text-nowrap"><span id="perc_max_val" class="fw-bold text-success">100%</span> <?= __("Max"); ?></span>
+		</div>
 
 		<div id="gridmapcontainer">
 			<div id="gridsquare_map" class="map-leaflet" style="width: 100%;"></div>
