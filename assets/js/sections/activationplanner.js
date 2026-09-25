@@ -18,7 +18,7 @@
 	let iotaUrl         = cfg.iotaUrl || '';
 	let dxccGridUrl     = cfg.dxccGridUrl || '';
 	let mwPercUrl       = cfg.mwPercUrl || '';
-	let mwPercLbl       = decodeHtml(cfg.mwPercLbl) || 'Needed on SAT for %s';
+	let mwPercLbl       = decodeHtml(cfg.mwPercLbl) || 'In log of %s (SAT)';
 	let satPassUrl      = cfg.satPassUrl || '';
 	let refsNearbyUrl   = cfg.refsNearbyUrl || '';
 	let satPassLbl      = decodeHtml(cfg.satPassLbl) || 'Satellite passes';
