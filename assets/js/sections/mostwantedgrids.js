@@ -21,6 +21,9 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 var map;
+var maidenhead;
+var percFilterMin = 0;
+var percFilterMax = 100;
 var grid_four = '';
 var grid_four_confirmed = '';
 
@@ -72,7 +75,7 @@ function plot() {
                 },
             });
 
-            var maidenhead = L.maidenhead().addTo(map);
+            maidenhead = L.maidenhead().addTo(map);
             map.on('mousemove', onMapMove);
             map.on('click', onMapClick);
 }
@@ -168,7 +171,8 @@ function hexToRgba(hex, alpha = 1) {
 }
 
 function colorGradient(color1, color2, percent) {
-	const f = Math.max(0, Math.min(maxPerc, percent)) / maxPerc;
+	const scaleMax = Math.min(percFilterMax, maxPerc);
+	const f = scaleMax > percFilterMin ? Math.max(0, Math.min(1, (percent - percFilterMin) / (scaleMax - percFilterMin))) : 0;
 
 	function parseToRgba(colorStr) {
 		const match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
@@ -197,5 +201,30 @@ $(document).ready(function(){
 	gridPlot(this.form);
 	$(window).resize(function () {
 		set_map_height();
+	});
+	['perc_min', 'perc_max'].forEach(function(id) {
+		document.getElementById(id).addEventListener('input', function() {
+			var min = parseInt(document.getElementById('perc_min').value, 10);
+			var max = parseInt(document.getElementById('perc_max').value, 10);
+			if (min > max) {
+				if (this.id === 'perc_min') {
+					max = min;
+					document.getElementById('perc_max').value = max;
+				} else {
+					min = max;
+					document.getElementById('perc_min').value = min;
+				}
+			}
+			percFilterMin = min;
+			percFilterMax = max;
+			document.getElementById('perc_min_val').textContent = min + '%';
+			document.getElementById('perc_max_val').textContent = max + '%';
+			var fill = document.getElementById('perc_fill');
+			fill.style.left = min + '%';
+			fill.style.right = (100 - max) + '%';
+			if (maidenhead) {
+				maidenhead.redraw();
+			}
+		});
 	});
 });
