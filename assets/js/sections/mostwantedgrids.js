@@ -52,6 +52,10 @@ function plot() {
                     maxPerc = mwgrids[key];
                 }
             }
+            var slider = document.getElementById("perc_max");
+            slider.value = maxPerc;
+            var fill = document.getElementById('perc_fill');
+            fill.style.right = (100 - maxPerc) + '%';
 
             map = L.map('gridsquare_map', {
             layers: [layer],
